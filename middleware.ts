@@ -1,11 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-
-const protectedPrefixes = ['/admin', '/client'];
-
-function isProtected(pathname: string) {
-  return protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-}
+import { isProtectedPath, routeForSignedInUser } from './lib/saas/routes';
 
 function redirectTo(request: NextRequest, pathname: string) {
   const redirectUrl = request.nextUrl.clone();
@@ -23,8 +18,10 @@ export async function middleware(request: NextRequest) {
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const pathname = request.nextUrl.pathname;
 
   if (!url || !anonKey) {
+    if (isProtectedPath(pathname)) return redirectTo(request, '/login');
     return response;
   }
 
@@ -51,9 +48,7 @@ export async function middleware(request: NextRequest) {
     data: { user }
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
-
-  if (!user && isProtected(pathname)) {
+  if (!user && isProtectedPath(pathname)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/login';
     redirectUrl.searchParams.set('next', pathname);
@@ -66,14 +61,12 @@ export async function middleware(request: NextRequest) {
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (profile?.role === 'admin' && pathname.startsWith('/client')) {
-    return redirectTo(request, '/admin');
-  }
+  const destination = routeForSignedInUser(profile?.role, pathname);
 
-  if (profile?.role !== 'admin' && pathname.startsWith('/admin')) {
-    return redirectTo(request, '/client');
+  if (destination !== pathname) {
+    return redirectTo(request, destination);
   }
 
   return response;
