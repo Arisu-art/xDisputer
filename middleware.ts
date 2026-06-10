@@ -1,6 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { isProtectedPath, routeForSignedInUser } from './lib/saas/routes';
+import type { UserRole } from './lib/supabase/roles';
+
+const bootstrapAdminEmails = new Set(['mycoquibuyen2002@gmail.com']);
+
+function roleFromEmail(email: string | null | undefined): UserRole | null {
+  return email && bootstrapAdminEmails.has(email.toLowerCase()) ? 'admin' : null;
+}
 
 function redirectTo(request: NextRequest, pathname: string) {
   const redirectUrl = request.nextUrl.clone();
@@ -59,11 +66,12 @@ export async function middleware(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role,email')
     .eq('id', user.id)
     .maybeSingle();
 
-  const destination = routeForSignedInUser(profile?.role, pathname);
+  const resolvedRole = roleFromEmail(user.email) || roleFromEmail(profile?.email) || profile?.role;
+  const destination = routeForSignedInUser(resolvedRole, pathname);
 
   if (destination !== pathname) {
     return redirectTo(request, destination);
