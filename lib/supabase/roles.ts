@@ -34,8 +34,6 @@ export function accountStatus(profile: UserProfile | null | undefined): AccountS
 }
 
 export function canAccessRole(currentRole: UserRole | null | undefined, requiredRole: UserRole) {
-  if (currentRole === 'master') return true;
-  if (currentRole === 'admin') return requiredRole === 'admin' || requiredRole === 'client';
   return currentRole === requiredRole;
 }
 
