@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { dashboardForRole } from './routes';
+import { canAccessRole, ensureUserProfile, roleForEmail, type UserProfile, type UserRole } from '../supabase/roles';
 import { createSupabaseServerClient } from '../supabase/server';
-import { ensureUserProfile, roleForEmail, type UserProfile, type UserRole } from '../supabase/roles';
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseUser = NonNullable<Awaited<ReturnType<SupabaseServerClient['auth']['getUser']>>['data']['user']>;
@@ -11,17 +11,16 @@ export type SessionContext = {
   user: SupabaseUser | null;
   profile: UserProfile | null;
   role: UserRole | null;
+  isMaster: boolean;
   isAdmin: boolean;
   isClient: boolean;
-  dashboardPath: '/admin' | '/workspace';
+  dashboardPath: '/master' | '/admin' | '/workspace';
 };
 
 function resolveRole(user: SupabaseUser | null, profile: UserProfile | null): UserRole | null {
   if (!user) return null;
-
   const emailRole = roleForEmail(user.email || profile?.email);
-  if (emailRole === 'admin') return 'admin';
-
+  if (emailRole !== 'client') return emailRole;
   return profile?.role || 'client';
 }
 
@@ -31,13 +30,14 @@ export async function getSessionContext(): Promise<SessionContext> {
   const user = userResult.user ?? null;
   const profile = user ? await ensureUserProfile(supabase, user) : null;
   const role = resolveRole(user, profile);
-  const dashboardPath = dashboardForRole(role) as '/admin' | '/workspace';
+  const dashboardPath = dashboardForRole(role) as '/master' | '/admin' | '/workspace';
 
   return {
     supabase,
     user,
     profile,
     role,
+    isMaster: role === 'master',
     isAdmin: role === 'admin',
     isClient: role === 'client',
     dashboardPath
@@ -57,7 +57,7 @@ export async function requireAuth() {
 export async function requireRole(requiredRole: UserRole) {
   const session = await requireAuth();
 
-  if (session.role !== requiredRole) {
+  if (!canAccessRole(session.role, requiredRole)) {
     redirect(session.dashboardPath);
   }
 
