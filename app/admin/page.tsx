@@ -1,36 +1,43 @@
+import Link from 'next/link';
 import { requireRole } from '../../lib/supabase/roles';
+import SaasPortalShell from '../../components/SaasPortalShell';
 
 export default async function AdminPage() {
   const { user, profile } = await requireRole('admin');
 
   return (
-    <main className="app-shell">
-      <section className="main-area">
-        <header className="header">
-          <div>
-            <p className="eyebrow">Administrator</p>
-            <h1>Admin Console</h1>
-            <p className="workspace-operation-status success">
-              Signed in as {profile?.email || user?.email}. You can manage SaaS operations here.
-            </p>
-          </div>
-        </header>
-
-        <section className="dashboard-grid">
-          <article className="dashboard-card">
-            <h2>Users</h2>
-            <p>Manage client accounts, roles, and workspace access.</p>
-          </article>
-          <article className="dashboard-card">
-            <h2>Cases</h2>
-            <p>Review client case activity and document packet progress.</p>
-          </article>
-          <article className="dashboard-card">
-            <h2>System</h2>
-            <p>Monitor Supabase, Vercel deployment, and framework health.</p>
-          </article>
-        </section>
+    <SaasPortalShell
+      role="admin"
+      email={profile?.email || user?.email}
+      title="Admin command center"
+      subtitle="Manage SaaS users, monitor client workspaces, and operate the document platform from one protected console."
+    >
+      <section className="saas-admin-grid">
+        <article className="saas-admin-card primary">
+          <p>Users</p>
+          <h2>Account control</h2>
+          <span>Client and administrator role management is backed by Supabase profiles.</span>
+        </article>
+        <article className="saas-admin-card">
+          <p>Cases</p>
+          <h2>Client operations</h2>
+          <span>Review workspace activity and packet readiness as the database layer expands.</span>
+        </article>
+        <article className="saas-admin-card">
+          <p>System</p>
+          <h2>Platform health</h2>
+          <span>Vercel, Supabase Auth, middleware, and protected routing are active.</span>
+        </article>
       </section>
-    </main>
+
+      <section className="saas-admin-panel">
+        <div>
+          <p className="saas-portal-eyebrow">Workspace access</p>
+          <h2>Open client workflow</h2>
+          <p>Administrators are routed here by default. Use client view only when testing the client workflow experience.</p>
+        </div>
+        <Link href="/client">Open client view</Link>
+      </section>
+    </SaasPortalShell>
   );
 }
