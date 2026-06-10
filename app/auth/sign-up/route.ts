@@ -1,5 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createSupabaseServerClient } from '../../../lib/supabase/server';
+import { appRedirect, getAppOrigin } from '../../../lib/supabase/origin';
+
+function friendlySignupError(message: string) {
+  if (/rate limit/i.test(message)) return 'Email rate limit exceeded. Wait a few minutes, then try again or disable email confirmation for local testing.';
+  if (/already registered|already exists/i.test(message)) return 'This email already has an account. Sign in instead.';
+  return message;
+}
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -8,7 +15,10 @@ export async function POST(request: NextRequest) {
   const email = String(formData.get('email') || '').trim();
   const password = String(formData.get('password') || '');
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
+  if (!fullName || !email || !password) {
+    return NextResponse.redirect(appRedirect(request, '/signup', { error: 'Full name, email, and password are required.' }));
+  }
+
   const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase.auth.signUp({
@@ -18,17 +28,13 @@ export async function POST(request: NextRequest) {
       data: {
         full_name: fullName
       },
-      emailRedirectTo: `${siteUrl}/auth/callback`
+      emailRedirectTo: `${getAppOrigin(request)}/auth/callback`
     }
   });
 
   if (error) {
-    const url = new URL('/signup', request.url);
-    url.searchParams.set('error', error.message);
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(appRedirect(request, '/signup', { error: friendlySignupError(error.message) }));
   }
 
-  const url = new URL('/login', request.url);
-  url.searchParams.set('message', 'Account created. Check your email if confirmation is enabled, then sign in.');
-  return NextResponse.redirect(url);
+  return NextResponse.redirect(appRedirect(request, '/login', { message: 'Account created. Check your email if confirmation is enabled, then sign in.' }));
 }
