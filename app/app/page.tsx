@@ -1,11 +1,7 @@
 import { redirect } from 'next/navigation';
-import { getCurrentUserProfile } from '../../lib/supabase/roles';
-import { dashboardForRole } from '../../lib/saas/routes';
+import { requireAuth } from '../../lib/saas/session';
 
 export default async function AppRoute() {
-  const { user, profile } = await getCurrentUserProfile();
-
-  if (!user) redirect('/login?next=/app');
-
-  redirect(dashboardForRole(profile?.role));
+  const session = await requireAuth();
+  redirect(session.dashboardPath);
 }
