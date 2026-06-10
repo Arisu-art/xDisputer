@@ -1,7 +1,8 @@
+import { activateAccount, demoteToClient, disableAccount, pauseAccount, promoteToAdmin } from './actions';
 import { requireRole } from '../../lib/saas/session';
 import type { UserProfile } from '../../lib/supabase/roles';
 
-type ProfileRow = Pick<UserProfile, 'id' | 'email' | 'full_name' | 'role' | 'created_at' | 'updated_at'>;
+type ProfileRow = Pick<UserProfile, 'id' | 'email' | 'full_name' | 'role' | 'account_status' | 'created_at' | 'updated_at'>;
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '—';
@@ -10,18 +11,28 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
 }
 
+function AccountActionButton({ profileId, action, label }: { profileId: string; action: (formData: FormData) => Promise<void>; label: string }) {
+  return (
+    <form action={action}>
+      <input type="hidden" name="profileId" value={profileId} />
+      <button type="submit" className="admin-action-button">{label}</button>
+    </form>
+  );
+}
+
 export default async function MasterPage() {
   const { user, profile, supabase } = await requireRole('master');
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,email,full_name,role,created_at,updated_at')
+    .select('id,email,full_name,role,account_status,created_at,updated_at')
     .order('created_at', { ascending: false });
 
   const profiles: ProfileRow[] = Array.isArray(data) ? data : [];
   const masterUsers = profiles.filter((item) => item.role === 'master').length;
   const adminUsers = profiles.filter((item) => item.role === 'admin').length;
   const clientUsers = profiles.filter((item) => item.role === 'client').length;
+  const pausedUsers = profiles.filter((item) => item.account_status === 'paused' || item.account_status === 'disabled').length;
   const queryError = error?.message || null;
 
   return (
@@ -36,8 +47,10 @@ export default async function MasterPage() {
         </div>
 
         <nav aria-label="Master navigation">
-          <a className="active" href="/master">Master control</a>
-          <a href="/admin">Admin monitor</a>
+          <a className="active" href="/master">Account control</a>
+          <a href="#admins">Manage admins</a>
+          <a href="#clients">Monitor clients</a>
+          <a href="/admin">Admin console</a>
           <a href="/app">Role router</a>
         </nav>
 
@@ -55,31 +68,20 @@ export default async function MasterPage() {
           <div>
             <p>Master administration</p>
             <h1>Control accounts and roles.</h1>
-            <span>Master can supervise admin accounts, client users, and platform access hierarchy.</span>
+            <span>Promote, demote, pause, activate, or disable accounts from one owner console.</span>
           </div>
         </header>
 
         <section className="admin-monitor-stats" aria-label="Role statistics">
-          <article>
-            <p>Masters</p>
-            <strong>{masterUsers}</strong>
-          </article>
-          <article>
-            <p>Admins</p>
-            <strong>{adminUsers}</strong>
-          </article>
-          <article>
-            <p>Clients</p>
-            <strong>{clientUsers}</strong>
-          </article>
+          <article><p>Masters</p><strong>{masterUsers}</strong></article>
+          <article><p>Admins</p><strong>{adminUsers}</strong></article>
+          <article><p>Clients</p><strong>{clientUsers}</strong></article>
+          <article><p>Paused/Disabled</p><strong>{pausedUsers}</strong></article>
         </section>
 
-        <section className="admin-monitor-card">
+        <section className="admin-monitor-card" id="admins">
           <div className="admin-monitor-card-header">
-            <div>
-              <p>Platform profiles</p>
-              <h2>Account hierarchy</h2>
-            </div>
+            <div><p>Master controls</p><h2>Account hierarchy</h2></div>
             <span>{profiles.length} records</span>
           </div>
 
@@ -92,25 +94,33 @@ export default async function MasterPage() {
                   <tr>
                     <th>User</th>
                     <th>Role</th>
-                    <th>Created</th>
+                    <th>Status</th>
                     <th>Updated</th>
+                    <th>Controls</th>
                   </tr>
                 </thead>
                 <tbody>
                   {profiles.length ? profiles.map((item) => (
                     <tr key={item.id}>
-                      <td>
-                        <strong>{item.full_name || item.email || 'Unnamed user'}</strong>
-                        <small>{item.email || item.id}</small>
-                      </td>
+                      <td><strong>{item.full_name || item.email || 'Unnamed user'}</strong><small>{item.email || item.id}</small></td>
                       <td><span className={`admin-role-badge ${item.role}`}>{item.role}</span></td>
-                      <td>{formatDate(item.created_at)}</td>
+                      <td><span className={`admin-status-badge ${item.account_status || 'active'}`}>{item.account_status || 'active'}</span></td>
                       <td>{formatDate(item.updated_at)}</td>
+                      <td>
+                        <div className="admin-actions-row">
+                          {item.role === 'client' && <AccountActionButton profileId={item.id} action={promoteToAdmin} label="Make admin" />}
+                          {item.role === 'admin' && <AccountActionButton profileId={item.id} action={demoteToClient} label="Demote" />}
+                          {(item.account_status === 'paused' || item.account_status === 'disabled') ? (
+                            <AccountActionButton profileId={item.id} action={activateAccount} label="Activate" />
+                          ) : (
+                            <AccountActionButton profileId={item.id} action={pauseAccount} label="Pause" />
+                          )}
+                          {item.id !== user.id && <AccountActionButton profileId={item.id} action={disableAccount} label="Disable" />}
+                        </div>
+                      </td>
                     </tr>
                   )) : (
-                    <tr>
-                      <td colSpan={4} className="admin-monitor-empty">No profile records found yet.</td>
-                    </tr>
+                    <tr><td colSpan={5} className="admin-monitor-empty">No profile records found yet.</td></tr>
                   )}
                 </tbody>
               </table>
