@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   const password = String(formData.get('password') || '');
 
   if (!fullName || !email || !password) {
-    return NextResponse.redirect(appRedirect(request, '/signup', { error: 'Full name, email, and password are required.' }));
+    return NextResponse.redirect(appRedirect(request, '/signup', { error: 'Full name, email, and password are required.' }), 303);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
   });
 
   if (error) {
-    return NextResponse.redirect(appRedirect(request, '/signup', { error: friendlySignupError(error.message) }));
+    return NextResponse.redirect(appRedirect(request, '/signup', { error: friendlySignupError(error.message) }), 303);
   }
 
-  return NextResponse.redirect(appRedirect(request, '/login', { message: 'Account created. Check your email if confirmation is enabled, then sign in.' }));
+  return NextResponse.redirect(appRedirect(request, '/login', { message: 'Account created. Check your email if confirmation is enabled, then sign in.' }), 303);
 }
