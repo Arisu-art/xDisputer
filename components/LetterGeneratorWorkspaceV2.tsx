@@ -178,17 +178,117 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   function restoreOriginal() { if (!originalSource.trim()) return; if (source.trim() && source !== originalSource) captureDraft('Working draft saved before restoring imported original'); setSource(originalSource); setNormalized(false); clearOutputs(); report('Imported original restored. Your previous working draft is available through Recover saved draft. Supporting evidence was retained.', 'success'); }
   function recoverDraft() { if (!recoveryDraft) return; const active: SourceDraftSnapshot = { text: source, normalized, label: 'Version saved before draft recovery', capturedAt: new Date().toISOString() }; const restored = recoveryDraft; setSource(restored.text); setNormalized(restored.normalized); setRecoveryDraft(active); clearOutputs(); report(`${restored.label} recovered. Supporting evidence was retained.`, 'success'); }
   function setLine(key: string, value: string) {
-    const pattern = new RegExp(`^${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:.*$`, 'mi');
+    const pattern = new RegExp(`^${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:.*$`, 'im');
     const line = `${key}: ${value}`;
-    setSource((current) => pattern.test(current) ? current.replace(pattern, line) : `${current.trim()}\n${line}`.trim());
-    setNormalized(false);
+    const anchor = /\n\s*\n(?=(DISPUTE ACCOUNTS|HARD INQUIRIES|LATE PAYMENTS)\b)/i;
+    setSource(pattern.test(source) ? source.replace(pattern, line) : anchor.test(source) ? source.replace(anchor, `\n${line}\n\n`) : `${source.trim()}\n${line}`);
+    setNormalized(true);
     clearOutputs();
   }
-  function letter(route: LetterRoute, file: File, date: string) { return route.type === 'DISPUTE' ? renderReferenceDisputeDocx(file, parsed, route.bureau, route.items, date, templates.FCRA?.contract, templates.ATTACHMENT?.contract) : renderLatePaymentReference(file, parsed, route.bureau, route.items, date); }
-  async function affidavit(bureau: Bureau, date: string) { if (!templates.AFFIDAVIT) return null; const blob = await renderMappedAppendix(templates.AFFIDAVIT.file, affidavitSource, { bureau, date, creditItems: parsed.dispute[bureau], round, routeType: 'DISPUTE' }, templates.AFFIDAVIT.contract); return highlightTextInDocx(blob, ['[REVIEW]', 'N/A']); }
-  async function uploadRef(roundValue: Round, type: LetterType, file: File) { const item = await saveReferenceFile(roundValue, type, file); setReferences((current) => [...current.filter((value) => value.id !== item.id), item]); clearOutputs(); report(`${roundValue} ${labels[type]} reference uploaded.`, 'success'); }
-  async function removeRef(roundValue: Round, type: LetterType) { await removeReferenceFile(`${roundValue}-${type}`); setReferences((current) => current.filter((item) => item.id !== `${roundValue}-${type}`)); clearOutputs(); report(`${roundValue} ${labels[type]} reference removed.`); }
-  async function makeZip(output: ReviewOutput[], notes: string[], date: string) { const zip = new JSZip(); output.forEach((item) => addOrderedPacketFolders(zip, item, item.blob)); if (notes.length) zip.file('READ_ME_GENERATION_NOTES.txt', notes.join('\n')); zip.file('PACKET_MANIFEST.json', JSON.stringify({ client: parsed.name, date, round, files: output.map((item) => item.path) }, null, 2)); return zip.generateAsync({ type: 'blob' }); }
+
+  async function uploadRef(slot: LetterReference, file: File) {
+    if (!isDocx(file.name)) {
+      report('Letter references accept DOCX files only.', 'error');
+      return;
+    }
+
+    const contract = await saveReferenceFile(slot, file);
+    setReferences((items) =>
+      items.map((item) =>
+        item.id === slot.id
+          ? { ...item, file: file.name, size: file.size, contract }
+          : item
+      )
+    );
+    clearOutputs();
+  }
+
+  async function removeRef(slot: LetterReference) {
+    await removeReferenceFile(slot.id);
+    setReferences((items) =>
+      items.map((item) =>
+        item.id === slot.id
+          ? { ...item, file: '', size: undefined, contract: undefined }
+          : item
+      )
+    );
+    clearOutputs();
+  }
+
+  async function letter(route: LetterRoute, file: File, date: string) {
+    const recipient = bureauInfo[route.bureau];
+    const identity = {
+      consumerName: parsed.name,
+      addressLines: parsed.address,
+      dob: parsed.dob,
+      ssn: parsed.ssn,
+      letterDate: date,
+      bureauName: recipient.name,
+      bureauAddressLines: recipient.address.split('\n')
+    };
+
+    return route.type === 'DISPUTE'
+      ? renderReferenceDisputeDocx(file, {
+          ...identity,
+          disputeItems: route.items
+            .filter((item) => item.type === 'DISPUTE_ACCOUNT')
+            .map((item) => item.displayText),
+          hardInquiryItems: route.items
+            .filter((item) => item.type === 'HARD_INQUIRY')
+            .map((item) => item.displayText)
+        })
+      : renderLatePaymentReference(file, {
+          ...identity,
+          latePaymentItems: route.items.map((item) => item.displayText)
+        });
+  }
+
+  async function affidavit(bureau: Bureau, date: string) {
+    const file = await readTemplateExhibit(round, 'AFFIDAVIT');
+
+    if (!file) return null;
+
+    const recipient = bureauInfo[bureau];
+    const output = await renderMappedAppendix(file, {
+      kind: 'AFFIDAVIT',
+      bureau,
+      documentDate: date,
+      recipientName: recipient.name,
+      recipientAddressLines: recipient.address.split('\n'),
+      source: affidavitSource
+    });
+
+    return affidavitJurisdiction.reviewRequired ? highlightTextInDocx(output, 'N/A') : output;
+  }
+
+  async function makeZip(items: ReviewOutput[], notes: string[], date: string) {
+    const zip = new JSZip();
+
+    await addOrderedPacketFolders(
+      zip,
+      items,
+      round,
+      evidenceKey,
+      parsed.name,
+      routes.map((route) => ({ type: route.type, bureau: route.bureau }))
+    );
+
+    zip.file(
+      'Package Manifest.txt',
+      [
+        'COMPLETE ORDERED COMPONENT PACKAGE',
+        `Client: ${parsed.name}`,
+        `Round: ${round}`,
+        `Date: ${date}`,
+        'Delivery format: ordered bureau folders only.',
+        'Dispute order: 01 Dispute Letter.docx; 02 Supporting Documents.pdf; 03 Attachment.pdf; 04 FCRA Legal Exhibit.pdf; 05 Affidavit.docx; 06 FTC Identity Theft Report.docx.',
+        ...notes.map((item) => `- ${item}`)
+      ].join('\n')
+    );
+
+    return zip.generateAsync({ type: 'blob' });
+  }
+
   async function generate() {
     setGenerateAttempted(true);
     if (!preflight.ready) { report(preflightFailureMessage(preflight), 'error'); return; }
