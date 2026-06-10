@@ -15,35 +15,37 @@ export default function Page() {
         </div>
       </nav>
 
-      <section className="saas-public-hero">
-        <p className="saas-public-eyebrow">Document operations SaaS</p>
-        <h1>Secure dispute packet workflows for clients.</h1>
-        <p>
-          xDisputer protects the packet workflow behind Supabase authentication, then routes signed-in users into the workspace.
-        </p>
+      <section className="saas-public-shell-card">
+        <div className="saas-public-hero compact">
+          <p className="saas-public-eyebrow">Document operations SaaS</p>
+          <h1>Secure packet workflow.</h1>
+          <p>
+            Sign in to manage templates, source data, outputs, and filing records from one protected xDisputer workspace.
+          </p>
 
-        <div className="saas-public-cta">
-          <Link href="/signup">Create account</Link>
-          <Link href="/login">Sign in</Link>
+          <div className="saas-public-cta">
+            <Link href="/login">Sign in</Link>
+            <Link href="/signup">Create account</Link>
+          </div>
         </div>
-      </section>
 
-      <section className="saas-public-grid">
-        <article>
-          <span>01</span>
-          <h2>Create account</h2>
-          <p>Register with Supabase Auth before accessing protected packet workflows.</p>
-        </article>
-        <article>
-          <span>02</span>
-          <h2>Sign in</h2>
-          <p>Use a verified account session to enter the client workspace.</p>
-        </article>
-        <article>
-          <span>03</span>
-          <h2>Work securely</h2>
-          <p>Prepare source data, templates, outputs, and filing records from one protected workspace.</p>
-        </article>
+        <div className="saas-public-panel-grid">
+          <article>
+            <span>01</span>
+            <h2>Authenticate</h2>
+            <p>Access starts with a protected Supabase account.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h2>Workspace</h2>
+            <p>Continue directly into the native packet workflow.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h2>Deliver</h2>
+            <p>Review outputs and track filing progress cleanly.</p>
+          </article>
+        </div>
       </section>
     </main>
   );
