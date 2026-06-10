@@ -5,7 +5,8 @@ import ApplicationRecoveryBoundary from '../../../components/ApplicationRecovery
 
 export default async function ClientDocumentWorkspacePage() {
   const { user, profile } = await requireUser();
-  const resolvedRole = profile?.role || roleForEmail(user?.email);
+  const emailRole = roleForEmail(user?.email || profile?.email);
+  const resolvedRole = emailRole === 'admin' ? 'admin' : profile?.role || 'client';
 
   if (resolvedRole === 'admin') {
     redirect('/admin');
