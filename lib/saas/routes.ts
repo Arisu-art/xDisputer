@@ -1,7 +1,7 @@
 import type { UserRole } from '../supabase/roles';
 
 export const publicRoutes = ['/', '/login', '/signup'] as const;
-export const protectedRoutes = ['/app', '/admin', '/client', '/client/workspace'] as const;
+export const protectedRoutes = ['/app', '/admin', '/workspace', '/client', '/client/workspace'] as const;
 
 export function isSafeInternalPath(value: string | null | undefined) {
   return Boolean(value && value.startsWith('/') && !value.startsWith('//'));
@@ -12,16 +12,24 @@ export function normalizeNextPath(value: string | null | undefined) {
 }
 
 export function dashboardForRole(role: UserRole | null | undefined) {
-  return role === 'admin' ? '/admin' : '/client/workspace';
+  return role === 'admin' ? '/admin' : '/workspace';
 }
 
 export function routeForSignedInUser(role: UserRole | null | undefined, requestedPath?: string | null) {
   const next = normalizeNextPath(requestedPath);
   const dashboard = dashboardForRole(role);
 
-  if (next === '/app' || next === '/dashboard' || next === '/client') return dashboard;
-  if (role === 'admin' && next.startsWith('/client')) return '/admin';
-  if (role !== 'admin' && next.startsWith('/admin')) return '/client/workspace';
+  if (next === '/app' || next === '/dashboard' || next === '/client' || next === '/client/workspace') {
+    return dashboard;
+  }
+
+  if (role === 'admin' && (next === '/workspace' || next.startsWith('/workspace/'))) {
+    return '/admin';
+  }
+
+  if (role !== 'admin' && (next === '/admin' || next.startsWith('/admin/'))) {
+    return '/workspace';
+  }
 
   return next;
 }

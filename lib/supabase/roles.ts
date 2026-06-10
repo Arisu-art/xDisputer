@@ -21,7 +21,10 @@ export function roleForEmail(email: string | null | undefined): UserRole {
   return email && bootstrapAdminEmails.has(email.toLowerCase()) ? 'admin' : 'client';
 }
 
-export async function ensureUserProfile(supabase: SupabaseServerClient, user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }) {
+export async function ensureUserProfile(
+  supabase: SupabaseServerClient,
+  user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }
+) {
   const fullName = typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : '';
   const expectedRole = roleForEmail(user.email);
 
@@ -44,6 +47,7 @@ export async function ensureUserProfile(supabase: SupabaseServerClient, user: { 
         .eq('id', user.id)
         .select('id,email,full_name,role,created_at,updated_at')
         .single();
+
       return updated as UserProfile | null;
     }
 
