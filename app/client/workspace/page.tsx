@@ -4,7 +4,7 @@ import LetterGeneratorWorkspaceV2 from '../../../components/LetterGeneratorWorks
 import ApplicationRecoveryBoundary from '../../../components/ApplicationRecoveryBoundary';
 
 export default async function ClientDocumentWorkspacePage() {
-  const { profile } = await requireUser();
+  const { user, profile } = await requireUser();
 
   if (profile?.role === 'admin') {
     redirect('/admin');
@@ -12,7 +12,7 @@ export default async function ClientDocumentWorkspacePage() {
 
   return (
     <ApplicationRecoveryBoundary>
-      <LetterGeneratorWorkspaceV2 />
+      <LetterGeneratorWorkspaceV2 accountEmail={profile?.email || user?.email || null} accountRole={profile?.role || 'client'} />
     </ApplicationRecoveryBoundary>
   );
 }
