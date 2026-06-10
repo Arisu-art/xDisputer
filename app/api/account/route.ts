@@ -10,6 +10,7 @@ export async function GET() {
       user: null,
       profile: null,
       role: null,
+      isMaster: false,
       isAdmin: false,
       isClient: false,
       dashboard: null
@@ -24,6 +25,7 @@ export async function GET() {
     },
     profile: session.profile,
     role: session.role,
+    isMaster: session.isMaster,
     isAdmin: session.isAdmin,
     isClient: session.isClient,
     dashboard: session.dashboardPath
