@@ -54,10 +54,11 @@ import './saas-auth-center.css';
 import './saas-portal.css';
 import './saas-public.css';
 import './obsidian-console.css';
+import './xdisputer-shell-compact.css';
 
 export const metadata = {
-  title: 'Obsidian SaaS Console',
-  description: 'Premium secure document operations SaaS'
+  title: 'xDisputer',
+  description: 'Secure document operations SaaS'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
