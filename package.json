@@ -1,0 +1,33 @@
+{
+  "name": "letter-generator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "ai:code": "node scripts/ai-coding-assistant.js",
+    "ai:code:interactive": "node scripts/ai-coding-assistant.js --interactive",
+    "ai:code:help": "node scripts/ai-coding-assistant.js --help",
+    "ai:process": "node scripts/ai-code-processor.js",
+    "ai:apply": "node scripts/apply-changes.js"
+  },
+  "dependencies": {
+    "docx-preview": "^0.3.6",
+    "docxtemplater": "^3.68.7",
+    "html2canvas": "^1.4.1",
+    "jszip": "^3.10.1",
+    "next": "^16.2.6",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.4.296",
+    "pizzip": "^3.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0"
+  }
+}
