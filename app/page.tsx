@@ -1,10 +1,5 @@
-import LetterGeneratorWorkspaceV2 from '../components/LetterGeneratorWorkspaceV2';
-import ApplicationRecoveryBoundary from '../components/ApplicationRecoveryBoundary';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return (
-    <ApplicationRecoveryBoundary>
-      <LetterGeneratorWorkspaceV2 />
-    </ApplicationRecoveryBoundary>
-  );
+  redirect('/login');
 }
