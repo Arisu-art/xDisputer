@@ -31,18 +31,18 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export default function ObsidianAppShell({ role, email, title, subtitle, children }: ObsidianAppShellProps) {
+export default function ObsidianAppShell({ role, email, title, children }: ObsidianAppShellProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem('obsidian-sidebar-collapsed');
+    const stored = window.localStorage.getItem('xdisputer-sidebar-collapsed');
     if (stored) setCollapsed(stored === 'true');
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem('obsidian-sidebar-collapsed', String(collapsed));
+    window.localStorage.setItem('xdisputer-sidebar-collapsed', String(collapsed));
   }, [collapsed]);
 
   useEffect(() => {
@@ -51,15 +51,14 @@ export default function ObsidianAppShell({ role, email, title, subtitle, childre
 
   const visibleNavItems = useMemo(() => navItems.filter((item) => item.roles.includes(role)), [role]);
   const initials = (email || role).slice(0, 2).toUpperCase();
-  const today = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date());
 
   return (
     <main className="obsidian-shell" data-sidebar-collapsed={collapsed ? 'true' : 'false'}>
       <aside className="obsidian-sidebar" aria-label="Primary navigation">
         <div className="obsidian-sidebar-brand">
-          <Link href="/" className="obsidian-brand-mark" aria-label="Obsidian SaaS Console home">
+          <Link href="/" className="obsidian-brand-mark" aria-label="xDisputer home">
             <span>xD</span>
-            <strong>Obsidian</strong>
+            <strong>xDisputer</strong>
           </Link>
           <button
             type="button"
@@ -112,9 +111,9 @@ export default function ObsidianAppShell({ role, email, title, subtitle, childre
 
       <div className={`obsidian-mobile-drawer${mobileOpen ? ' open' : ''}`} aria-hidden={!mobileOpen}>
         <div className="obsidian-sidebar-brand">
-          <Link href="/" className="obsidian-brand-mark" aria-label="Obsidian SaaS Console home">
+          <Link href="/" className="obsidian-brand-mark" aria-label="xDisputer home">
             <span>xD</span>
-            <strong>Obsidian</strong>
+            <strong>xDisputer</strong>
           </Link>
           <button type="button" className="obsidian-icon-button" aria-label="Close menu" onClick={() => setMobileOpen(false)}>
             ×
@@ -134,24 +133,15 @@ export default function ObsidianAppShell({ role, email, title, subtitle, childre
       </div>
 
       <section className="obsidian-main">
-        <header className="obsidian-topbar">
+        <header className="obsidian-topbar compact">
           <div className="obsidian-title-group">
             <button type="button" className="obsidian-mobile-menu" aria-label="Open navigation menu" onClick={() => setMobileOpen(true)}>
               ☰
             </button>
-            <div>
-              <p>Obsidian SaaS Console / {role}</p>
-              <h1>{title}</h1>
-            </div>
+            <h1>{title}</h1>
           </div>
 
           <div className="obsidian-topbar-actions">
-            <label className="obsidian-command" aria-label="Search command bar">
-              <span aria-hidden="true">⌘</span>
-              <input type="search" placeholder="Search workspace…" />
-            </label>
-            <span className="obsidian-date-chip">{today}</span>
-            <button type="button" className="obsidian-icon-button" aria-label="Notifications">○</button>
             <form action="/auth/sign-out" method="post">
               <button type="submit" className="obsidian-signout-button">Sign out</button>
             </form>
@@ -159,14 +149,7 @@ export default function ObsidianAppShell({ role, email, title, subtitle, childre
           </div>
         </header>
 
-        <div className="obsidian-page-wrap">
-          <section className="obsidian-page-hero">
-            <div>
-              <p className="obsidian-kicker">{role === 'admin' ? 'SaaS administration' : 'Secure client workspace'}</p>
-              <h2>{title}</h2>
-              <p>{subtitle}</p>
-            </div>
-          </section>
+        <div className="obsidian-page-wrap compact">
           <div className="obsidian-page-motion">{children}</div>
         </div>
       </section>
