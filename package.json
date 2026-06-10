@@ -10,7 +10,9 @@
     "ai:code:interactive": "node scripts/ai-coding-assistant.js --interactive",
     "ai:code:help": "node scripts/ai-coding-assistant.js --help",
     "ai:process": "node scripts/ai-code-processor.js",
-    "ai:apply": "node scripts/apply-changes.js"
+    "ai:apply": "node scripts/apply-changes.js",
+    "typecheck": "tsc --noEmit",
+    "quality:check": "npm run typecheck && npm run build"
   },
   "dependencies": {
     "docx-preview": "^0.3.6",
