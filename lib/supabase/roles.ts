@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from './server';
 import { dashboardForRole } from '../saas/routes';
 
-export type UserRole = 'admin' | 'client';
+export type UserRole = 'master' | 'admin' | 'client';
 
 export type UserProfile = {
   id: string;
@@ -15,10 +15,22 @@ export type UserProfile = {
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
-const bootstrapAdminEmails = new Set(['mycoquibuyen2002@gmail.com']);
+const bootstrapMasterEmails = new Set(['mycoquibuyen2002@gmail.com']);
+const bootstrapAdminEmails = new Set<string>([]);
 
 export function roleForEmail(email: string | null | undefined): UserRole {
-  return email && bootstrapAdminEmails.has(email.toLowerCase()) ? 'admin' : 'client';
+  const normalizedEmail = email?.toLowerCase();
+
+  if (normalizedEmail && bootstrapMasterEmails.has(normalizedEmail)) return 'master';
+  if (normalizedEmail && bootstrapAdminEmails.has(normalizedEmail)) return 'admin';
+
+  return 'client';
+}
+
+export function canAccessRole(currentRole: UserRole | null | undefined, requiredRole: UserRole) {
+  if (currentRole === 'master') return true;
+  if (currentRole === 'admin') return requiredRole === 'admin' || requiredRole === 'client';
+  return currentRole === requiredRole;
 }
 
 export async function ensureUserProfile(
@@ -38,7 +50,7 @@ export async function ensureUserProfile(
     const patch: Partial<Pick<UserProfile, 'email' | 'role'>> = {};
 
     if (!existing.email && user.email) patch.email = user.email;
-    if (expectedRole === 'admin' && existing.role !== 'admin') patch.role = 'admin';
+    if (expectedRole !== 'client' && existing.role !== expectedRole) patch.role = expectedRole;
 
     if (Object.keys(patch).length) {
       const { data: updated } = await supabase
@@ -98,7 +110,7 @@ export async function requireUser() {
 export async function requireRole(role: UserRole) {
   const value = await requireUser();
 
-  if (value.profile?.role !== role) {
+  if (!canAccessRole(value.profile?.role, role)) {
     redirect(dashboardForRole(value.profile?.role));
   }
 
