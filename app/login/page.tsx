@@ -6,7 +6,7 @@ export default async function LoginPage({
   searchParams?: Promise<{ next?: string; error?: string; message?: string }>;
 }) {
   const params = await searchParams;
-  const next = params?.next || '/client';
+  const next = params?.next || '/dashboard';
   const error = params?.error;
   const message = params?.message;
 
