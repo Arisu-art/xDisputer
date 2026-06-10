@@ -2,10 +2,12 @@ import Link from 'next/link';
 import { requireRole } from '../../lib/supabase/roles';
 import { getStaticIntegrationHealth } from '../../lib/saas/integration-health';
 import SaasPortalShell from '../../components/SaasPortalShell';
+import { ObsidianPanel, ObsidianStatCard, ObsidianStatusBadge } from '../../components/ObsidianDashboardPrimitives';
 
 export default async function AdminPage() {
   const { user, profile } = await requireRole('admin');
   const integrations = getStaticIntegrationHealth();
+  const connectedCount = integrations.filter((item) => item.status === 'connected').length;
 
   return (
     <SaasPortalShell
@@ -14,49 +16,44 @@ export default async function AdminPage() {
       title="Admin command center"
       subtitle="Manage SaaS users, monitor client workspaces, and operate the document platform from one protected console."
     >
-      <section className="saas-admin-grid">
-        <article className="saas-admin-card primary">
-          <p>Users</p>
-          <h2>Account control</h2>
-          <span>Client and administrator role management is backed by Supabase profiles.</span>
-        </article>
-        <article className="saas-admin-card">
-          <p>Cases</p>
-          <h2>Client operations</h2>
-          <span>Review workspace activity and packet readiness as the database layer expands.</span>
-        </article>
-        <article className="saas-admin-card">
-          <p>System</p>
-          <h2>Platform health</h2>
-          <span>Vercel, Supabase Auth, middleware, and protected routing are active.</span>
-        </article>
-      </section>
+      <div className="obsidian-dashboard-grid">
+        <ObsidianStatCard label="Profiles" value="Role-based" trend="Supabase" />
+        <ObsidianStatCard label="Integrations" value={`${connectedCount}/${integrations.length}`} trend="Checked" />
+        <ObsidianStatCard label="Routing" value="Protected" trend="Middleware" />
 
-      <section className="saas-admin-panel">
-        <div>
-          <p className="saas-portal-eyebrow">Workspace access</p>
-          <h2>Open client workflow</h2>
-          <p>Admins stay in the console by default. The document engine lives under the client workspace route for controlled testing.</p>
-        </div>
-        <Link href="/client/workspace">Open workspace</Link>
-      </section>
+        <ObsidianPanel title="Platform operations" eyebrow="Admin control" className="obsidian-panel-large">
+          <div className="obsidian-action-panel">
+            <div>
+              <h4>Operate the SaaS layer without touching the document engine.</h4>
+              <p>Auth, profiles, role routing, and protected workspace access are handled before users reach packet generation.</p>
+            </div>
+            <Link href="/client/workspace" className="obsidian-primary-link">Open workspace</Link>
+          </div>
+        </ObsidianPanel>
 
-      <section className="saas-admin-panel stacked">
-        <div>
-          <p className="saas-portal-eyebrow">Connected platform</p>
-          <h2>Integration health</h2>
-          <p>These checks show whether the runtime has the required Supabase, Vercel, and GitHub wiring for a SaaS deployment.</p>
-        </div>
-        <div className="saas-integration-list">
-          {integrations.map((item) => (
-            <article key={item.id} className={`saas-integration-item ${item.status}`}>
-              <span>{item.status}</span>
-              <strong>{item.label}</strong>
-              <p>{item.detail}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+        <ObsidianPanel title="Integration health" eyebrow="Connected platform">
+          <div className="obsidian-list-stack">
+            {integrations.map((item) => (
+              <article key={item.id} className="obsidian-list-row">
+                <div>
+                  <strong>{item.label}</strong>
+                  <p>{item.detail}</p>
+                </div>
+                <ObsidianStatusBadge status={item.status} />
+              </article>
+            ))}
+          </div>
+        </ObsidianPanel>
+
+        <ObsidianPanel title="SaaS build sequence" eyebrow="System map">
+          <div className="obsidian-timeline">
+            <div><span /> <p>Public landing page</p></div>
+            <div><span /> <p>Supabase Auth and profiles</p></div>
+            <div><span /> <p>Role-aware dashboards</p></div>
+            <div><span /> <p>Database-backed cases and filings</p></div>
+          </div>
+        </ObsidianPanel>
+      </div>
     </SaasPortalShell>
   );
 }
