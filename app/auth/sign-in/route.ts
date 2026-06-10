@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createSupabaseServerClient } from '../../../lib/supabase/server';
 import { appRedirect } from '../../../lib/supabase/origin';
-import { ensureUserProfile } from '../../../lib/supabase/roles';
+import { ensureUserProfile, roleForEmail } from '../../../lib/supabase/roles';
 import { normalizeNextPath, routeForSignedInUser } from '../../../lib/saas/routes';
 
 function friendlySignInError(message: string) {
@@ -34,6 +34,8 @@ export async function POST(request: NextRequest) {
 
   const { data: userResult } = await supabase.auth.getUser();
   const profile = userResult.user ? await ensureUserProfile(supabase, userResult.user) : null;
+  const emailRole = roleForEmail(userResult.user?.email || profile?.email);
+  const resolvedRole = emailRole !== 'client' ? emailRole : profile?.role || 'client';
 
-  return NextResponse.redirect(appRedirect(request, routeForSignedInUser(profile?.role, next)), 303);
+  return NextResponse.redirect(appRedirect(request, routeForSignedInUser(resolvedRole, next)), 303);
 }
