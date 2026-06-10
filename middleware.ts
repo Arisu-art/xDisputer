@@ -3,10 +3,10 @@ import { createServerClient } from '@supabase/ssr';
 import { isProtectedPath, routeForSignedInUser } from './lib/saas/routes';
 import type { UserRole } from './lib/supabase/roles';
 
-const bootstrapAdminEmails = new Set(['mycoquibuyen2002@gmail.com']);
+const bootstrapMasterEmails = new Set(['mycoquibuyen2002@gmail.com']);
 
 function roleFromEmail(email: string | null | undefined): UserRole | null {
-  return email && bootstrapAdminEmails.has(email.toLowerCase()) ? 'admin' : null;
+  return email && bootstrapMasterEmails.has(email.toLowerCase()) ? 'master' : null;
 }
 
 function redirectTo(request: NextRequest, pathname: string) {
@@ -81,5 +81,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/app/:path*', '/admin/:path*', '/workspace/:path*', '/client/:path*']
+  matcher: ['/app/:path*', '/master/:path*', '/admin/:path*', '/workspace/:path*', '/client/:path*']
 };
