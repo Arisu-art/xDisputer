@@ -7,6 +7,13 @@ function isProtected(pathname: string) {
   return protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
+function redirectTo(request: NextRequest, pathname: string) {
+  const redirectUrl = request.nextUrl.clone();
+  redirectUrl.pathname = pathname;
+  redirectUrl.search = '';
+  return NextResponse.redirect(redirectUrl);
+}
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -53,18 +60,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && pathname.startsWith('/admin')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+  if (!user) return response;
 
-    if (profile?.role !== 'admin') {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = '/client';
-      return NextResponse.redirect(redirectUrl);
-    }
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role === 'admin' && pathname.startsWith('/client')) {
+    return redirectTo(request, '/admin');
+  }
+
+  if (profile?.role !== 'admin' && pathname.startsWith('/admin')) {
+    return redirectTo(request, '/client');
   }
 
   return response;
