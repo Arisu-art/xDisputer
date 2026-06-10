@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
   const email = String(formData.get('email') || '').trim();
   const password = String(formData.get('password') || '');
-  const next = normalizeNextPath(String(formData.get('next') || '/dashboard'));
+  const next = normalizeNextPath(String(formData.get('next') || '/app'));
 
   if (!email || !password) {
     return NextResponse.redirect(appRedirect(request, '/login', { error: 'Email and password are required.', next }), 303);
