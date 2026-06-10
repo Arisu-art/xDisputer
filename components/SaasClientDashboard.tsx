@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { IntegrationHealthItem } from '../lib/saas/integration-health';
+import { ObsidianPanel, ObsidianStatCard, ObsidianStatusBadge } from './ObsidianDashboardPrimitives';
 
 export type SaasClientDashboardProps = {
   email?: string | null;
@@ -7,39 +8,44 @@ export type SaasClientDashboardProps = {
 };
 
 export default function SaasClientDashboard({ email, integrations }: SaasClientDashboardProps) {
+  const connectedCount = integrations.filter((item) => item.status === 'connected').length;
+
   return (
-    <div className="saas-home-grid">
-      <section className="saas-home-card saas-home-card-main">
-        <p className="saas-portal-eyebrow">Client portal</p>
-        <h2>Start from your SaaS dashboard</h2>
-        <p>
-          Your account is protected by Supabase. Use the workspace only when you are ready to prepare a document packet.
-        </p>
-        <div className="saas-home-actions">
-          <Link href="/client/workspace">Open document workspace</Link>
-          <Link href="/client/settings">Account settings</Link>
+    <div className="obsidian-dashboard-grid">
+      <ObsidianStatCard label="Account" value={email || 'Client'} trend="Active" />
+      <ObsidianStatCard label="Platform" value={`${connectedCount}/${integrations.length}`} trend="Connected" />
+      <ObsidianStatCard label="Workspace" value="Ready" trend="Protected" />
+
+      <ObsidianPanel title="Document operations" eyebrow="Primary workflow" className="obsidian-panel-large">
+        <div className="obsidian-action-panel">
+          <div>
+            <h4>Prepare packets inside a protected SaaS workspace.</h4>
+            <p>Your account is connected to Supabase Auth. Launch the document engine only when you are ready to work.</p>
+          </div>
+          <Link href="/client/workspace" className="obsidian-primary-link">Open document workspace</Link>
         </div>
-      </section>
+      </ObsidianPanel>
 
-      <section className="saas-home-card">
-        <p className="saas-portal-eyebrow">Signed in</p>
-        <h2>{email || 'Client account'}</h2>
-        <p>Client users can prepare packets, manage local workspace assets, and continue filing workflows.</p>
-      </section>
-
-      <section className="saas-home-card saas-home-wide">
-        <p className="saas-portal-eyebrow">Connected platform</p>
-        <h2>Integration status</h2>
-        <div className="saas-integration-list">
+      <ObsidianPanel title="Integration status" eyebrow="Connected platform">
+        <div className="obsidian-list-stack">
           {integrations.map((item) => (
-            <article key={item.id} className={`saas-integration-item ${item.status}`}>
-              <span>{item.status}</span>
-              <strong>{item.label}</strong>
-              <p>{item.detail}</p>
+            <article key={item.id} className="obsidian-list-row">
+              <div>
+                <strong>{item.label}</strong>
+                <p>{item.detail}</p>
+              </div>
+              <ObsidianStatusBadge status={item.status} />
             </article>
           ))}
         </div>
-      </section>
+      </ObsidianPanel>
+
+      <ObsidianPanel title="Recent activity" eyebrow="Audit-ready workflow">
+        <div className="obsidian-empty-state">
+          <strong>No recent packet activity yet</strong>
+          <p>Activity will appear here once database-backed cases, filings, and workspace runs are created.</p>
+        </div>
+      </ObsidianPanel>
     </div>
   );
 }
