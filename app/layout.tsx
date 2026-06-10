@@ -52,6 +52,7 @@ import './supporting-slot-balance.css';
 import './evidence-layout-final-polish.css';
 import './saas-auth-center.css';
 import './saas-portal.css';
+import './saas-public.css';
 
 export const metadata = {
   title: 'xDisputer',
