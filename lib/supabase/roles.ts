@@ -3,12 +3,14 @@ import { createSupabaseServerClient } from './server';
 import { dashboardForRole } from '../saas/routes';
 
 export type UserRole = 'master' | 'admin' | 'client';
+export type AccountStatus = 'active' | 'paused' | 'disabled';
 
 export type UserProfile = {
   id: string;
   email: string | null;
   full_name: string | null;
   role: UserRole;
+  account_status: AccountStatus | null;
   created_at: string;
   updated_at: string;
 };
@@ -27,6 +29,10 @@ export function roleForEmail(email: string | null | undefined): UserRole {
   return 'client';
 }
 
+export function accountStatus(profile: UserProfile | null | undefined): AccountStatus {
+  return profile?.account_status || 'active';
+}
+
 export function canAccessRole(currentRole: UserRole | null | undefined, requiredRole: UserRole) {
   if (currentRole === 'master') return true;
   if (currentRole === 'admin') return requiredRole === 'admin' || requiredRole === 'client';
@@ -42,22 +48,23 @@ export async function ensureUserProfile(
 
   const { data: existing } = await supabase
     .from('profiles')
-    .select('id,email,full_name,role,created_at,updated_at')
+    .select('id,email,full_name,role,account_status,created_at,updated_at')
     .eq('id', user.id)
     .maybeSingle();
 
   if (existing) {
-    const patch: Partial<Pick<UserProfile, 'email' | 'role'>> = {};
+    const patch: Partial<Pick<UserProfile, 'email' | 'role' | 'account_status'>> = {};
 
     if (!existing.email && user.email) patch.email = user.email;
     if (expectedRole !== 'client' && existing.role !== expectedRole) patch.role = expectedRole;
+    if (!existing.account_status) patch.account_status = 'active';
 
     if (Object.keys(patch).length) {
       const { data: updated } = await supabase
         .from('profiles')
         .update(patch)
         .eq('id', user.id)
-        .select('id,email,full_name,role,created_at,updated_at')
+        .select('id,email,full_name,role,account_status,created_at,updated_at')
         .single();
 
       return updated as UserProfile | null;
@@ -72,9 +79,10 @@ export async function ensureUserProfile(
       id: user.id,
       email: user.email || null,
       full_name: fullName,
-      role: expectedRole
+      role: expectedRole,
+      account_status: 'active'
     })
-    .select('id,email,full_name,role,created_at,updated_at')
+    .select('id,email,full_name,role,account_status,created_at,updated_at')
     .single();
 
   return created as UserProfile | null;
@@ -102,6 +110,10 @@ export async function requireUser() {
 
   if (!value.user) {
     redirect('/login');
+  }
+
+  if (accountStatus(value.profile) !== 'active') {
+    redirect('/login?error=Account access is paused or disabled. Contact your administrator.');
   }
 
   return value;
