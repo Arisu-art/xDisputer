@@ -1,7 +1,8 @@
+import { activateClientAccount, disableClientAccount, pauseClientAccount } from './actions';
 import { requireRole } from '../../lib/saas/session';
 import type { UserProfile } from '../../lib/supabase/roles';
 
-type AdminProfileRow = Pick<UserProfile, 'id' | 'email' | 'full_name' | 'role' | 'created_at' | 'updated_at'>;
+type AdminProfileRow = Pick<UserProfile, 'id' | 'email' | 'full_name' | 'role' | 'account_status' | 'created_at' | 'updated_at'>;
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '—';
@@ -12,18 +13,29 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
 }
 
+function ClientActionButton({ profileId, action, label }: { profileId: string; action: (formData: FormData) => Promise<void>; label: string }) {
+  return (
+    <form action={action}>
+      <input type="hidden" name="profileId" value={profileId} />
+      <button type="submit" className="admin-action-button">{label}</button>
+    </form>
+  );
+}
+
 export default async function AdminPage() {
   const { user, profile, supabase } = await requireRole('admin');
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,email,full_name,role,created_at,updated_at')
+    .select('id,email,full_name,role,account_status,created_at,updated_at')
+    .in('role', ['client'])
     .order('created_at', { ascending: false });
 
   const profiles: AdminProfileRow[] = Array.isArray(data) ? data : [];
-  const totalUsers = profiles.length;
-  const adminUsers = profiles.filter((item) => item.role === 'admin').length;
-  const clientUsers = profiles.filter((item) => item.role === 'client').length;
+  const totalClients = profiles.length;
+  const activeClients = profiles.filter((item) => (item.account_status || 'active') === 'active').length;
+  const pausedClients = profiles.filter((item) => item.account_status === 'paused').length;
+  const disabledClients = profiles.filter((item) => item.account_status === 'disabled').length;
   const queryError = error?.message || null;
 
   return (
@@ -38,8 +50,11 @@ export default async function AdminPage() {
         </div>
 
         <nav aria-label="Admin navigation">
-          <a className="active" href="/admin">Users</a>
-          <a href="/app">Workspace router</a>
+          <a className="active" href="/admin">Client control</a>
+          <a href="#clients">Manage clients</a>
+          <a href="#health">Health summary</a>
+          <a href="#operations">Operations</a>
+          <a href="/app">Role router</a>
         </nav>
 
         <div className="admin-monitor-account">
@@ -55,70 +70,87 @@ export default async function AdminPage() {
         <header className="admin-monitor-header">
           <div>
             <p>Administration</p>
-            <h1>User monitoring</h1>
-            <span>Monitor registered profiles, roles, and recent account activity.</span>
+            <h1>Client operations.</h1>
+            <span>Manage client access, monitor client status, and route operational work from one admin console.</span>
           </div>
         </header>
 
-        <section className="admin-monitor-stats" aria-label="User statistics">
-          <article>
-            <p>Total users</p>
-            <strong>{totalUsers}</strong>
-          </article>
-          <article>
-            <p>Admins</p>
-            <strong>{adminUsers}</strong>
-          </article>
-          <article>
-            <p>Clients</p>
-            <strong>{clientUsers}</strong>
-          </article>
+        <section className="admin-monitor-stats" aria-label="Client statistics">
+          <article><p>Total clients</p><strong>{totalClients}</strong></article>
+          <article><p>Active</p><strong>{activeClients}</strong></article>
+          <article><p>Paused</p><strong>{pausedClients}</strong></article>
+          <article><p>Disabled</p><strong>{disabledClients}</strong></article>
         </section>
 
-        <section className="admin-monitor-card">
+        <section className="admin-monitor-card" id="clients">
           <div className="admin-monitor-card-header">
-            <div>
-              <p>Supabase profiles</p>
-              <h2>Users</h2>
-            </div>
-            <span>{totalUsers} records</span>
+            <div><p>Client access</p><h2>Manage client accounts</h2></div>
+            <span>{totalClients} clients</span>
           </div>
 
           {queryError ? (
-            <div className="admin-monitor-empty">
-              Could not load profile records: {queryError}
-            </div>
+            <div className="admin-monitor-empty">Could not load client records: {queryError}</div>
           ) : (
             <div className="admin-monitor-table-wrap">
               <table className="admin-monitor-table">
                 <thead>
                   <tr>
-                    <th>User</th>
-                    <th>Role</th>
+                    <th>Client</th>
+                    <th>Status</th>
                     <th>Created</th>
                     <th>Updated</th>
+                    <th>Controls</th>
                   </tr>
                 </thead>
                 <tbody>
                   {profiles.length ? profiles.map((item) => (
                     <tr key={item.id}>
-                      <td>
-                        <strong>{item.full_name || item.email || 'Unnamed user'}</strong>
-                        <small>{item.email || item.id}</small>
-                      </td>
-                      <td><span className={`admin-role-badge ${item.role}`}>{item.role}</span></td>
+                      <td><strong>{item.full_name || item.email || 'Unnamed client'}</strong><small>{item.email || item.id}</small></td>
+                      <td><span className={`admin-status-badge ${item.account_status || 'active'}`}>{item.account_status || 'active'}</span></td>
                       <td>{formatDate(item.created_at)}</td>
                       <td>{formatDate(item.updated_at)}</td>
+                      <td>
+                        <div className="admin-actions-row">
+                          {(item.account_status === 'paused' || item.account_status === 'disabled') ? (
+                            <ClientActionButton profileId={item.id} action={activateClientAccount} label="Activate" />
+                          ) : (
+                            <ClientActionButton profileId={item.id} action={pauseClientAccount} label="Pause" />
+                          )}
+                          <ClientActionButton profileId={item.id} action={disableClientAccount} label="Disable" />
+                        </div>
+                      </td>
                     </tr>
                   )) : (
-                    <tr>
-                      <td colSpan={4} className="admin-monitor-empty">No profile records found yet.</td>
-                    </tr>
+                    <tr><td colSpan={5} className="admin-monitor-empty">No client records found yet.</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
           )}
+        </section>
+
+        <section className="admin-power-grid" id="health">
+          <article className="admin-monitor-card">
+            <div className="admin-monitor-card-header">
+              <div><p>Power feature 01</p><h2>Client health summary</h2></div>
+            </div>
+            <div className="admin-power-list">
+              <span>Active ratio: {totalClients ? Math.round((activeClients / totalClients) * 100) : 0}%</span>
+              <span>Needs attention: {pausedClients + disabledClients}</span>
+              <span>Latest records are sorted by creation date.</span>
+            </div>
+          </article>
+
+          <article className="admin-monitor-card" id="operations">
+            <div className="admin-monitor-card-header">
+              <div><p>Power feature 02</p><h2>Operational shortcuts</h2></div>
+            </div>
+            <div className="admin-power-links">
+              <a href="/app">Open role router</a>
+              <a href="/workspace">Preview client workspace guard</a>
+              <a href="/api/account">Inspect current account JSON</a>
+            </div>
+          </article>
         </section>
       </section>
     </main>
