@@ -56,6 +56,7 @@ import './saas-public.css';
 import './obsidian-console.css';
 import './xdisputer-shell-compact.css';
 import './workspace-account-controls.css';
+import './admin-monitor.css';
 
 export const metadata = {
   title: 'xDisputer',
