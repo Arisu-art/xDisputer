@@ -36,8 +36,8 @@ class ChangeApplier {
             console.log(`✅ ${file.description}`);
           }
         } catch (error) {
-          failedChanges.push(`${file.description}: ${error.message}`);
-          console.error(`❌ ${file.description}:`, error.message);
+          failedChanges.push(`${file.description || file.type || 'Unknown change'}: ${error.message}`);
+          console.error(`❌ ${file.description || file.type || 'Unknown change'}:`, error.message);
         }
       }
 
@@ -60,6 +60,21 @@ class ChangeApplier {
    * Apply a single change
    */
   applyChange(change) {
+    if (!change || typeof change !== 'object') {
+      console.warn('⚠️  Invalid change entry skipped.');
+      return false;
+    }
+
+    if (change.type === 'FIX' || change.type === 'SUGGESTION') {
+      console.log(`📝 Manual review needed: ${change.description || change.notes || 'No description provided.'}`);
+      return false;
+    }
+
+    if (!change.file || typeof change.file !== 'string') {
+      console.warn(`⚠️  Change skipped because it has no target file: ${change.description || change.type || 'Unknown change'}`);
+      return false;
+    }
+
     const filePath = path.join(this.projectRoot, change.file);
 
     // Create directories if needed
@@ -96,12 +111,6 @@ class ChangeApplier {
           fs.writeFileSync(filePath, change.content, 'utf-8');
         }
         return true;
-
-      case 'FIX':
-      case 'SUGGESTION':
-        // These are for manual review - not auto-applied
-        console.log(`📝 Manual review needed: ${change.description}`);
-        return false;
 
       default:
         console.warn(`⚠️  Unknown change type: ${change.type}`);
