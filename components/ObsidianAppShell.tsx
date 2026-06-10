@@ -22,7 +22,6 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: 'Admin', href: '/admin', icon: '◇', roles: ['admin'] },
-  { label: 'Client Portal', href: '/client', icon: '◌', roles: ['client'] },
   { label: 'Workspace', href: '/client/workspace', icon: '▣', roles: ['admin', 'client'] }
 ];
 
@@ -51,12 +50,13 @@ export default function ObsidianAppShell({ role, email, title, children }: Obsid
 
   const visibleNavItems = useMemo(() => navItems.filter((item) => item.roles.includes(role)), [role]);
   const initials = (email || role).slice(0, 2).toUpperCase();
+  const homeHref = role === 'admin' ? '/admin' : '/client/workspace';
 
   return (
     <main className="obsidian-shell" data-sidebar-collapsed={collapsed ? 'true' : 'false'}>
       <aside className="obsidian-sidebar" aria-label="Primary navigation">
         <div className="obsidian-sidebar-brand">
-          <Link href="/" className="obsidian-brand-mark" aria-label="xDisputer home">
+          <Link href={homeHref} className="obsidian-brand-mark" aria-label="xDisputer home">
             <span>xD</span>
             <strong>xDisputer</strong>
           </Link>
@@ -73,7 +73,7 @@ export default function ObsidianAppShell({ role, email, title, children }: Obsid
 
         <nav className="obsidian-sidebar-nav" aria-label="Application pages">
           {visibleNavItems.map((item) => {
-            const active = isActive(pathname, item.href);
+            const active = isActive(pathname, item.href) || (item.href === '/client/workspace' && pathname === '/client');
             return (
               <Link
                 key={item.href}
@@ -111,7 +111,7 @@ export default function ObsidianAppShell({ role, email, title, children }: Obsid
 
       <div className={`obsidian-mobile-drawer${mobileOpen ? ' open' : ''}`} aria-hidden={!mobileOpen}>
         <div className="obsidian-sidebar-brand">
-          <Link href="/" className="obsidian-brand-mark" aria-label="xDisputer home">
+          <Link href={homeHref} className="obsidian-brand-mark" aria-label="xDisputer home">
             <span>xD</span>
             <strong>xDisputer</strong>
           </Link>
@@ -121,7 +121,7 @@ export default function ObsidianAppShell({ role, email, title, children }: Obsid
         </div>
         <nav className="obsidian-sidebar-nav" aria-label="Mobile application pages">
           {visibleNavItems.map((item) => {
-            const active = isActive(pathname, item.href);
+            const active = isActive(pathname, item.href) || (item.href === '/client/workspace' && pathname === '/client');
             return (
               <Link key={item.href} href={item.href} className={`obsidian-nav-item${active ? ' active' : ''}`} aria-current={active ? 'page' : undefined}>
                 <span className="obsidian-nav-icon" aria-hidden="true">{item.icon}</span>
