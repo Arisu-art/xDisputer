@@ -1,61 +1,75 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { createSupabaseServerClient } from '../../lib/supabase/server';
 
-export default function SignupPage() {
-  async function signUp(formData: FormData) {
-    'use server';
-
-    const fullName = String(formData.get('fullName') || '').trim();
-    const email = String(formData.get('email') || '').trim();
-    const password = String(formData.get('password') || '');
-
-    const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName
-        },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/auth/callback`
-      }
-    });
-
-    if (error) {
-      redirect(`/signup?error=${encodeURIComponent(error.message)}`);
-    }
-
-    redirect('/login');
-  }
+export default async function SignupPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ error?: string; message?: string }>;
+}) {
+  const params = await searchParams;
+  const error = params?.error;
+  const message = params?.message;
 
   return (
-    <main className="auth-shell">
-      <section className="auth-card">
-        <p className="eyebrow">xDisputer SaaS</p>
-        <h1>Create account</h1>
-        <p>New users are created as client users by default.</p>
+    <main className="saas-auth-page">
+      <section className="saas-auth-panel">
+        <div className="saas-auth-brand">
+          <span className="saas-auth-logo">xD</span>
+          <div>
+            <p className="saas-auth-eyebrow">Create client account</p>
+            <h1>Start your workspace</h1>
+          </div>
+        </div>
 
-        <form action={signUp} className="auth-form">
+        <p className="saas-auth-copy">
+          Client accounts are created with protected workspace access by default.
+        </p>
+
+        {error && <div className="saas-auth-alert error">{error}</div>}
+        {message && <div className="saas-auth-alert success">{message}</div>}
+
+        <form action="/auth/sign-up" method="post" className="saas-auth-form">
           <label>
-            Full name
-            <input name="fullName" type="text" required placeholder="Client name" />
+            <span>Full name</span>
+            <input name="fullName" type="text" required placeholder="Client full name" />
           </label>
+
           <label>
-            Email
+            <span>Email address</span>
             <input name="email" type="email" required placeholder="you@example.com" />
           </label>
+
           <label>
-            Password
+            <span>Password</span>
             <input name="password" type="password" required minLength={8} placeholder="Minimum 8 characters" />
           </label>
+
           <button type="submit">Create account</button>
         </form>
 
-        <p>
+        <p className="saas-auth-switch">
           Already have an account? <Link href="/login">Sign in</Link>
         </p>
       </section>
+
+      <aside className="saas-auth-hero">
+        <p className="saas-auth-eyebrow">Secure by design</p>
+        <h2>Every user gets an authenticated role, protected route, and profile record in Supabase.</h2>
+
+        <div className="saas-auth-feature-grid">
+          <div>
+            <strong>Client role</strong>
+            <span>Default role for new signups.</span>
+          </div>
+          <div>
+            <strong>Admin role</strong>
+            <span>Promote trusted accounts through Supabase SQL.</span>
+          </div>
+          <div>
+            <strong>Vercel-ready</strong>
+            <span>Uses environment variables, not hardcoded secrets.</span>
+          </div>
+        </div>
+      </aside>
     </main>
   );
 }

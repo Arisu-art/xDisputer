@@ -1,53 +1,73 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { createSupabaseServerClient } from '../../lib/supabase/server';
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams
 }: {
-  searchParams?: Promise<{ next?: string; error?: string }>;
+  searchParams?: Promise<{ next?: string; error?: string; message?: string }>;
 }) {
-  async function signIn(formData: FormData) {
-    'use server';
-
-    const email = String(formData.get('email') || '').trim();
-    const password = String(formData.get('password') || '');
-    const next = String(formData.get('next') || '/client');
-
-    const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      redirect(`/login?error=${encodeURIComponent(error.message)}`);
-    }
-
-    redirect(next || '/client');
-  }
+  const params = await searchParams;
+  const next = params?.next || '/client';
+  const error = params?.error;
+  const message = params?.message;
 
   return (
-    <main className="auth-shell">
-      <section className="auth-card">
-        <p className="eyebrow">xDisputer SaaS</p>
-        <h1>Sign in</h1>
-        <p>Access your protected document operations workspace.</p>
+    <main className="saas-auth-page">
+      <section className="saas-auth-panel">
+        <div className="saas-auth-brand">
+          <span className="saas-auth-logo">xD</span>
+          <div>
+            <p className="saas-auth-eyebrow">xDisputer SaaS</p>
+            <h1>Welcome back</h1>
+          </div>
+        </div>
 
-        <form action={signIn} className="auth-form">
-          <input type="hidden" name="next" value="/client" />
+        <p className="saas-auth-copy">
+          Sign in to access your protected document operations workspace.
+        </p>
+
+        {error && <div className="saas-auth-alert error">{error}</div>}
+        {message && <div className="saas-auth-alert success">{message}</div>}
+
+        <form action="/auth/sign-in" method="post" className="saas-auth-form">
+          <input type="hidden" name="next" value={next} />
+
           <label>
-            Email
+            <span>Email address</span>
             <input name="email" type="email" required placeholder="you@example.com" />
           </label>
+
           <label>
-            Password
-            <input name="password" type="password" required placeholder="Password" />
+            <span>Password</span>
+            <input name="password" type="password" required placeholder="Enter your password" />
           </label>
+
           <button type="submit">Sign in</button>
         </form>
 
-        <p>
-          No account yet? <Link href="/signup">Create one</Link>
+        <p className="saas-auth-switch">
+          New to xDisputer? <Link href="/signup">Create an account</Link>
         </p>
       </section>
+
+      <aside className="saas-auth-hero">
+        <p className="saas-auth-eyebrow">Document operations platform</p>
+        <h2>Run dispute packets, client cases, and filing workflows from one secure SaaS workspace.</h2>
+
+        <div className="saas-auth-feature-grid">
+          <div>
+            <strong>Admin console</strong>
+            <span>Manage users, roles, cases, and operations.</span>
+          </div>
+          <div>
+            <strong>Client workspace</strong>
+            <span>Protected access for document packet workflows.</span>
+          </div>
+          <div>
+            <strong>Supabase auth</strong>
+            <span>Account creation, sessions, and role-backed access.</span>
+          </div>
+        </div>
+      </aside>
     </main>
   );
 }
