@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { requireRole } from '../../lib/supabase/roles';
+import { getStaticIntegrationHealth } from '../../lib/saas/integration-health';
 import SaasPortalShell from '../../components/SaasPortalShell';
 
 export default async function AdminPage() {
   const { user, profile } = await requireRole('admin');
+  const integrations = getStaticIntegrationHealth();
 
   return (
     <SaasPortalShell
@@ -34,9 +36,26 @@ export default async function AdminPage() {
         <div>
           <p className="saas-portal-eyebrow">Workspace access</p>
           <h2>Open client workflow</h2>
-          <p>Administrators are routed here by default. Use client view only when testing the client workflow experience.</p>
+          <p>Admins stay in the console by default. The document engine lives under the client workspace route for controlled testing.</p>
         </div>
-        <Link href="/client">Open client view</Link>
+        <Link href="/client/workspace">Open workspace</Link>
+      </section>
+
+      <section className="saas-admin-panel stacked">
+        <div>
+          <p className="saas-portal-eyebrow">Connected platform</p>
+          <h2>Integration health</h2>
+          <p>These checks show whether the runtime has the required Supabase, Vercel, and GitHub wiring for a SaaS deployment.</p>
+        </div>
+        <div className="saas-integration-list">
+          {integrations.map((item) => (
+            <article key={item.id} className={`saas-integration-item ${item.status}`}>
+              <span>{item.status}</span>
+              <strong>{item.label}</strong>
+              <p>{item.detail}</p>
+            </article>
+          ))}
+        </div>
       </section>
     </SaasPortalShell>
   );
