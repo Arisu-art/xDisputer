@@ -1,28 +1,22 @@
 import { redirect } from 'next/navigation';
 import { requireUser } from '../../lib/supabase/roles';
-import LetterGeneratorWorkspaceV2 from '../../components/LetterGeneratorWorkspaceV2';
-import ApplicationRecoveryBoundary from '../../components/ApplicationRecoveryBoundary';
+import { getStaticIntegrationHealth } from '../../lib/saas/integration-health';
 import SaasPortalShell from '../../components/SaasPortalShell';
+import SaasClientDashboard from '../../components/SaasClientDashboard';
 
-export default async function ClientWorkspacePage() {
+export default async function ClientPortalPage() {
   const { user, profile } = await requireUser();
 
-  if (profile?.role === 'admin') {
-    redirect('/admin');
-  }
+  if (profile?.role === 'admin') redirect('/admin');
 
   return (
     <SaasPortalShell
       role="client"
       email={profile?.email || user?.email}
-      title="Client document workspace"
-      subtitle="Prepare packets, upload source data, review outputs, and continue filing operations from your protected account."
+      title="Client portal"
+      subtitle="A secure dashboard for account access, workspace launch, and connected platform status."
     >
-      <div className="saas-embedded-workspace">
-        <ApplicationRecoveryBoundary>
-          <LetterGeneratorWorkspaceV2 />
-        </ApplicationRecoveryBoundary>
-      </div>
+      <SaasClientDashboard email={profile?.email || user?.email} integrations={getStaticIntegrationHealth()} />
     </SaasPortalShell>
   );
 }
