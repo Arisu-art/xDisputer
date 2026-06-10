@@ -50,10 +50,11 @@ import './evidence-files-restored-layout.css';
 import './supporting-editor-balanced-stage.css';
 import './supporting-slot-balance.css';
 import './evidence-layout-final-polish.css';
+import './saas-auth-center.css';
 
 export const metadata = {
-  title: 'LetterGenerator',
-  description: 'Precision DOCX letter automation'
+  title: 'xDisputer',
+  description: 'Secure document operations SaaS'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
