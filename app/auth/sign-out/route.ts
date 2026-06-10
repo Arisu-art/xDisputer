@@ -6,5 +6,5 @@ export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
 
-  return NextResponse.redirect(appRedirect(request, '/login', { message: 'You have been signed out.' }));
+  return NextResponse.redirect(appRedirect(request, '/login', { message: 'You have been signed out.' }), 303);
 }
