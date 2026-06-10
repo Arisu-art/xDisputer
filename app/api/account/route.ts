@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUserProfile } from '../../../lib/supabase/roles';
-import { dashboardForRole } from '../../../lib/saas/routes';
+import { getSessionContext } from '../../../lib/saas/session';
 
 export async function GET() {
-  const { user, profile } = await getCurrentUserProfile();
+  const session = await getSessionContext();
 
-  if (!user) {
+  if (!session.user) {
     return NextResponse.json({
       authenticated: false,
       user: null,
       profile: null,
+      role: null,
+      isAdmin: false,
+      isClient: false,
       dashboard: null
     });
   }
@@ -17,10 +19,13 @@ export async function GET() {
   return NextResponse.json({
     authenticated: true,
     user: {
-      id: user.id,
-      email: user.email
+      id: session.user.id,
+      email: session.user.email
     },
-    profile,
-    dashboard: dashboardForRole(profile?.role)
+    profile: session.profile,
+    role: session.role,
+    isAdmin: session.isAdmin,
+    isClient: session.isClient,
+    dashboard: session.dashboardPath
   });
 }
