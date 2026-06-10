@@ -1,4 +1,5 @@
-import { requireRole, type UserProfile } from '../../lib/supabase/roles';
+import { requireRole } from '../../lib/saas/session';
+import type { UserProfile } from '../../lib/supabase/roles';
 
 type AdminProfileRow = Pick<UserProfile, 'id' | 'email' | 'full_name' | 'role' | 'created_at' | 'updated_at'>;
 
