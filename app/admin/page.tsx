@@ -1,59 +1,111 @@
-import Link from 'next/link';
 import { requireRole } from '../../lib/supabase/roles';
-import { getStaticIntegrationHealth } from '../../lib/saas/integration-health';
-import SaasPortalShell from '../../components/SaasPortalShell';
-import { ObsidianPanel, ObsidianStatCard, ObsidianStatusBadge } from '../../components/ObsidianDashboardPrimitives';
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(value));
+}
 
 export default async function AdminPage() {
-  const { user, profile } = await requireRole('admin');
-  const integrations = getStaticIntegrationHealth();
-  const connectedCount = integrations.filter((item) => item.status === 'connected').length;
+  const { user, profile, supabase } = await requireRole('admin');
+
+  const { data: profiles = [] } = await supabase
+    .from('profiles')
+    .select('id,email,full_name,role,created_at,updated_at')
+    .order('created_at', { ascending: false });
+
+  const totalUsers = profiles.length;
+  const adminUsers = profiles.filter((item) => item.role === 'admin').length;
+  const clientUsers = profiles.filter((item) => item.role === 'client').length;
 
   return (
-    <SaasPortalShell
-      role="admin"
-      email={profile?.email || user?.email}
-      title="Admin command center"
-      subtitle="Manage SaaS users, monitor client workspaces, and operate the document platform from one protected console."
-    >
-      <div className="obsidian-dashboard-grid">
-        <ObsidianStatCard label="Profiles" value="Role-based" trend="Supabase" />
-        <ObsidianStatCard label="Integrations" value={`${connectedCount}/${integrations.length}`} trend="Checked" />
-        <ObsidianStatCard label="Routing" value="Protected" trend="Middleware" />
+    <main className="admin-monitor-page">
+      <aside className="admin-monitor-sidebar">
+        <div className="admin-monitor-brand">
+          <span>xD</span>
+          <div>
+            <strong>xDisputer</strong>
+            <small>Admin console</small>
+          </div>
+        </div>
 
-        <ObsidianPanel title="Platform operations" eyebrow="Admin control" className="obsidian-panel-large">
-          <div className="obsidian-action-panel">
+        <nav aria-label="Admin navigation">
+          <a className="active" href="/admin">Users</a>
+          <a href="/client/workspace">Workspace</a>
+        </nav>
+
+        <div className="admin-monitor-account">
+          <strong>{profile?.email || user.email || 'Admin account'}</strong>
+          <small>Administrator</small>
+          <form action="/auth/sign-out" method="post">
+            <button type="submit">Sign out</button>
+          </form>
+        </div>
+      </aside>
+
+      <section className="admin-monitor-main">
+        <header className="admin-monitor-header">
+          <div>
+            <p>Administration</p>
+            <h1>User monitoring</h1>
+            <span>Monitor registered profiles, roles, and recent account activity.</span>
+          </div>
+        </header>
+
+        <section className="admin-monitor-stats" aria-label="User statistics">
+          <article>
+            <p>Total users</p>
+            <strong>{totalUsers}</strong>
+          </article>
+          <article>
+            <p>Admins</p>
+            <strong>{adminUsers}</strong>
+          </article>
+          <article>
+            <p>Clients</p>
+            <strong>{clientUsers}</strong>
+          </article>
+        </section>
+
+        <section className="admin-monitor-card">
+          <div className="admin-monitor-card-header">
             <div>
-              <h4>Operate the SaaS layer without touching the document engine.</h4>
-              <p>Auth, profiles, role routing, and protected workspace access are handled before users reach packet generation.</p>
+              <p>Supabase profiles</p>
+              <h2>Users</h2>
             </div>
-            <Link href="/client/workspace" className="obsidian-primary-link">Open workspace</Link>
+            <span>{totalUsers} records</span>
           </div>
-        </ObsidianPanel>
 
-        <ObsidianPanel title="Integration health" eyebrow="Connected platform">
-          <div className="obsidian-list-stack">
-            {integrations.map((item) => (
-              <article key={item.id} className="obsidian-list-row">
-                <div>
-                  <strong>{item.label}</strong>
-                  <p>{item.detail}</p>
-                </div>
-                <ObsidianStatusBadge status={item.status} />
-              </article>
-            ))}
+          <div className="admin-monitor-table-wrap">
+            <table className="admin-monitor-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Created</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {profiles.length ? profiles.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <strong>{item.full_name || item.email || 'Unnamed user'}</strong>
+                      <small>{item.email || item.id}</small>
+                    </td>
+                    <td><span className={`admin-role-badge ${item.role}`}>{item.role}</span></td>
+                    <td>{formatDate(item.created_at)}</td>
+                    <td>{formatDate(item.updated_at)}</td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={4} className="admin-monitor-empty">No profile records found yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </ObsidianPanel>
-
-        <ObsidianPanel title="SaaS build sequence" eyebrow="System map">
-          <div className="obsidian-timeline">
-            <div><span /> <p>Public landing page</p></div>
-            <div><span /> <p>Supabase Auth and profiles</p></div>
-            <div><span /> <p>Role-aware dashboards</p></div>
-            <div><span /> <p>Database-backed cases and filings</p></div>
-          </div>
-        </ObsidianPanel>
-      </div>
-    </SaasPortalShell>
+        </section>
+      </section>
+    </main>
   );
 }
