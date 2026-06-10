@@ -15,8 +15,15 @@ export type UserProfile = {
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
+const bootstrapAdminEmails = new Set(['mycoquibuyen2002@gmail.com']);
+
+export function roleForEmail(email: string | null | undefined): UserRole {
+  return email && bootstrapAdminEmails.has(email.toLowerCase()) ? 'admin' : 'client';
+}
+
 export async function ensureUserProfile(supabase: SupabaseServerClient, user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }) {
   const fullName = typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : '';
+  const expectedRole = roleForEmail(user.email);
 
   const { data: existing } = await supabase
     .from('profiles')
@@ -25,10 +32,15 @@ export async function ensureUserProfile(supabase: SupabaseServerClient, user: { 
     .maybeSingle();
 
   if (existing) {
-    if (!existing.email && user.email) {
+    const patch: Partial<Pick<UserProfile, 'email' | 'role'>> = {};
+
+    if (!existing.email && user.email) patch.email = user.email;
+    if (expectedRole === 'admin' && existing.role !== 'admin') patch.role = 'admin';
+
+    if (Object.keys(patch).length) {
       const { data: updated } = await supabase
         .from('profiles')
-        .update({ email: user.email })
+        .update(patch)
         .eq('id', user.id)
         .select('id,email,full_name,role,created_at,updated_at')
         .single();
@@ -44,7 +56,7 @@ export async function ensureUserProfile(supabase: SupabaseServerClient, user: { 
       id: user.id,
       email: user.email || null,
       full_name: fullName,
-      role: 'client'
+      role: expectedRole
     })
     .select('id,email,full_name,role,created_at,updated_at')
     .single();
