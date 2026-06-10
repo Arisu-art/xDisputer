@@ -69,7 +69,8 @@
 
 .saas-portal-nav a,
 .saas-portal-nav button,
-.saas-admin-panel a {
+.saas-admin-panel a,
+.saas-home-actions a {
   min-height: 40px;
   display: inline-flex;
   align-items: center;
@@ -85,7 +86,8 @@
 }
 
 .saas-portal-nav button,
-.saas-admin-panel a {
+.saas-admin-panel a,
+.saas-home-actions a:first-child {
   background: linear-gradient(135deg, #111827, #2563eb);
   border-color: transparent;
   color: white;
@@ -170,14 +172,16 @@
   min-height: calc(100vh - 220px);
 }
 
-.saas-admin-grid {
+.saas-admin-grid,
+.saas-home-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
 }
 
 .saas-admin-card,
-.saas-admin-panel {
+.saas-admin-panel,
+.saas-home-card {
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 1.35rem;
   padding: 1.25rem;
@@ -185,12 +189,26 @@
   box-shadow: 0 18px 48px rgba(15, 23, 42, 0.07);
 }
 
-.saas-admin-card.primary {
+.saas-admin-card.primary,
+.saas-home-card-main {
   background: linear-gradient(135deg, #111827, #2563eb);
   color: white;
 }
 
-.saas-admin-card p {
+.saas-home-card-main {
+  grid-column: span 2;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.saas-home-wide {
+  grid-column: 1 / -1;
+}
+
+.saas-admin-card p,
+.saas-home-card > p:first-child {
   margin: 0 0 0.65rem;
   font-size: 0.74rem;
   text-transform: uppercase;
@@ -201,20 +219,30 @@
 }
 
 .saas-admin-card h2,
-.saas-admin-panel h2 {
+.saas-admin-panel h2,
+.saas-home-card h2 {
   margin: 0;
   letter-spacing: -0.04em;
 }
 
+.saas-home-card-main h2 {
+  max-width: 620px;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 0.98;
+  letter-spacing: -0.065em;
+}
+
 .saas-admin-card span,
-.saas-admin-panel p:not(.saas-portal-eyebrow) {
+.saas-admin-panel p:not(.saas-portal-eyebrow),
+.saas-home-card p:not(:first-child) {
   display: block;
   margin-top: 0.65rem;
   color: #64748b;
   line-height: 1.6;
 }
 
-.saas-admin-card.primary span {
+.saas-admin-card.primary span,
+.saas-home-card-main p:not(:first-child) {
   color: rgba(255, 255, 255, 0.82);
 }
 
@@ -224,6 +252,74 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.saas-admin-panel.stacked {
+  display: block;
+}
+
+.saas-home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1.25rem;
+}
+
+.saas-home-actions a:first-child {
+  background: #ffffff;
+  color: #111827;
+}
+
+.saas-integration-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.saas-integration-item {
+  border: 1px solid #dbe3ef;
+  border-radius: 1rem;
+  padding: 1rem;
+  background: #ffffff;
+}
+
+.saas-integration-item span {
+  display: inline-flex;
+  margin-bottom: 0.65rem;
+  border-radius: 999px;
+  padding: 0.24rem 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.saas-integration-item.connected span {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.saas-integration-item.warning span {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.saas-integration-item.missing span {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.saas-integration-item strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.saas-integration-item p {
+  margin: 0.45rem 0 0;
+  color: #64748b;
+  line-height: 1.55;
 }
 
 @media (max-width: 900px) {
@@ -238,7 +334,14 @@
     justify-content: flex-start;
   }
 
-  .saas-admin-grid {
+  .saas-admin-grid,
+  .saas-home-grid,
+  .saas-integration-list {
     grid-template-columns: 1fr;
+  }
+
+  .saas-home-card-main,
+  .saas-home-wide {
+    grid-column: auto;
   }
 }
