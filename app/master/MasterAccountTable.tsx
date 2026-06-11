@@ -1,4 +1,4 @@
-import { activateAccount, demoteToClient, disableAccount, pauseAccount, promoteToAdmin } from './actions';
+import { activateAccount, clearManagerAssignment, demoteToClient, disableAccount, promoteToManager } from './actions';
 import type { ManagedAccount } from '../../lib/saas/account-management';
 
 function formatDate(value: string | null | undefined) {
@@ -22,14 +22,14 @@ function AccountControls({ account, currentUserId }: { account: ManagedAccount; 
 
   return (
     <div className="admin-actions-row">
-      {account.role === 'client' && <AccountActionButton profileId={account.id} action={promoteToAdmin} label="Make admin" />}
-      {account.role === 'admin' && <AccountActionButton profileId={account.id} action={demoteToClient} label="Demote" />}
-      {(account.account_status === 'paused' || account.account_status === 'disabled') ? (
+      {account.role === 'client' && <AccountActionButton profileId={account.id} action={promoteToManager} label="Make manager" />}
+      {account.role === 'manager' && <AccountActionButton profileId={account.id} action={demoteToClient} label="Demote" />}
+      {account.account_status === 'disabled' ? (
         <AccountActionButton profileId={account.id} action={activateAccount} label="Activate" />
       ) : (
-        <AccountActionButton profileId={account.id} action={pauseAccount} label="Pause" />
+        account.id !== currentUserId && <AccountActionButton profileId={account.id} action={disableAccount} label="Disable" />
       )}
-      {account.id !== currentUserId && <AccountActionButton profileId={account.id} action={disableAccount} label="Disable" />}
+      {account.role === 'client' && account.manager_id && <AccountActionButton profileId={account.id} action={clearManagerAssignment} label="Remove manager" />}
     </div>
   );
 }
@@ -43,6 +43,7 @@ export default function MasterAccountTable({ accounts, currentUserId, emptyText 
             <th>User</th>
             <th>Role</th>
             <th>Status</th>
+            <th>Manager</th>
             <th>Updated</th>
             <th>Controls</th>
           </tr>
@@ -53,11 +54,12 @@ export default function MasterAccountTable({ accounts, currentUserId, emptyText 
               <td><strong>{item.full_name || item.email || 'Unnamed user'}</strong><small>{item.email || item.id}</small></td>
               <td><span className={`admin-role-badge ${item.role}`}>{item.role}</span></td>
               <td><span className={`admin-status-badge ${item.account_status || 'active'}`}>{item.account_status || 'active'}</span></td>
+              <td><small>{item.manager_id || item.manager_invite_code || '—'}</small></td>
               <td>{formatDate(item.updated_at)}</td>
               <td><AccountControls account={item} currentUserId={currentUserId} /></td>
             </tr>
           )) : (
-            <tr><td colSpan={5} className="admin-monitor-empty">{emptyText}</td></tr>
+            <tr><td colSpan={6} className="admin-monitor-empty">{emptyText}</td></tr>
           )}
         </tbody>
       </table>
