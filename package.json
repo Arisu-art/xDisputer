@@ -12,7 +12,8 @@
     "ai:process": "node scripts/ai-code-processor.js",
     "ai:apply": "node scripts/apply-changes.js",
     "typecheck": "tsc --noEmit",
-    "quality:check": "npm run typecheck && npm run build"
+    "quality:check": "npm run typecheck && npm run build",
+    "xdisputer:guard": "node scripts/xdisputer-deploy-guard.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
