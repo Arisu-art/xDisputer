@@ -5495,3 +5495,29 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   0% { background-position: 120% 0; }
   100% { background-position: -120% 0; }
 }
+
+.workspace-loading-shell {
+  min-height: 100vh;
+  padding: 2rem;
+  background: #f1f5f9;
+}
+
+.workspace-loading-panel {
+  display: grid;
+  gap: 1rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.workspace-loading-shell {
+  min-height: 100vh;
+  padding: 2rem;
+  background: #f1f5f9;
+}
+
+.workspace-loading-panel {
+  display: grid;
+  gap: 1rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}

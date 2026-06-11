@@ -1,3 +1,4 @@
+import ConsoleNavLink from '../../../components/ConsoleNavLink';
 import { listAccessAuditEvents, readableAuditEventType, type AccessAuditEvent } from '../../../lib/saas/access-audit';
 import { requireRole } from '../../../lib/saas/session';
 
@@ -68,11 +69,11 @@ export default async function ManagerAuditPage() {
 
         <div className="admin-sidebar-section-title">Operations</div>
         <nav aria-label="Manager audit navigation">
-          <a href="/admin">Monitoring</a>
-          <a href="/admin/access">Access control</a>
-          <a href="/admin?panel=intake">Client intake</a>
-          <a href="/admin/reports">Reports</a>
-          <a className="active" href="/admin/audit">Audit log</a>
+          <ConsoleNavLink href="/admin">Monitoring</ConsoleNavLink>
+          <ConsoleNavLink href="/admin/access">Access control</ConsoleNavLink>
+          <ConsoleNavLink href="/admin?panel=intake">Client intake</ConsoleNavLink>
+          <ConsoleNavLink href="/admin/reports">Reports</ConsoleNavLink>
+          <ConsoleNavLink className="active" href="/admin/audit">Audit log</ConsoleNavLink>
         </nav>
 
         <div className="admin-monitor-account">

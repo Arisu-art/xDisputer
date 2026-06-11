@@ -1,3 +1,4 @@
+import ConsoleNavLink from '../../../components/ConsoleNavLink';
 import {
   activeGenerationFilterCount,
   generationReportQueryString,
@@ -183,11 +184,11 @@ export default async function ManagerReportsPage({ searchParams }: PageProps) {
 
         <div className="admin-sidebar-section-title">Operations</div>
         <nav aria-label="Manager reports navigation">
-          <a href="/admin">Monitoring</a>
-          <a href="/admin/access">Access control</a>
-          <a href="/admin?panel=intake">Client intake</a>
-          <a className="active" href="/admin/reports">Generation reports</a>
-          <a href="/admin/audit">Audit log</a>
+          <ConsoleNavLink href="/admin">Monitoring</ConsoleNavLink>
+          <ConsoleNavLink href="/admin/access">Access control</ConsoleNavLink>
+          <ConsoleNavLink href="/admin?panel=intake">Client intake</ConsoleNavLink>
+          <ConsoleNavLink className="active" href="/admin/reports">Generation reports</ConsoleNavLink>
+          <ConsoleNavLink href="/admin/audit">Audit log</ConsoleNavLink>
         </nav>
 
         <div className="admin-monitor-account">

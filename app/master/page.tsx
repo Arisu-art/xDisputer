@@ -1,3 +1,4 @@
+import ConsoleNavLink from '../../components/ConsoleNavLink';
 import { redirect } from 'next/navigation';
 import MasterAccountTable from './MasterAccountTable';
 import { listManagedAccounts, type ManagedAccount } from '../../lib/saas/account-management';
@@ -113,7 +114,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
           <MasterSidebarLink panel="managers" activePanel={activePanel}>Managers</MasterSidebarLink>
           <MasterSidebarLink panel="clients" activePanel={activePanel}>Clients</MasterSidebarLink>
           <a className={activePanel === "reports" ? "active" : ""} href="/master/reports">Reports</a>
-          <a href="/master/audit">Audit log</a>
+          <ConsoleNavLink href="/master/audit">Audit log</ConsoleNavLink>
         </nav>
 
         <div className="admin-monitor-account">

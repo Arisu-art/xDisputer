@@ -1,3 +1,4 @@
+import ConsoleNavLink from '../../../components/ConsoleNavLink';
 import {
   directoryQueryString,
   getMasterAccountSummary,
@@ -83,10 +84,10 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
 
         <div className="admin-sidebar-section-title">Operations</div>
         <nav aria-label="Master navigation">
-          <a href="/master">Monitoring</a>
-          <a className="active" href="/master/accounts">All accounts</a>
-          <a href="/master/reports">Reports</a>
-          <a href="/master/audit">Audit log</a>
+          <ConsoleNavLink href="/master">Monitoring</ConsoleNavLink>
+          <ConsoleNavLink className="active" href="/master/accounts">All accounts</ConsoleNavLink>
+          <ConsoleNavLink href="/master/reports">Reports</ConsoleNavLink>
+          <ConsoleNavLink href="/master/audit">Audit log</ConsoleNavLink>
         </nav>
 
         <div className="admin-monitor-account">

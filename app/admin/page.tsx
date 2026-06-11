@@ -1,3 +1,4 @@
+import ConsoleNavLink from '../../components/ConsoleNavLink';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { ensureManagerInviteCode, listManagedAccounts, type ManagedAccount } from '../../lib/saas/account-management';
@@ -202,7 +203,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
           <ManagerSidebarLink panel="intake" activePanel={activePanel}>Client intake</ManagerSidebarLink>
           <ManagerSidebarLink panel="review" activePanel={activePanel}>Review queue</ManagerSidebarLink>
           <a className={activePanel === "reports" ? "active" : ""} href="/admin/reports">Reports</a>
-          <a href="/admin/audit">Audit log</a>
+          <ConsoleNavLink href="/admin/audit">Audit log</ConsoleNavLink>
         </nav>
 
         <div className="admin-monitor-account">

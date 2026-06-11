@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { dashboardForRole } from './routes';
 import { canAccessRole, ensureUserProfile, normalizeRole, roleForEmail, type UserProfile, type UserRole } from '../supabase/roles';
@@ -25,7 +26,7 @@ function resolveRole(user: SupabaseUser | null, profile: UserProfile | null): Us
   return normalizeRole(profile?.role || 'client');
 }
 
-export async function getSessionContext(): Promise<SessionContext> {
+export const getSessionContext = cache(async (): Promise<SessionContext> => {
   const supabase = await createSupabaseServerClient();
   const { data: userResult } = await supabase.auth.getUser();
   const user = userResult.user ?? null;
@@ -44,7 +45,7 @@ export async function getSessionContext(): Promise<SessionContext> {
     isClient: role === 'client',
     dashboardPath
   };
-}
+});
 
 export async function requireAuth() {
   const session = await getSessionContext();

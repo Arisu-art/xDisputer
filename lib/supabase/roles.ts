@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from './server';
 import { dashboardForRole } from '../saas/routes';
@@ -181,7 +182,7 @@ export async function ensureUserProfile(
     : null;
 }
 
-export async function getCurrentUserProfile() {
+export const getCurrentUserProfile = cache(async () => {
   const supabase = await createSupabaseServerClient();
   const { data: userResult } = await supabase.auth.getUser();
 
@@ -196,7 +197,7 @@ export async function getCurrentUserProfile() {
     profile,
     supabase
   };
-}
+});
 
 export async function requireUser() {
   const value = await getCurrentUserProfile();
