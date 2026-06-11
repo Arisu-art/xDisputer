@@ -37,7 +37,43 @@ export default function TemplatePacketConfigurator({ round, slots, supportingRea
     return () => { cancelled = true; };
   }, [round]);
   useEffect(() => setActiveNode(null), [focusedPacket]);
-  async function uploadExhibit(kind: ExhibitKind, file: File) { try { const next = await saveTemplateExhibit(round, kind, file); setExhibits(next); onExhibitsChange(next); const contract = next[kind]?.contract; onMessage(`${exhibitTitles[kind]} saved${contract?.mode === 'PLACEHOLDERS' ? `; ${contract.tags.length} placeholder tag(s) mapped to Source Data.` : contract?.mode === 'LEGACY_HIGHLIGHTED' ? '; highlighted fields will be mapped from Source Data.' : '.'}`); setActiveNode(null); } catch (error) { onMessage(error instanceof Error ? error.message : 'File could not be saved.'); } }
+  async function syncExhibitToSupabase(kind: ExhibitKind, file: File) {
+    const formData = new FormData();
+    formData.set('round', round);
+    formData.set('templateKind', 'EXHIBIT');
+    formData.set('exhibitKind', kind);
+    formData.set('file', file);
+
+    const response = await fetch('/api/template-assets', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'x-template-upload': 'workspace'
+      },
+      body: formData
+    });
+
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || payload?.status === 'error') {
+      throw new Error(payload?.message || 'Template could not be saved to Supabase.');
+    }
+
+    return payload?.message || `${exhibitTitles[kind]} saved to Supabase.`;
+  }
+  async function uploadExhibit(kind: ExhibitKind, file: File) {
+    try {
+      const next = await saveTemplateExhibit(round, kind, file);
+      const syncMessage = await syncExhibitToSupabase(kind, file);
+      setExhibits(next);
+      onExhibitsChange(next);
+      const contract = next[kind]?.contract;
+      onMessage(`${syncMessage}${contract?.mode === 'PLACEHOLDERS' ? ` ${contract.tags.length} placeholder tag(s) mapped to Source Data.` : contract?.mode === 'LEGACY_HIGHLIGHTED' ? ' Highlighted fields will be mapped from Source Data.' : ''}`);
+      setActiveNode(null);
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : 'File could not be saved.');
+    }
+  }
   async function removeExhibit(kind: ExhibitKind) { const next = await removeTemplateExhibit(round, kind); setExhibits(next); onExhibitsChange(next); onMessage(`${exhibitTitles[kind]} removed from ${round}.`); }
   function LetterActions({ slot, node }: { slot: LetterReference; node: NodeId }) { const active = activeNode === node; return <div className={`contextual-actions studio-actions ${active ? 'visible' : ''}`}><button className="reveal-action" type="button" aria-expanded={active} onClick={() => setActiveNode(active ? null : node)}>{active ? 'Close' : slot.file ? 'Replace' : 'Upload'}</button><div className="contextual-action-region" aria-hidden={!active}><div><label><span>Select DOCX</span><input type="file" accept=".docx" onChange={(event) => { const file = event.target.files?.[0]; if (file) void onUploadLetter(slot, file).then(() => setActiveNode(null)); event.target.value = ''; }} /></label>{slot.file && <button type="button" className="remove-node" onClick={() => void onRemoveLetter(slot)}>Remove</button>}</div></div></div>; }
   function ExhibitActions({ kind }: { kind: ExhibitKind }) { const active = activeNode === kind, fileFormat = exhibitModes[kind] === 'GENERATED_DOCX' ? 'DOCX' : 'PDF'; return <div className={`contextual-actions studio-actions ${active ? 'visible' : ''}`}><button className="reveal-action" type="button" aria-expanded={active} onClick={() => setActiveNode(active ? null : kind)}>{active ? 'Close' : exhibits[kind] ? 'Replace' : 'Upload'}</button><div className="contextual-action-region" aria-hidden={!active}><div><label><span>Select {fileFormat}</span><input type="file" accept={exhibitAccept[kind]} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadExhibit(kind, file); event.target.value = ''; }} /></label>{exhibits[kind] && <button type="button" className="remove-node" onClick={() => void removeExhibit(kind)}>Remove</button>}</div></div></div>; }

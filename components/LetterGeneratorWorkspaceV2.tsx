@@ -273,6 +273,37 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
     clearOutputs();
   }
 
+  async function syncTemplateAsset(input: {
+    templateKind: 'LETTER' | 'EXHIBIT';
+    letterType?: LetterType;
+    exhibitKind?: ExhibitKind;
+    file: File;
+  }) {
+    const formData = new FormData();
+    formData.set('round', round);
+    formData.set('templateKind', input.templateKind);
+    if (input.letterType) formData.set('letterType', input.letterType);
+    if (input.exhibitKind) formData.set('exhibitKind', input.exhibitKind);
+    formData.set('file', input.file);
+
+    const response = await fetch('/api/template-assets', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'x-template-upload': 'workspace'
+      },
+      body: formData
+    });
+
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || payload?.status === 'error') {
+      throw new Error(payload?.message || 'Template could not be saved to Supabase.');
+    }
+
+    return payload?.message || 'Template saved to Supabase.';
+  }
+
   async function uploadRef(slot: LetterReference, file: File) {
     if (!isDocx(file.name)) {
       report('Letter references accept DOCX files only.', 'error');
@@ -280,6 +311,12 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
     }
 
     const contract = await saveReferenceFile(slot, file);
+    const syncMessage = await syncTemplateAsset({
+      templateKind: 'LETTER',
+      letterType: slot.type,
+      file
+    });
+
     setReferences((items) =>
       items.map((item) =>
         item.id === slot.id
@@ -288,6 +325,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
       )
     );
     clearOutputs();
+    report(syncMessage, 'success');
   }
 
   async function removeRef(slot: LetterReference) {

@@ -10,12 +10,23 @@ const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
 const allowedExhibitKinds = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
 
-function redirectBack(request: NextRequest, status: 'ok' | 'error', message?: string) {
+function wantsJson(request: NextRequest) {
+  return request.headers.get('accept')?.includes('application/json')
+    || request.headers.get('x-template-upload') === 'workspace';
+}
+
+function respond(request: NextRequest, status: 'ok' | 'error', message: string, code = status === 'ok' ? 200 : 400) {
+  if (wantsJson(request)) {
+    return NextResponse.json({ status, message }, { status: code });
+  }
+
   const fallback = new URL('/system/templates', request.url);
   const referer = request.headers.get('referer');
   const target = referer ? new URL(referer) : fallback;
+
   target.searchParams.set('control', status);
-  if (message) target.searchParams.set('message', message.slice(0, 220));
+  target.searchParams.set('message', message.slice(0, 220));
+
   return NextResponse.redirect(target, 303);
 }
 
@@ -27,6 +38,7 @@ function documentKind(input: {
   if (input.templateKind === 'LETTER') {
     return input.letterType === 'LATE_PAYMENT' ? 'LATE_PAYMENT_LETTER' : 'DISPUTE_LETTER';
   }
+
   return input.exhibitKind as TemplateDocumentKind;
 }
 
@@ -58,6 +70,7 @@ export async function GET(request: NextRequest) {
   let query = session.supabase
     .from('template_assets')
     .select('*')
+    .eq('owner_id', session.user.id)
     .eq('is_active', true)
     .order('created_at', { ascending: false });
 
@@ -76,8 +89,9 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getSessionContext();
 
-    if (!session.user) return redirectBack(request, 'error', 'No authenticated user.');
-    if (!session.isMaster) return redirectBack(request, 'error', 'Only the master account can upload template assets.');
+    if (!session.user) {
+      return respond(request, 'error', 'No authenticated user.', 401);
+    }
 
     const formData = await request.formData();
 
@@ -87,23 +101,28 @@ export async function POST(request: NextRequest) {
     const exhibitKind = String(formData.get('exhibitKind') || '').trim() as ExhibitKind;
     const file = formData.get('file');
 
-    if (!allowedRounds.includes(round)) return redirectBack(request, 'error', 'Invalid round.');
-    if (templateKind !== 'LETTER' && templateKind !== 'EXHIBIT') return redirectBack(request, 'error', 'Invalid template kind.');
+    if (!allowedRounds.includes(round)) return respond(request, 'error', 'Invalid round.');
+    if (templateKind !== 'LETTER' && templateKind !== 'EXHIBIT') return respond(request, 'error', 'Invalid template kind.');
 
     const resolvedLetterType = templateKind === 'LETTER' ? letterType : null;
     const resolvedExhibitKind = templateKind === 'EXHIBIT' ? exhibitKind : null;
 
-    if (templateKind === 'LETTER' && !allowedLetterTypes.includes(letterType)) return redirectBack(request, 'error', 'Invalid letter type.');
-    if (templateKind === 'EXHIBIT' && !allowedExhibitKinds.includes(exhibitKind)) return redirectBack(request, 'error', 'Invalid exhibit kind.');
-    if (!(file instanceof File) || file.size === 0) return redirectBack(request, 'error', 'Template file is required.');
+    if (templateKind === 'LETTER' && !allowedLetterTypes.includes(letterType)) return respond(request, 'error', 'Invalid letter type.');
+    if (templateKind === 'EXHIBIT' && !allowedExhibitKinds.includes(exhibitKind)) return respond(request, 'error', 'Invalid exhibit kind.');
+    if (!(file instanceof File) || file.size === 0) return respond(request, 'error', 'Template file is required.');
 
-    const kind = documentKind({ templateKind, letterType: resolvedLetterType, exhibitKind: resolvedExhibitKind });
+    const kind = documentKind({
+      templateKind,
+      letterType: resolvedLetterType,
+      exhibitKind: resolvedExhibitKind
+    });
+
     assertFileType(file, kind);
 
     const contract = await inspectTemplateContract(file, kind);
     const targetType = resolvedLetterType || resolvedExhibitKind;
 
-    if (!targetType) return redirectBack(request, 'error', 'Template type is required.');
+    if (!targetType) return respond(request, 'error', 'Template type is required.');
 
     const storagePath = templateStoragePath({
       userId: session.user.id,
@@ -120,7 +139,7 @@ export async function POST(request: NextRequest) {
         upsert: false
       });
 
-    if (upload.error) return redirectBack(request, 'error', upload.error.message);
+    if (upload.error) return respond(request, 'error', upload.error.message, 500);
 
     let latestQuery = session.supabase
       .from('template_assets')
@@ -149,7 +168,7 @@ export async function POST(request: NextRequest) {
     if (resolvedExhibitKind) deactivateQuery = deactivateQuery.eq('exhibit_kind', resolvedExhibitKind);
 
     const deactivate = await deactivateQuery;
-    if (deactivate.error) return redirectBack(request, 'error', deactivate.error.message);
+    if (deactivate.error) return respond(request, 'error', deactivate.error.message, 500);
 
     const insert = await session.supabase
       .from('template_assets')
@@ -172,10 +191,10 @@ export async function POST(request: NextRequest) {
       .select('id')
       .single();
 
-    if (insert.error) return redirectBack(request, 'error', insert.error.message);
+    if (insert.error) return respond(request, 'error', insert.error.message, 500);
 
-    return redirectBack(request, 'ok', `${round} ${targetType} template uploaded.`);
+    return respond(request, 'ok', `${round} ${targetType} template saved to your workspace.`);
   } catch (error) {
-    return redirectBack(request, 'error', error instanceof Error ? error.message : 'Template upload failed.');
+    return respond(request, 'error', error instanceof Error ? error.message : 'Template upload failed.', 500);
   }
 }

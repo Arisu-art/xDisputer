@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
   let query = session.supabase
     .from('template_assets')
     .select('*')
+    .eq('owner_id', session.user.id)
     .eq('round_label', round)
     .eq('template_kind', templateKind)
     .eq('is_active', true)
