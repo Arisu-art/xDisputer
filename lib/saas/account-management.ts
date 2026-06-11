@@ -60,119 +60,48 @@ export async function updateManagedAccount(supabase: SupabaseServerClient, input
 
   if (!targetProfileId) throw new Error('Missing target profile id.');
 
-  const { data: target, error: targetError } = await supabase
-    .from('profiles')
-    .select(profileSelect)
-    .eq('id', targetProfileId)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('control_update_profile', {
+    target_profile_id: targetProfileId,
+    next_role: input.nextRole || null,
+    next_status: input.nextStatus || null,
+    next_manager_id: typeof input.nextManagerId === 'undefined' ? null : input.nextManagerId,
+    clear_manager: typeof input.nextManagerId !== 'undefined' && input.nextManagerId === null
+  });
 
-  if (targetError) throw new Error(targetError.message);
-  if (!target) throw new Error('Target account was not found or your role does not have access to it.');
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Account update did not return a profile row.');
 
-  const targetAccount = normalizeAccount(target as ManagedAccount);
-
-  if (targetAccount.role === 'master') {
-    throw new Error('Master accounts cannot be modified from account controls.');
-  }
-
-  if ((input.actorRole === 'admin' || input.actorRole === 'manager') && targetAccount.role !== 'client') {
-    throw new Error('Managers can only manage client accounts.');
-  }
-
-  if ((input.actorRole === 'admin' || input.actorRole === 'manager') && targetAccount.manager_id !== input.actorUserId) {
-    throw new Error('Managers can only manage clients assigned to them.');
-  }
-
-  if (targetProfileId === input.actorUserId && input.nextStatus && input.nextStatus !== 'active') {
-    throw new Error('You cannot disable your own active session.');
-  }
-
-  const patch: Partial<Pick<ManagedAccount, 'role' | 'account_status' | 'updated_at' | 'manager_id'>> = {
-    updated_at: new Date().toISOString()
-  };
-
-  if (input.nextRole) patch.role = input.nextRole;
-  if (input.nextStatus) patch.account_status = input.nextStatus;
-  if (typeof input.nextManagerId !== 'undefined') patch.manager_id = input.nextManagerId;
-
-  const { data: updated, error: updateError } = await supabase
-    .from('profiles')
-    .update(patch)
-    .eq('id', targetProfileId)
-    .select(profileSelect)
-    .single();
-
-  if (updateError) throw new Error(updateError.message);
-  if (!updated) throw new Error('Account update did not return a profile row.');
-
-  return normalizeAccount(updated as ManagedAccount);
+  return normalizeAccount(data as ManagedAccount);
 }
 
 export async function ensureManagerInviteCode(supabase: SupabaseServerClient, managerId: string) {
-  const { data: manager, error } = await supabase
-    .from('profiles')
-    .select(profileSelect)
-    .eq('id', managerId)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('control_ensure_manager_invite_code');
 
   if (error) throw new Error(error.message);
-  if (!manager) throw new Error('Manager profile not found.');
+  if (!data) throw new Error('Manager invite code was not returned.');
 
-  const normalizedManager = normalizeAccount(manager as ManagedAccount);
-  if (normalizedManager.manager_invite_code) return normalizedManager.manager_invite_code;
-
-  const inviteCode = generateInviteCode(managerId);
-  const { data: updated, error: updateError } = await supabase
-    .from('profiles')
-    .update({ manager_invite_code: inviteCode, updated_at: new Date().toISOString() })
-    .eq('id', managerId)
-    .select(profileSelect)
-    .single();
-
-  if (updateError) throw new Error(updateError.message);
-  return (updated as ManagedAccount).manager_invite_code || inviteCode;
+  return String(data);
 }
 
 export async function rotateManagerInviteCode(supabase: SupabaseServerClient, managerId: string) {
-  const inviteCode = generateInviteCode(managerId);
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({ manager_invite_code: inviteCode, updated_at: new Date().toISOString() })
-    .eq('id', managerId)
-    .in('role', ['manager', 'admin'])
-    .select(profileSelect)
-    .single();
+  const { data, error } = await supabase.rpc('control_rotate_manager_invite_code');
 
   if (error) throw new Error(error.message);
-  if (!data) throw new Error('Manager invite code was not updated.');
-  return inviteCode;
+  if (!data) throw new Error('Manager invite code was not returned.');
+
+  return String(data);
 }
 
 export async function joinManagerByInviteCode(supabase: SupabaseServerClient, clientId: string, inviteCode: string) {
   const code = inviteCode.trim().toUpperCase();
   if (!code) throw new Error('Invite code is required.');
 
-  const { data: manager, error: managerError } = await supabase
-    .from('profiles')
-    .select(profileSelect)
-    .eq('manager_invite_code', code)
-    .in('role', ['manager', 'admin'])
-    .eq('account_status', 'active')
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('control_join_manager', {
+    invite_code: code
+  });
 
-  if (managerError) throw new Error(managerError.message);
-  if (!manager) throw new Error('Manager invite code was not found or is inactive.');
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Could not assign client to manager.');
 
-  const { data: updated, error: updateError } = await supabase
-    .from('profiles')
-    .update({ manager_id: (manager as ManagedAccount).id, updated_at: new Date().toISOString() })
-    .eq('id', clientId)
-    .eq('role', 'client')
-    .select(profileSelect)
-    .single();
-
-  if (updateError) throw new Error(updateError.message);
-  if (!updated) throw new Error('Could not assign client to manager.');
-
-  return normalizeAccount(updated as ManagedAccount);
+  return normalizeAccount(data as ManagedAccount);
 }
