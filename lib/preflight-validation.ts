@@ -1,10 +1,11 @@
 import { bureaus, type LetterRoute, type ParsedSource } from './letter-engine';
-import { generationPacketPositions, generationRequiredExhibits } from './generation-contract';
+import { generationPacketPositions } from './generation-contract';
 import type { PacketAssets } from './packet-assets';
 import type { LetterReference } from './reference-store';
 import type { TemplateExhibits } from './template-exhibits';
 import type { WorkspacePreferences } from './workspace-preferences';
 import { userFacingText } from './ux-copy-contract';
+import { resolveRoundTemplateSelection } from './round-template-policy';
 
 export type PreflightSeverity = 'pass' | 'warning' | 'blocker';
 
@@ -16,6 +17,7 @@ export type PreflightCheck = {
 };
 
 export type GenerationPreflightInput = {
+  round?: string | null;
   source: string;
   normalized: boolean;
   parsed: ParsedSource;
@@ -53,10 +55,6 @@ function countLatePayments(parsed: ParsedSource) {
   return bureaus.reduce((total, bureau) => total + parsed.late[bureau].length, 0);
 }
 
-function routeTemplateName(route: LetterRoute) {
-  return route.type === 'DISPUTE' ? 'Dispute Letter' : 'Late Payment Letter';
-}
-
 export function evaluateGenerationPreflight(input: GenerationPreflightInput): GenerationPreflightResult {
   const checks: PreflightCheck[] = [];
   const sourceReady = Boolean(input.source.trim() && input.normalized && input.parsed.name.trim());
@@ -86,17 +84,26 @@ export function evaluateGenerationPreflight(input: GenerationPreflightInput): Ge
       : block('source.late-payments', 'Late payments', 'A late-payment document is selected, but no late-payment items were found.'));
   }
 
-  const routeMissing = input.routes.filter((route) => !input.references.find((slot) => slot.round && slot.type === route.type && slot.file));
-  checks.push(routeMissing.length
-    ? block('templates.letters', 'Letter templates', `Missing required letter template(s): ${routeMissing.map((route) => `${route.bureau} ${routeTemplateName(route)}`).join(', ')}.`)
-    : pass('templates.letters', 'Letter templates', 'All active letter templates are ready.'));
+  const roundSelection = resolveRoundTemplateSelection({
+    round: input.round,
+    routes: input.routes,
+    references: input.references,
+    templates: input.templates
+  });
+
+  checks.push(roundSelection.missingLetterTypes.length
+    ? block('templates.letters', `${roundSelection.round} letter templates`, `Missing required ${roundSelection.round} letter template(s): ${roundSelection.missingLetterTypes.map((type) => type === 'DISPUTE' ? 'Dispute Letter' : 'Late Payment Letter').join(', ')}.`)
+    : pass('templates.letters', `${roundSelection.round} letter templates`, `All active ${roundSelection.round} letter templates are ready.`));
+
+  checks.push(roundSelection.missingExhibits.length
+    ? block('templates.exhibits', `${roundSelection.round} packet templates`, `Missing required ${roundSelection.round} packet item(s): ${roundSelection.missingExhibits.join(', ')}.`)
+    : pass('templates.exhibits', `${roundSelection.round} packet templates`, `Required ${roundSelection.round} packet templates are ready.`));
+
+  for (const issue of roundSelection.issues.filter((item) => item.severity === 'warning')) {
+    checks.push(warn(issue.code, `${roundSelection.round} policy`, issue.message));
+  }
 
   const activeTypes = Array.from(new Set(input.routes.map((route) => route.type)));
-  const requiredExhibits = Array.from(new Set(activeTypes.flatMap((type) => generationRequiredExhibits(type))));
-  const missingExhibits = requiredExhibits.filter((kind) => !input.templates[kind]);
-  checks.push(missingExhibits.length
-    ? block('templates.exhibits', 'Required packet templates', `Missing required packet item(s): ${missingExhibits.join(', ')}.`)
-    : pass('templates.exhibits', 'Required packet templates', 'Required packet templates are ready.'));
 
   checks.push(input.evidence.supporting.length
     ? pass('evidence.supporting', 'Supporting documents', `${input.evidence.supporting.length} supporting document image(s) ready.`)

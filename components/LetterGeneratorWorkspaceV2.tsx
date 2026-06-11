@@ -30,6 +30,7 @@ import { activeWorkflowDiagnostics, assessRouteCoverage, requiredGenerationFailu
 import { evaluateGenerationPreflight, preflightFailureMessage } from '../lib/preflight-validation';
 import { buildCasePipeline, nextCaseAction } from '../lib/case-pipeline';
 import { resolveUxVisibility } from '../lib/ux-visibility-contract';
+import { buildGenerationManifest, generationManifestText, normalizeGeneratedOutputForManifest } from '../lib/generation-manifest';
 
 type Panel = 'Dashboard' | 'Templates' | 'Source Data' | 'Outputs' | 'Filing Tracker' | 'Settings';
 type SourceDraftSnapshot = { text: string; normalized: boolean; label: string; capturedAt: string };
@@ -127,7 +128,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   const customReady = customFields.every((item) => !item.required || Boolean(parsed.templateFields[item.key]?.trim()));
   const missingNodes = dispute ? requirements.filter((kind) => !templates[kind]) : [];
   const canGenerate = verified && routes.length > 0;
-  const preflight = useMemo(() => evaluateGenerationPreflight({ source, normalized, parsed: affidavitRequired ? affidavitSource : parsed, routes, references: refs, templates, evidence, affidavitReady, customReady, strictValidation: preferences.strictValidation, preferences }), [source, normalized, parsed, affidavitRequired, affidavitSource, routes, refs, templates, evidence, affidavitReady, customReady, preferences]);
+  const preflight = useMemo(() => evaluateGenerationPreflight({ round, source, normalized, parsed: affidavitRequired ? affidavitSource : parsed, routes, references: refs, templates, evidence, affidavitReady, customReady, strictValidation: preferences.strictValidation, preferences }), [source, normalized, parsed, affidavitRequired, affidavitSource, routes, refs, templates, evidence, affidavitReady, customReady, preferences]);
   const pipelineStages = useMemo(() => buildCasePipeline({ round, hasCase: Boolean(caseId || parsed.name), clientName: parsed.name, routes, references: refs, templates, evidence, preflight, outputCount: docs.length, orderedZipReady: Boolean(orderedZip), reviewedCount: docs.length ? docs.length : 0, downloaded: false, filedCount: filings.length }), [round, caseId, parsed.name, routes, refs, templates, evidence, preflight, docs.length, orderedZip, filings.length]);
   const pipelineNextAction = useMemo(() => nextCaseAction(pipelineStages), [pipelineStages]);
   const uxRules = useMemo(() => resolveUxVisibility({ panel, statusTone, hasSource: Boolean(source.trim()), hasPreflightBlockers: preflight.blockers.length > 0, hasPreflightWarnings: preflight.warnings.length > 0, generateAttempted, busy, hasGeneratedOutput: docs.length > 0 }), [panel, statusTone, source, preflight.blockers.length, preflight.warnings.length, generateAttempted, busy, docs.length]);
@@ -273,18 +274,26 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
       routes.map((route) => ({ type: route.type, bureau: route.bureau }))
     );
 
-    zip.file(
-      'Package Manifest.txt',
-      [
-        'COMPLETE ORDERED COMPONENT PACKAGE',
-        `Client: ${parsed.name}`,
-        `Round: ${round}`,
-        `Date: ${date}`,
-        'Delivery format: ordered bureau folders only.',
-        'Dispute order: 01 Dispute Letter.docx; 02 Supporting Documents.pdf; 03 Attachment.pdf; 04 FCRA Legal Exhibit.pdf; 05 Affidavit.docx; 06 FTC Identity Theft Report.docx.',
-        ...notes.map((item) => `- ${item}`)
-      ].join('\n')
-    );
+    const manifest = buildGenerationManifest({
+      round,
+      parsed,
+      routes,
+      references: refs,
+      templates,
+      outputs: items.map((item, index) => normalizeGeneratedOutputForManifest({
+        id: item.id,
+        path: item.path,
+        type: item.type,
+        role: item.role,
+        bureau: item.bureau,
+        sequence: item.sequence,
+        count: item.count
+      }, index)),
+      warnings: notes
+    });
+
+    zip.file('Package Manifest.txt', generationManifestText(manifest));
+    zip.file('generation-manifest.json', JSON.stringify(manifest, null, 2));
 
     return zip.generateAsync({ type: 'blob' });
   }
