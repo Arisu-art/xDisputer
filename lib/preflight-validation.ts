@@ -74,7 +74,9 @@ export function evaluateGenerationPreflight(input: GenerationPreflightInput): Ge
   else if (input.routes.some((route) => route.type === 'DISPUTE')) checks.push(block('source.dispute-accounts', 'Disputed accounts', 'A dispute document is selected, but no disputed accounts were found.'));
   else checks.push(warn('source.dispute-accounts', 'Disputed accounts', 'No disputed account section is active.'));
 
-  if (hardInquiries) checks.push(pass('source.hard-inquiries', 'Hard inquiries', `${hardInquiries} hard inquiry item(s) ready.`));
+  // Hard inquiries are optional. Only show this checklist item when the client source actually includes inquiries.
+  // If no hard inquiries are present, the checklist remains clean and generation is still valid.
+  if (hardInquiries > 0) checks.push(pass('source.hard-inquiries', 'Hard inquiries', `${hardInquiries} hard inquiry item(s) ready.`));
 
   if (input.routes.some((route) => route.type === 'LATE_PAYMENT')) {
     checks.push(latePayments
