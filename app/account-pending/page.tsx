@@ -1,9 +1,19 @@
 import { getAccessEntitlement } from '../../lib/saas/access-entitlement';
 import { requireAuth } from '../../lib/saas/session';
 
-export default async function AccountPendingPage() {
+export default async function AccountPendingPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ control?: string; message?: string }>;
+}) {
+  const params = searchParams ? await searchParams : {};
   const session = await requireAuth();
   const entitlement = await getAccessEntitlement();
+  const canJoinManager =
+    !entitlement.allowed &&
+    entitlement.reason === 'NO_MANAGER' &&
+    session.role === 'client' &&
+    !session.profile?.manager_id;
 
   return (
     <main className="saas-auth-page">
@@ -26,6 +36,22 @@ export default async function AccountPendingPage() {
           <div className="saas-auth-alert success">
             Manager: {entitlement.managerEmail}
           </div>
+        )}
+
+        {params.control && (
+          <div className={`saas-auth-alert ${params.control === 'error' ? 'error' : 'success'}`}>
+            {params.message || (params.control === 'error' ? 'Action failed.' : 'Action completed.')}
+          </div>
+        )}
+
+        {canJoinManager && (
+          <form action="/api/access/join-manager" method="post" className="saas-auth-form">
+            <label>
+              <span>Manager invite code</span>
+              <input name="inviteCode" required placeholder="Enter manager invite code" />
+            </label>
+            <button type="submit">Join manager approval list</button>
+          </form>
         )}
 
         <div className="saas-auth-form">
