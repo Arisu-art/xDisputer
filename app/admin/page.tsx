@@ -1,5 +1,5 @@
-import { activateClientAccount, disableClientAccount, pauseClientAccount } from './actions';
-import { listManagedAccounts } from '../../lib/saas/account-management';
+import { activateClientAccount, disableClientAccount, rotateInviteCode } from './actions';
+import { ensureManagerInviteCode, listManagedAccounts } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
 
 function formatDate(value: string | null | undefined) {
@@ -21,13 +21,14 @@ function ClientActionButton({ profileId, action, label }: { profileId: string; a
 }
 
 export default async function AdminPage() {
-  const { user, profile, supabase } = await requireRole('admin');
-  const { accounts: profiles, errorMessage: queryError } = await listManagedAccounts(supabase, 'admin');
+  const { user, profile, supabase } = await requireRole('manager');
+  const inviteCode = await ensureManagerInviteCode(supabase, user.id);
+  const { accounts: profiles, errorMessage: queryError } = await listManagedAccounts(supabase, 'manager', user.id);
 
   const totalClients = profiles.length;
   const activeClients = profiles.filter((item) => (item.account_status || 'active') === 'active').length;
-  const pausedClients = profiles.filter((item) => item.account_status === 'paused').length;
   const disabledClients = profiles.filter((item) => item.account_status === 'disabled').length;
+  const unassignedClients = profiles.filter((item) => !item.manager_id).length;
 
   return (
     <main className="admin-monitor-page">
@@ -36,21 +37,21 @@ export default async function AdminPage() {
           <span>xD</span>
           <div>
             <strong>xDisputer</strong>
-            <small>Admin console</small>
+            <small>Manager console</small>
           </div>
         </div>
 
-        <nav aria-label="Admin navigation">
+        <nav aria-label="Manager navigation">
           <a className="active" href="/admin">Client control</a>
-          <a href="#clients">Manage clients</a>
+          <a href="#invite">Invite code</a>
+          <a href="#clients">My clients</a>
           <a href="#health">Health summary</a>
-          <a href="#operations">Operations</a>
           <a href="/app">Role router</a>
         </nav>
 
         <div className="admin-monitor-account">
-          <strong>{profile?.email || user.email || 'Admin account'}</strong>
-          <small>Administrator</small>
+          <strong>{profile?.email || user.email || 'Manager account'}</strong>
+          <small>Manager</small>
           <form action="/auth/sign-out" method="post">
             <button type="submit">Sign out</button>
           </form>
@@ -60,27 +61,53 @@ export default async function AdminPage() {
       <section className="admin-monitor-main">
         <header className="admin-monitor-header">
           <div>
-            <p>Administration</p>
-            <h1>Client operations.</h1>
-            <span>Manage client access, monitor client status, and route operational work from one admin console.</span>
+            <p>Manager operations</p>
+            <h1>Monitor assigned clients.</h1>
+            <span>Share your invite code so clients can join your manager account.</span>
           </div>
         </header>
 
         <section className="admin-monitor-stats" aria-label="Client statistics">
-          <article><p>Total clients</p><strong>{totalClients}</strong></article>
+          <article><p>My clients</p><strong>{totalClients}</strong></article>
           <article><p>Active</p><strong>{activeClients}</strong></article>
-          <article><p>Paused</p><strong>{pausedClients}</strong></article>
           <article><p>Disabled</p><strong>{disabledClients}</strong></article>
+          <article><p>Unassigned</p><strong>{unassignedClients}</strong></article>
+        </section>
+
+        <section className="admin-power-grid" id="invite">
+          <article className="admin-monitor-card">
+            <div className="admin-monitor-card-header">
+              <div><p>Top function 01</p><h2>Invite clients</h2></div>
+            </div>
+            <div className="admin-power-list">
+              <span>Invite code: {inviteCode}</span>
+              <span>Clients use this code inside their workspace to join your manager account.</span>
+            </div>
+            <form action={rotateInviteCode} className="admin-inline-form">
+              <button type="submit" className="admin-action-button">Rotate invite code</button>
+            </form>
+          </article>
+
+          <article className="admin-monitor-card" id="health">
+            <div className="admin-monitor-card-header">
+              <div><p>Top function 02</p><h2>Client health</h2></div>
+            </div>
+            <div className="admin-power-list">
+              <span>Active clients: {activeClients}</span>
+              <span>Disabled clients: {disabledClients}</span>
+              <span>Action rule: disabled clients cannot access protected workspace.</span>
+            </div>
+          </article>
         </section>
 
         <section className="admin-monitor-card" id="clients">
           <div className="admin-monitor-card-header">
-            <div><p>Client access</p><h2>Manage client accounts</h2></div>
+            <div><p>Top function 03</p><h2>My client accounts</h2></div>
             <span>{totalClients} clients</span>
           </div>
 
           {queryError ? (
-            <div className="admin-monitor-empty">Could not load client records: {queryError}</div>
+            <div className="admin-monitor-empty">Could not load assigned client records: {queryError}</div>
           ) : (
             <div className="admin-monitor-table-wrap">
               <table className="admin-monitor-table">
@@ -88,7 +115,7 @@ export default async function AdminPage() {
                   <tr>
                     <th>Client</th>
                     <th>Status</th>
-                    <th>Created</th>
+                    <th>Joined</th>
                     <th>Updated</th>
                     <th>Controls</th>
                   </tr>
@@ -102,46 +129,21 @@ export default async function AdminPage() {
                       <td>{formatDate(item.updated_at)}</td>
                       <td>
                         <div className="admin-actions-row">
-                          {(item.account_status === 'paused' || item.account_status === 'disabled') ? (
+                          {item.account_status === 'disabled' ? (
                             <ClientActionButton profileId={item.id} action={activateClientAccount} label="Activate" />
                           ) : (
-                            <ClientActionButton profileId={item.id} action={pauseClientAccount} label="Pause" />
+                            <ClientActionButton profileId={item.id} action={disableClientAccount} label="Disable" />
                           )}
-                          <ClientActionButton profileId={item.id} action={disableClientAccount} label="Disable" />
                         </div>
                       </td>
                     </tr>
                   )) : (
-                    <tr><td colSpan={5} className="admin-monitor-empty">No client records found yet.</td></tr>
+                    <tr><td colSpan={5} className="admin-monitor-empty">No clients assigned yet. Share your invite code with a client.</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
           )}
-        </section>
-
-        <section className="admin-power-grid" id="health">
-          <article className="admin-monitor-card">
-            <div className="admin-monitor-card-header">
-              <div><p>Power feature 01</p><h2>Client health summary</h2></div>
-            </div>
-            <div className="admin-power-list">
-              <span>Active ratio: {totalClients ? Math.round((activeClients / totalClients) * 100) : 0}%</span>
-              <span>Needs attention: {pausedClients + disabledClients}</span>
-              <span>Latest records are sorted by creation date.</span>
-            </div>
-          </article>
-
-          <article className="admin-monitor-card" id="operations">
-            <div className="admin-monitor-card-header">
-              <div><p>Power feature 02</p><h2>Operational shortcuts</h2></div>
-            </div>
-            <div className="admin-power-links">
-              <a href="/app">Open role router</a>
-              <a href="/workspace">Preview client workspace guard</a>
-              <a href="/api/account">Inspect current account JSON</a>
-            </div>
-          </article>
         </section>
       </section>
     </main>
