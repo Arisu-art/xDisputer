@@ -184,6 +184,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
           <ManagerSidebarLink panel="intake" activePanel={activePanel}>Client intake</ManagerSidebarLink>
           <ManagerSidebarLink panel="review" activePanel={activePanel}>Review queue</ManagerSidebarLink>
           <ManagerSidebarLink panel="reports" activePanel={activePanel}>Reports</ManagerSidebarLink>
+          <a href="/admin/audit">Audit log</a>
         </nav>
 
         <div className="admin-monitor-account">
