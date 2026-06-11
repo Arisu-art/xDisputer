@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { dashboardForRole } from './routes';
-import { canAccessRole, ensureUserProfile, roleForEmail, type UserProfile, type UserRole } from '../supabase/roles';
+import { canAccessRole, ensureUserProfile, normalizeRole, roleForEmail, type UserProfile, type UserRole } from '../supabase/roles';
 import { createSupabaseServerClient } from '../supabase/server';
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -12,6 +12,7 @@ export type SessionContext = {
   profile: UserProfile | null;
   role: UserRole | null;
   isMaster: boolean;
+  isManager: boolean;
   isAdmin: boolean;
   isClient: boolean;
   dashboardPath: '/master' | '/admin' | '/workspace';
@@ -20,8 +21,8 @@ export type SessionContext = {
 function resolveRole(user: SupabaseUser | null, profile: UserProfile | null): UserRole | null {
   if (!user) return null;
   const emailRole = roleForEmail(user.email || profile?.email);
-  if (emailRole !== 'client') return emailRole;
-  return profile?.role || 'client';
+  if (emailRole === 'master') return 'master';
+  return normalizeRole(profile?.role || 'client');
 }
 
 export async function getSessionContext(): Promise<SessionContext> {
@@ -38,7 +39,8 @@ export async function getSessionContext(): Promise<SessionContext> {
     profile,
     role,
     isMaster: role === 'master',
-    isAdmin: role === 'admin',
+    isManager: role === 'manager',
+    isAdmin: role === 'manager',
     isClient: role === 'client',
     dashboardPath
   };
