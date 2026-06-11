@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from './server';
 import { dashboardForRole } from '../saas/routes';
 
-export type UserRole = 'master' | 'admin' | 'client';
+export type UserRole = 'master' | 'manager' | 'admin' | 'client';
 export type AccountStatus = 'active' | 'paused' | 'disabled';
 
 export type UserProfile = {
@@ -11,6 +11,8 @@ export type UserProfile = {
   full_name: string | null;
   role: UserRole;
   account_status: AccountStatus | null;
+  manager_id: string | null;
+  manager_invite_code: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -18,15 +20,16 @@ export type UserProfile = {
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 const bootstrapMasterEmails = new Set(['mycoquibuyen2002@gmail.com']);
-const bootstrapAdminEmails = new Set<string>([]);
+
+export function normalizeRole(role: string | null | undefined): UserRole {
+  if (role === 'admin') return 'manager';
+  if (role === 'master' || role === 'manager' || role === 'client') return role;
+  return 'client';
+}
 
 export function roleForEmail(email: string | null | undefined): UserRole {
   const normalizedEmail = email?.toLowerCase();
-
-  if (normalizedEmail && bootstrapMasterEmails.has(normalizedEmail)) return 'master';
-  if (normalizedEmail && bootstrapAdminEmails.has(normalizedEmail)) return 'admin';
-
-  return 'client';
+  return normalizedEmail && bootstrapMasterEmails.has(normalizedEmail) ? 'master' : 'client';
 }
 
 export function accountStatus(profile: UserProfile | null | undefined): AccountStatus {
@@ -34,7 +37,9 @@ export function accountStatus(profile: UserProfile | null | undefined): AccountS
 }
 
 export function canAccessRole(currentRole: UserRole | null | undefined, requiredRole: UserRole) {
-  return currentRole === requiredRole;
+  const current = normalizeRole(currentRole);
+  const required = normalizeRole(requiredRole);
+  return current === required;
 }
 
 export async function ensureUserProfile(
@@ -46,15 +51,16 @@ export async function ensureUserProfile(
 
   const { data: existing } = await supabase
     .from('profiles')
-    .select('id,email,full_name,role,account_status,created_at,updated_at')
+    .select('id,email,full_name,role,account_status,manager_id,manager_invite_code,created_at,updated_at')
     .eq('id', user.id)
     .maybeSingle();
 
   if (existing) {
+    const currentRole = normalizeRole(existing.role);
     const patch: Partial<Pick<UserProfile, 'email' | 'role' | 'account_status'>> = {};
 
     if (!existing.email && user.email) patch.email = user.email;
-    if (expectedRole !== 'client' && existing.role !== expectedRole) patch.role = expectedRole;
+    if (expectedRole === 'master' && currentRole !== 'master') patch.role = 'master';
     if (!existing.account_status) patch.account_status = 'active';
 
     if (Object.keys(patch).length) {
@@ -62,13 +68,13 @@ export async function ensureUserProfile(
         .from('profiles')
         .update(patch)
         .eq('id', user.id)
-        .select('id,email,full_name,role,account_status,created_at,updated_at')
+        .select('id,email,full_name,role,account_status,manager_id,manager_invite_code,created_at,updated_at')
         .single();
 
-      return updated as UserProfile | null;
+      return updated ? ({ ...updated, role: normalizeRole(updated.role) } as UserProfile) : null;
     }
 
-    return existing as UserProfile;
+    return { ...existing, role: currentRole } as UserProfile;
   }
 
   const { data: created } = await supabase
@@ -80,10 +86,10 @@ export async function ensureUserProfile(
       role: expectedRole,
       account_status: 'active'
     })
-    .select('id,email,full_name,role,account_status,created_at,updated_at')
+    .select('id,email,full_name,role,account_status,manager_id,manager_invite_code,created_at,updated_at')
     .single();
 
-  return created as UserProfile | null;
+  return created ? ({ ...created, role: normalizeRole(created.role) } as UserProfile) : null;
 }
 
 export async function getCurrentUserProfile() {
@@ -111,7 +117,7 @@ export async function requireUser() {
   }
 
   if (accountStatus(value.profile) !== 'active') {
-    redirect('/login?error=Account access is paused or disabled. Contact your administrator.');
+    redirect('/login?error=Account access is disabled. Contact your manager.');
   }
 
   return value;
