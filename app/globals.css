@@ -5365,3 +5365,99 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
     width: 100%;
   }
 }
+
+/* ------------------------------------------------------------------
+   Phase 9A: Scalable account directories
+   Progressive workflow + server-side search + pagination.
+------------------------------------------------------------------- */
+
+.directory-filter-form {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto auto;
+  gap: 0.75rem;
+  align-items: end;
+  margin-bottom: 1rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.directory-filter-form label {
+  display: grid;
+  gap: 0.42rem;
+  min-width: 0;
+}
+
+.directory-filter-form label span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.directory-filter-form input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: 1px solid rgba(148, 163, 184, 0.52);
+  border-radius: 13px;
+  padding: 0 0.78rem;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.88rem;
+  font-weight: 700;
+  outline: none;
+}
+
+.directory-filter-form input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.directory-pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.directory-pager > span {
+  color: #64748b;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.directory-pager > div {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.admin-action-button.disabled {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+@media (max-width: 720px) {
+  .directory-filter-form {
+    grid-template-columns: 1fr;
+  }
+
+  .directory-filter-form .admin-action-button,
+  .directory-pager .admin-action-button {
+    width: 100% !important;
+  }
+
+  .directory-pager,
+  .directory-pager > div {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+}

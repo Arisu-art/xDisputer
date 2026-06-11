@@ -190,9 +190,9 @@ export default async function MasterReportsPage({ searchParams }: PageProps) {
         <div className="admin-sidebar-section-title">Operations</div>
         <nav aria-label="Master reports navigation">
           <a href="/master">Monitoring</a>
-          <a href="/master?panel=access">All accounts</a>
-          <a href="/master?panel=managers">Managers</a>
-          <a href="/master?panel=clients">Clients</a>
+          <a href="/master/accounts">All accounts</a>
+          <a href="/master/accounts?view=managers">Managers</a>
+          <a href="/master/accounts?view=clients">Clients</a>
           <a className="active" href="/master/reports">Generation reports</a>
           <a href="/master/audit">Audit log</a>
         </nav>

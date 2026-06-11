@@ -38,7 +38,7 @@ function formatDate(value: string | null | undefined) {
 }
 
 function MasterSidebarLink({ panel, activePanel, children }: { panel: MasterPanel; activePanel: MasterPanel; children: string }) {
-  return <a className={activePanel === panel ? 'active' : ''} href={`/master?panel=${panel}`}>{children}</a>;
+  return <a className={activePanel === panel ? 'active' : ''} href={panel === 'access' ? '/master/accounts' : panel === 'managers' ? '/master/accounts?view=managers' : panel === 'clients' ? '/master/accounts?view=clients' : `/master?panel=${panel}`}>{children}</a>;
 }
 
 function StatusList({ accounts }: { accounts: ManagedAccount[] }) {
@@ -150,16 +150,16 @@ export default async function MasterPage({ searchParams }: PageProps) {
                   <article className="admin-monitor-card native-operation-card dashboard-snapshot-card">
                     <div className="admin-monitor-card-header">
                       <div><p>Monitoring</p><h2>Attention queue</h2></div>
-                      <a className="dashboard-card-link" href="/master?panel=clients">View clients</a>
+                      <a className="dashboard-card-link" href="/master/accounts?view=clients">View clients</a>
                     </div>
                     <StatusList accounts={attentionQueue} />
-                    <SnapshotFooter count={5} total={attentionQueue.length} href="/master?panel=clients" />
+                    <SnapshotFooter count={5} total={attentionQueue.length} href="/master/accounts?view=clients" />
                   </article>
 
                   <article className="admin-monitor-card native-operation-card dashboard-snapshot-card">
                     <div className="admin-monitor-card-header">
                       <div><p>Coverage</p><h2>Client-manager assignment</h2></div>
-                      <a className="dashboard-card-link" href="/master?panel=clients">View clients</a>
+                      <a className="dashboard-card-link" href="/master/accounts?view=clients">View clients</a>
                     </div>
                     <div className="dashboard-snapshot-list">
                       <div className="admin-power-list">
@@ -169,7 +169,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
                         <span>Coverage rate: {coverageRate}%</span>
                       </div>
                     </div>
-                    <SnapshotFooter count={4} total={4} href="/master?panel=clients" />
+                    <SnapshotFooter count={4} total={4} href="/master/accounts?view=clients" />
                   </article>
                 </section>
               </>
@@ -218,7 +218,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
                 {activeAccessView === 'managers' && (
                   <section className="master-access-stack">
                     <div className="access-workflow-toolbar">
-                      <a className="access-workflow-back" href="/master?panel=access">← Access control</a>
+                      <a className="access-workflow-back" href="/master/accounts">← Access control</a>
                       <span>{managerProfiles.length} manager account(s)</span>
                     </div>
 
@@ -235,7 +235,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
                 {activeAccessView === 'clients' && (
                   <section className="master-access-stack">
                     <div className="access-workflow-toolbar">
-                      <a className="access-workflow-back" href="/master?panel=access">← Access control</a>
+                      <a className="access-workflow-back" href="/master/accounts">← Access control</a>
                       <span>{clientProfiles.length} client account(s)</span>
                     </div>
 
@@ -252,7 +252,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
                 {activeAccessView === 'pending' && (
                   <section className="master-access-stack">
                     <div className="access-workflow-toolbar">
-                      <a className="access-workflow-back" href="/master?panel=access">← Access control</a>
+                      <a className="access-workflow-back" href="/master/accounts">← Access control</a>
                       <span>{pendingClients.length} pending / unassigned</span>
                     </div>
 

@@ -50,7 +50,7 @@ function statusText(value: string | null | undefined) {
 }
 
 function ManagerSidebarLink({ panel, activePanel, children }: { panel: ManagerPanel; activePanel: ManagerPanel; children: string }) {
-  return <a className={activePanel === panel ? 'active' : ''} href={`/admin?panel=${panel}`}>{children}</a>;
+  return <a className={activePanel === panel ? 'active' : ''} href={panel === 'access' ? '/admin/access' : `/admin?panel=${panel}`}>{children}</a>;
 }
 
 function ControlForm({ profileId, intent, label, primary = false }: { profileId: string; intent: string; label: string; primary?: boolean }) {
@@ -240,19 +240,19 @@ export default async function AdminPage({ searchParams }: PageProps) {
                   <article className="admin-monitor-card native-operation-card dashboard-snapshot-card">
                     <div className="admin-monitor-card-header">
                       <div><p>Monitoring</p><h2>Pending approval</h2></div>
-                      <a className="dashboard-card-link" href="/admin?panel=access">Review</a>
+                      <a className="dashboard-card-link" href="/admin/access">Review</a>
                     </div>
                     <ClientMonitorList clients={pendingClients} emptyText="No clients are waiting for approval." />
-                    <SnapshotFooter count={5} total={pendingClients.length} href="/admin?panel=access" />
+                    <SnapshotFooter count={5} total={pendingClients.length} href="/admin/access" />
                   </article>
 
                   <article className="admin-monitor-card native-operation-card dashboard-snapshot-card">
                     <div className="admin-monitor-card-header">
                       <div><p>Monitoring</p><h2>Active clients</h2></div>
-                      <a className="dashboard-card-link" href="/admin?panel=access">View all</a>
+                      <a className="dashboard-card-link" href="/admin/access">View all</a>
                     </div>
                     <ClientMonitorList clients={activeClients} emptyText="No active clients yet." />
-                    <SnapshotFooter count={5} total={activeClients.length} href="/admin?panel=access" />
+                    <SnapshotFooter count={5} total={activeClients.length} href="/admin/access" />
                   </article>
                 </section>
               </>
@@ -294,7 +294,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                 {activeAccessView === 'pending' && (
                   <section className="admin-dataset-stack">
                     <div className="access-workflow-toolbar">
-                      <a className="access-workflow-back" href="/admin?panel=access">← Access control</a>
+                      <a className="access-workflow-back" href="/admin/access">← Access control</a>
                       <span>{pendingClients.length} pending approval</span>
                     </div>
 
@@ -311,7 +311,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                 {activeAccessView === 'active' && (
                   <section className="admin-dataset-stack">
                     <div className="access-workflow-toolbar">
-                      <a className="access-workflow-back" href="/admin?panel=access">← Access control</a>
+                      <a className="access-workflow-back" href="/admin/access">← Access control</a>
                       <span>{activeClients.length} active clients</span>
                     </div>
 
@@ -328,7 +328,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
                 {activeAccessView === 'blocked' && (
                   <section className="admin-dataset-stack">
                     <div className="access-workflow-toolbar">
-                      <a className="access-workflow-back" href="/admin?panel=access">← Access control</a>
+                      <a className="access-workflow-back" href="/admin/access">← Access control</a>
                       <span>{disabledClients.length} disabled / suspended</span>
                     </div>
 
@@ -387,10 +387,10 @@ export default async function AdminPage({ searchParams }: PageProps) {
                 <article className="admin-monitor-card native-operation-card dashboard-snapshot-card">
                   <div className="admin-monitor-card-header">
                     <div><p>Review queue</p><h2>Needs attention</h2></div>
-                    <a className="dashboard-card-link" href="/admin?panel=access">Open access</a>
+                    <a className="dashboard-card-link" href="/admin/access">Open access</a>
                   </div>
                   <ClientMonitorList clients={attentionQueue} emptyText="No assigned clients need access attention." />
-                  <SnapshotFooter count={5} total={attentionQueue.length} href="/admin?panel=access" />
+                  <SnapshotFooter count={5} total={attentionQueue.length} href="/admin/access" />
                 </article>
 
                 <article className="admin-monitor-card native-operation-card">

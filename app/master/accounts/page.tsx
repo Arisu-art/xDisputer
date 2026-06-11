@@ -1,55 +1,168 @@
+import {
+  directoryQueryString,
+  getMasterAccountSummary,
+  listMasterAccountDirectory,
+  normalizeDirectoryParams,
+  type DirectoryView
+} from '../../../lib/saas/account-directory';
 import MasterAccountTable from '../MasterAccountTable';
-import { listManagedAccounts, type ManagedAccount } from '../../../lib/saas/account-management';
 import { requireRole } from '../../../lib/saas/session';
 
 type PageProps = {
-  searchParams?: Promise<{
-    filter?: string | string[];
-    page?: string | string[];
-  }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-function stringParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
+function viewTitle(view: string) {
+  if (view === 'managers') return 'Manager accounts';
+  if (view === 'clients') return 'Client accounts';
+  if (view === 'pending') return 'Pending / unassigned clients';
+  if (view === 'blocked') return 'Disabled / suspended accounts';
+  return 'Account directory';
 }
 
-function applyFilter(accounts: ManagedAccount[], filter: string | undefined) {
-  if (filter === 'managers') return accounts.filter((item) => item.role === 'manager' || item.role === 'admin');
-  if (filter === 'clients') return accounts.filter((item) => item.role === 'client');
-  if (filter === 'attention') return accounts.filter((item) => item.account_status === 'disabled' || (item.role === 'client' && !item.manager_id));
-  return accounts;
+function DirectoryFilter({ view, query }: { view: string; query: string }) {
+  return (
+    <form action="/master/accounts" method="get" className="directory-filter-form">
+      <input type="hidden" name="view" value={view} />
+      <label>
+        <span>Search</span>
+        <input name="q" type="search" placeholder="Email, name, role, status, or invite code" defaultValue={query} />
+      </label>
+      <button className="admin-action-button primary" type="submit">Search</button>
+      <a className="admin-action-button" href={`/master/accounts${directoryQueryString({ view })}`}>Reset</a>
+    </form>
+  );
+}
+
+function Pager({ view, query, page, pageSize, total }: { view: string; query: string; page: number; pageSize: number; total: number }) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const previous = Math.max(1, page - 1);
+  const next = Math.min(totalPages, page + 1);
+
+  return (
+    <div className="directory-pager">
+      <span>Page {page} of {totalPages} • {total} result(s)</span>
+      <div>
+        <a className={`admin-action-button ${page <= 1 ? 'disabled' : ''}`} href={`/master/accounts${directoryQueryString({ view, q: query, page: previous, pageSize })}`}>Previous</a>
+        <a className={`admin-action-button ${page >= totalPages ? 'disabled' : ''}`} href={`/master/accounts${directoryQueryString({ view, q: query, page: next, pageSize })}`}>Next</a>
+      </div>
+    </div>
+  );
 }
 
 export default async function MasterAccountsPage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : {};
-  const filter = stringParam(params.filter);
-  const currentPage = Math.max(1, Number(stringParam(params.page) || '1') || 1);
-  const pageSize = 20;
+  const directoryParams = normalizeDirectoryParams(params);
+  const selectedView = ['managers', 'clients', 'pending', 'blocked', 'all'].includes(directoryParams.view)
+    ? directoryParams.view as DirectoryView
+    : 'overview';
+
   const { user, profile, supabase } = await requireRole('master');
-  const { accounts, errorMessage } = await listManagedAccounts(supabase, 'master');
-  const filtered = applyFilter(accounts, filter);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const safePage = Math.min(currentPage, pageCount);
-  const start = (safePage - 1) * pageSize;
-  const visible = filtered.slice(start, start + pageSize);
-  const basePath = `/master/accounts${filter ? `?filter=${filter}&` : '?'}`;
+
+  const [{ summary, errorMessage: summaryError }, directory] = await Promise.all([
+    getMasterAccountSummary(supabase),
+    selectedView === 'overview'
+      ? Promise.resolve({ accounts: [], total: 0, page: 1, pageSize: directoryParams.pageSize, errorMessage: null })
+      : listMasterAccountDirectory(supabase, {
+          view: selectedView,
+          query: directoryParams.query,
+          page: directoryParams.page,
+          pageSize: directoryParams.pageSize
+        })
+  ]);
+
+  const coverageRate = summary.clients ? Math.round((summary.linked / summary.clients) * 100) : 0;
 
   return (
-    <main className="admin-monitor-page native-console full-table-page">
+    <main className="admin-monitor-page native-console master-ops-console">
       <aside className="admin-monitor-sidebar native-console-sidebar">
-        <div className="admin-monitor-brand"><span>xD</span><div><strong>xDisputer</strong><small>Master accounts</small></div></div>
-        <div className="admin-sidebar-section-title">Account table</div>
-        <nav aria-label="Master account table navigation"><a href="/master?panel=monitoring">Monitoring</a><a className="active" href="/master/accounts">All accounts</a><a href="/master/accounts?filter=managers">Managers</a><a href="/master/accounts?filter=clients">Clients</a><a href="/master/accounts?filter=attention">Needs attention</a></nav>
-        <div className="admin-monitor-account"><strong>{profile?.email || user.email || 'Master account'}</strong><small>Owner account</small><form action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form></div>
+        <div className="admin-monitor-brand">
+          <span>xD</span>
+          <div><strong>xDisputer</strong><small>Master console</small></div>
+        </div>
+
+        <div className="admin-sidebar-section-title">Operations</div>
+        <nav aria-label="Master navigation">
+          <a href="/master">Monitoring</a>
+          <a className="active" href="/master/accounts">All accounts</a>
+          <a href="/master/reports">Reports</a>
+          <a href="/master/audit">Audit log</a>
+        </nav>
+
+        <div className="admin-monitor-account">
+          <strong>{profile?.email || user.email || 'Master account'}</strong>
+          <small>Owner account</small>
+          <form action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form>
+        </div>
       </aside>
 
       <section className="admin-monitor-main native-console-main">
-        <header className="admin-monitor-header native-command-hero master-compact-hero"><div><p>Master table</p><h1>Account records.</h1><span>Full table view for large account sets, separated from dashboard snapshots.</span></div></header>
-        <section className="admin-monitor-card native-operation-card">
-          <div className="full-table-toolbar"><div><p className="eyebrow">Account records</p><h2>{filter === 'attention' ? 'Needs attention' : filter === 'managers' ? 'Managers' : filter === 'clients' ? 'Clients' : 'All accounts'}</h2></div><a href="/master?panel=monitoring">Back to monitoring</a></div>
-          {errorMessage ? <div className="admin-monitor-empty">Could not load accounts: {errorMessage}</div> : <MasterAccountTable accounts={visible} currentUserId={user.id} emptyText="No matching accounts." />}
-          <div className="table-pagination"><a href={`${basePath}page=${Math.max(1, safePage - 1)}`}>‹ Prev</a><span>Page {safePage} of {pageCount}</span><span>Showing {filtered.length ? start + 1 : 0}-{Math.min(start + pageSize, filtered.length)} of {filtered.length}</span><a href={`${basePath}page=${Math.min(pageCount, safePage + 1)}`}>Next ›</a></div>
-        </section>
+        <header className="admin-monitor-header native-command-hero master-compact-hero">
+          <div>
+            <p>Master account directory</p>
+            <h1>Scalable account workflow.</h1>
+            <span>Choose one account dataset, search server-side, and paginate large account lists without breaking layout.</span>
+          </div>
+        </header>
+
+        {(summaryError || directory.errorMessage) && (
+          <section className="admin-monitor-card">
+            <div className="admin-monitor-empty">{summaryError || directory.errorMessage}</div>
+          </section>
+        )}
+
+        {selectedView === 'overview' ? (
+          <section className="progressive-dataset-grid access-workflow-grid">
+            <a className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=managers">
+              <p>Manager control</p>
+              <h2>Manager accounts</h2>
+              <span>{summary.managers} manager(s)</span>
+              <strong>Promote, demote, disable, reactivate, and rotate invite codes.</strong>
+            </a>
+            <a className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=clients">
+              <p>Client control</p>
+              <h2>Client accounts</h2>
+              <span>{summary.clients} client(s)</span>
+              <strong>Review client account state and manager assignment.</strong>
+            </a>
+            <a className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=pending">
+              <p>Pending</p>
+              <h2>Pending / unassigned</h2>
+              <span>{summary.pending} pending</span>
+              <strong>Find users who need manager assignment or approval.</strong>
+            </a>
+            <a className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=blocked">
+              <p>Blocked</p>
+              <h2>Disabled / suspended</h2>
+              <span>{summary.blocked} blocked</span>
+              <strong>Review accounts that cannot use the platform.</strong>
+            </a>
+            <a className="progressive-dataset-card access-workflow-card" href="/master/reports">
+              <p>Reports</p>
+              <h2>Generation reports</h2>
+              <span>{coverageRate}% coverage</span>
+              <strong>Open read-only platform activity reports.</strong>
+            </a>
+          </section>
+        ) : (
+          <section className="master-access-stack">
+            <div className="access-workflow-toolbar">
+              <a className="access-workflow-back" href="/master/accounts">← Account directory</a>
+              <span>{directory.total} result(s)</span>
+            </div>
+
+            <article className="admin-monitor-card native-operation-card">
+              <div className="admin-monitor-card-header">
+                <div><p>Account dataset</p><h2>{viewTitle(selectedView)}</h2></div>
+                <span>{directory.total} total</span>
+              </div>
+
+              <DirectoryFilter view={selectedView} query={directoryParams.query} />
+              <MasterAccountTable accounts={directory.accounts} currentUserId={user.id} emptyText="No accounts match this dataset." />
+              <Pager view={selectedView} query={directoryParams.query} page={directory.page} pageSize={directory.pageSize} total={directory.total} />
+            </article>
+          </section>
+        )}
       </section>
     </main>
   );
