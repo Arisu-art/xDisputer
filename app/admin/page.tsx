@@ -11,13 +11,8 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
 }
 
-function ClientActionButton({ profileId, action, label }: { profileId: string; action: (formData: FormData) => Promise<void>; label: string }) {
-  return (
-    <form action={action}>
-      <input type="hidden" name="profileId" value={profileId} />
-      <button type="submit" className="admin-action-button">{label}</button>
-    </form>
-  );
+function HiddenProfileId({ profileId }: { profileId: string }) {
+  return <input type="hidden" name="profileId" value={profileId} />;
 }
 
 export default async function AdminPage() {
@@ -130,9 +125,15 @@ export default async function AdminPage() {
                       <td>
                         <div className="admin-actions-row">
                           {item.account_status === 'disabled' ? (
-                            <ClientActionButton profileId={item.id} action={activateClientAccount} label="Activate" />
+                            <form action={activateClientAccount}>
+                              <HiddenProfileId profileId={item.id} />
+                              <button type="submit" className="admin-action-button">Activate</button>
+                            </form>
                           ) : (
-                            <ClientActionButton profileId={item.id} action={disableClientAccount} label="Disable" />
+                            <form action={disableClientAccount}>
+                              <HiddenProfileId profileId={item.id} />
+                              <button type="submit" className="admin-action-button">Disable</button>
+                            </form>
                           )}
                         </div>
                       </td>
