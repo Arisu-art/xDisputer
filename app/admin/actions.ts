@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { updateManagedAccount } from '../../lib/saas/account-management';
+import { joinManagerByInviteCode, rotateManagerInviteCode, updateManagedAccount } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
 import type { AccountStatus } from '../../lib/supabase/roles';
 
@@ -11,11 +11,11 @@ function valueFromForm(formData: FormData, key: string) {
 
 async function updateClientStatus(formData: FormData, account_status: AccountStatus) {
   const targetProfileId = valueFromForm(formData, 'profileId');
-  const { supabase, user } = await requireRole('admin');
+  const { supabase, user } = await requireRole('manager');
 
   await updateManagedAccount(supabase, {
     actorUserId: user.id,
-    actorRole: 'admin',
+    actorRole: 'manager',
     targetProfileId,
     nextStatus: account_status
   });
@@ -24,14 +24,25 @@ async function updateClientStatus(formData: FormData, account_status: AccountSta
   revalidatePath('/api/account');
 }
 
-export async function pauseClientAccount(formData: FormData) {
-  await updateClientStatus(formData, 'paused');
-}
-
 export async function activateClientAccount(formData: FormData) {
   await updateClientStatus(formData, 'active');
 }
 
 export async function disableClientAccount(formData: FormData) {
   await updateClientStatus(formData, 'disabled');
+}
+
+export async function rotateInviteCode() {
+  const { supabase, user } = await requireRole('manager');
+  await rotateManagerInviteCode(supabase, user.id);
+  revalidatePath('/admin');
+  revalidatePath('/api/account');
+}
+
+export async function joinManager(formData: FormData) {
+  const inviteCode = valueFromForm(formData, 'inviteCode');
+  const { supabase, user } = await requireRole('client');
+  await joinManagerByInviteCode(supabase, user.id, inviteCode);
+  revalidatePath('/workspace');
+  revalidatePath('/api/account');
 }
