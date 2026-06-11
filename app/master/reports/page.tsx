@@ -192,8 +192,8 @@ export default async function MasterReportsPage({ searchParams }: PageProps) {
         <nav aria-label="Master reports navigation">
           <ConsoleNavLink href="/master">Monitoring</ConsoleNavLink>
           <ConsoleNavLink href="/master/accounts">All accounts</ConsoleNavLink>
-          <a href="/master/accounts?view=managers">Managers</a>
-          <a href="/master/accounts?view=clients">Clients</a>
+          <ConsoleNavLink href="/master/accounts?view=managers">Managers</ConsoleNavLink>
+          <ConsoleNavLink href="/master/accounts?view=clients">Clients</ConsoleNavLink>
           <ConsoleNavLink className="active" href="/master/reports">Generation reports</ConsoleNavLink>
           <ConsoleNavLink href="/master/audit">Audit log</ConsoleNavLink>
           <ConsoleNavLink href="/master/system">System health</ConsoleNavLink>
