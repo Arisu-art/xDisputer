@@ -196,6 +196,7 @@ export default async function MasterReportsPage({ searchParams }: PageProps) {
           <a href="/master/accounts?view=clients">Clients</a>
           <ConsoleNavLink className="active" href="/master/reports">Generation reports</ConsoleNavLink>
           <ConsoleNavLink href="/master/audit">Audit log</ConsoleNavLink>
+          <ConsoleNavLink href="/master/system">System health</ConsoleNavLink>
         </nav>
 
         <div className="admin-monitor-account">

@@ -88,6 +88,7 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
           <ConsoleNavLink className="active" href="/master/accounts">All accounts</ConsoleNavLink>
           <ConsoleNavLink href="/master/reports">Reports</ConsoleNavLink>
           <ConsoleNavLink href="/master/audit">Audit log</ConsoleNavLink>
+          <ConsoleNavLink href="/master/system">System health</ConsoleNavLink>
         </nav>
 
         <div className="admin-monitor-account">
