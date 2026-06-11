@@ -167,22 +167,34 @@ export default async function MasterPage({ searchParams }: PageProps) {
             )}
 
             {activePanel === 'access' && (
-              <section className="master-access-stack">
-                <article className="admin-monitor-card native-operation-card">
-                  <div className="admin-monitor-card-header">
-                    <div><p>Access control</p><h2>Manager accounts</h2></div>
-                    <span>{managerProfiles.length} managers</span>
-                  </div>
-                  <MasterAccountTable accounts={managerProfiles} currentUserId={user.id} emptyText="No manager accounts found yet. Promote a client into manager access from the client section below." />
-                </article>
+              <section className="progressive-dataset-grid">
+                <a className="progressive-dataset-card" href="/master?panel=managers">
+                  <p>Manager control</p>
+                  <h2>Manage manager accounts</h2>
+                  <span>{managerProfiles.length} manager account(s)</span>
+                  <strong>Promote, demote, disable, reactivate, or rotate invite codes.</strong>
+                </a>
 
-                <article className="admin-monitor-card native-operation-card">
-                  <div className="admin-monitor-card-header">
-                    <div><p>Access control</p><h2>Client accounts</h2></div>
-                    <span>{clientProfiles.length} clients</span>
-                  </div>
-                  <MasterAccountTable accounts={clientProfiles} currentUserId={user.id} emptyText="No client accounts found yet." />
-                </article>
+                <a className="progressive-dataset-card" href="/master?panel=clients">
+                  <p>Client control</p>
+                  <h2>Manage client accounts</h2>
+                  <span>{clientProfiles.length} client account(s)</span>
+                  <strong>Review pending clients, unlink assignments, or promote trusted users.</strong>
+                </a>
+
+                <a className="progressive-dataset-card" href="/master/reports">
+                  <p>Reports</p>
+                  <h2>Generation activity</h2>
+                  <span>{coverageRate}% coverage</span>
+                  <strong>View read-only usage reports without quota enforcement.</strong>
+                </a>
+
+                <a className="progressive-dataset-card" href="/master/audit">
+                  <p>Audit</p>
+                  <h2>Access history</h2>
+                  <span>{attentionQueue.length} attention item(s)</span>
+                  <strong>Review who changed access, approval, manager, and invite states.</strong>
+                </a>
               </section>
             )}
 

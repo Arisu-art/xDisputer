@@ -250,7 +250,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
             )}
 
             {activePanel === 'access' && (
-              <section className="admin-power-grid">
+              <section className="admin-dataset-stack">
                 <article className="admin-monitor-card native-operation-card">
                   <div className="admin-monitor-card-header">
                     <div><p>Access control</p><h2>Pending approval</h2></div>

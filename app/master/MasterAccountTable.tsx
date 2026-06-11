@@ -8,8 +8,8 @@ function formatDate(value: string | null | undefined) {
 }
 
 function statusText(value: string | null | undefined) {
-  if (value === 'pending_manager_assignment') return 'Waiting for invite';
-  if (value === 'pending_manager_approval') return 'Pending manager approval';
+  if (value === 'pending_manager_assignment') return 'Waiting';
+  if (value === 'pending_manager_approval') return 'Pending';
   if (value === 'active') return 'Active';
   if (value === 'suspended') return 'Suspended';
   if (value === 'disabled') return 'Disabled';
@@ -40,35 +40,35 @@ function RotateInviteForm({ managerId }: { managerId: string }) {
   return (
     <form action="/api/master/rotate-invite" method="post">
       <input type="hidden" name="managerId" value={managerId} />
-      <button type="submit" className="admin-action-button">Rotate invite</button>
+      <button type="submit" className="admin-action-button">Rotate</button>
     </form>
   );
 }
 
 function RelationshipBadge({ account }: { account: ManagedAccount }) {
-  if (account.role === 'manager') return <span className="admin-relation-badge ready">Manager access</span>;
-  if (account.role === 'client' && account.manager_id) return <span className="admin-relation-badge linked">Manager linked</span>;
+  if (account.role === 'manager' || account.role === 'admin') return <span className="admin-relation-badge ready">Manager</span>;
+  if (account.role === 'client' && account.manager_id) return <span className="admin-relation-badge linked">Linked</span>;
   if (account.role === 'client') return <span className="admin-relation-badge open">Unassigned</span>;
   return <span className="admin-relation-badge owner">Owner</span>;
 }
 
 function AccountControls({ account, currentUserId }: { account: ManagedAccount; currentUserId: string }) {
-  if (account.role === 'master') return <span className="admin-control-note">Protected owner</span>;
-  if (account.id === currentUserId) return <span className="admin-control-note">Current account</span>;
+  if (account.role === 'master') return <span className="admin-control-note">Protected</span>;
+  if (account.id === currentUserId) return <span className="admin-control-note">Current</span>;
 
   const isManager = account.role === 'manager' || account.role === 'admin';
   const isClient = account.role === 'client';
   const isBlocked = account.account_status === 'disabled' || account.account_status === 'suspended';
 
   return (
-    <div className="admin-actions-row">
+    <div className="admin-actions-row compact-actions">
       {isClient && (
-        <ControlForm profileId={account.id} intent="make_manager" label="Promote manager" primary />
+        <ControlForm profileId={account.id} intent="make_manager" label="Promote" primary />
       )}
 
       {isManager && (
         <>
-          <ControlForm profileId={account.id} intent="demote_client" label="Demote client" />
+          <ControlForm profileId={account.id} intent="demote_client" label="Demote" />
           <RotateInviteForm managerId={account.id} />
         </>
       )}
@@ -83,7 +83,7 @@ function AccountControls({ account, currentUserId }: { account: ManagedAccount; 
       )}
 
       {isClient && account.manager_id && (
-        <ControlForm profileId={account.id} intent="clear_manager" label="Remove manager" />
+        <ControlForm profileId={account.id} intent="clear_manager" label="Unlink" />
       )}
     </div>
   );
@@ -100,14 +100,14 @@ export default function MasterAccountTable({
 }) {
   return (
     <div className="admin-monitor-table-wrap">
-      <table className="admin-monitor-table">
+      <table className="admin-monitor-table professional-data-table">
         <thead>
           <tr>
             <th>Account</th>
             <th>Role</th>
             <th>Status</th>
-            <th>Relationship</th>
-            <th>Invite code</th>
+            <th>Link</th>
+            <th>Invite</th>
             <th>Updated</th>
             <th>Controls</th>
           </tr>
@@ -129,8 +129,8 @@ export default function MasterAccountTable({
                   {statusText(item.account_status)}
                 </span>
               </td>
-              <td data-label="Relationship"><RelationshipBadge account={item} /></td>
-              <td data-label="Invite code">{item.role === 'manager' || item.role === 'admin' ? item.manager_invite_code || 'Not created yet' : '—'}</td>
+              <td data-label="Link"><RelationshipBadge account={item} /></td>
+              <td data-label="Invite">{item.role === 'manager' || item.role === 'admin' ? item.manager_invite_code || 'Not created' : '—'}</td>
               <td data-label="Updated">{formatDate(item.updated_at)}</td>
               <td data-label="Controls"><AccountControls account={item} currentUserId={currentUserId} /></td>
             </tr>

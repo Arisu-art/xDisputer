@@ -4738,3 +4738,223 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
     width: 100%;
   }
 }
+
+/* ------------------------------------------------------------------
+   Progressive Dataset Workflow v2
+   Fixes dense admin/master tables by avoiding side-by-side data grids.
+   Rule: overview chooses context; detail pages show one full-width dataset.
+------------------------------------------------------------------- */
+
+.progressive-dataset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 1rem;
+}
+
+.progressive-dataset-card {
+  display: grid;
+  gap: 0.7rem;
+  min-height: 190px;
+  padding: 1.35rem;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 24px;
+  background: #ffffff;
+  color: #0f172a;
+  text-decoration: none;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.progressive-dataset-card:hover {
+  transform: translateY(-2px);
+  border-color: #bfdbfe;
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.09);
+}
+
+.progressive-dataset-card p {
+  color: #2563eb;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.progressive-dataset-card h2 {
+  max-width: 18rem;
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.progressive-dataset-card span {
+  width: fit-content;
+  padding: 0.44rem 0.7rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.progressive-dataset-card strong {
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+/* Data detail pages should be one readable column, not side-by-side datasets. */
+.master-access-stack,
+.admin-dataset-stack {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 1rem !important;
+  align-items: start !important;
+}
+
+/* Dense tables get full available width before switching to record cards. */
+.admin-monitor-table-wrap {
+  overflow-x: visible !important;
+}
+
+.admin-monitor-table.professional-data-table,
+.admin-monitor-table {
+  table-layout: auto !important;
+  width: 100% !important;
+}
+
+/* Keep table cells readable on desktop. */
+.admin-monitor-table th,
+.admin-monitor-table td {
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+
+.admin-monitor-table td:first-child {
+  min-width: 180px;
+}
+
+.admin-monitor-table td:last-child {
+  min-width: 150px;
+}
+
+.admin-monitor-table td small {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Compact but readable badges. */
+.admin-status-badge,
+.admin-role-badge,
+.admin-relation-badge {
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 0.42rem 0.68rem !important;
+  border-radius: 999px !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+}
+
+/* Controls should wrap as buttons, not split words vertically. */
+.admin-actions-row.compact-actions,
+.admin-actions-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.45rem !important;
+  align-items: center !important;
+}
+
+.admin-actions-row form {
+  flex: 0 0 auto !important;
+}
+
+.admin-action-button {
+  min-width: fit-content !important;
+  white-space: nowrap !important;
+  padding: 0.62rem 0.82rem !important;
+  border-radius: 12px !important;
+  line-height: 1 !important;
+}
+
+/* Switch to record cards only when the real viewport is constrained. */
+@media (max-width: 980px) {
+  .admin-monitor-table-wrap {
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .admin-monitor-table,
+  .admin-monitor-table thead,
+  .admin-monitor-table tbody,
+  .admin-monitor-table tr,
+  .admin-monitor-table th,
+  .admin-monitor-table td {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .admin-monitor-table thead {
+    display: none !important;
+  }
+
+  .admin-monitor-table tbody {
+    display: grid !important;
+    gap: 0.8rem !important;
+  }
+
+  .admin-monitor-table tr {
+    display: grid !important;
+    gap: 0.55rem !important;
+    padding: 1rem !important;
+    border: 1px solid rgba(203, 213, 225, 0.85) !important;
+    border-radius: 18px !important;
+    background: #ffffff !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04) !important;
+  }
+
+  .admin-monitor-table td {
+    display: grid !important;
+    grid-template-columns: 120px minmax(0, 1fr) !important;
+    gap: 0.75rem !important;
+    align-items: start !important;
+    min-width: 0 !important;
+    padding: 0.35rem 0 !important;
+    border: 0 !important;
+  }
+
+  .admin-monitor-table td::before {
+    content: attr(data-label);
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .admin-monitor-table td:not([data-label]) {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-monitor-table td:not([data-label])::before {
+    content: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-monitor-table td {
+    grid-template-columns: 1fr !important;
+    gap: 0.25rem !important;
+  }
+
+  .admin-actions-row,
+  .admin-actions-row.compact-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-actions-row form,
+  .admin-action-button {
+    width: 100% !important;
+  }
+}
