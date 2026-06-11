@@ -27,20 +27,36 @@ function MasterSidebarLink({ panel, activePanel, children }: { panel: MasterPane
   return <a className={activePanel === panel ? 'active' : ''} href={`/master?panel=${panel}`}>{children}</a>;
 }
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+}
+
 function StatusList({ accounts }: { accounts: ManagedAccount[] }) {
   if (!accounts.length) return <div className="admin-monitor-empty">No accounts need attention right now.</div>;
 
   return (
-    <div className="master-monitor-list">
-      {accounts.map((account) => (
+    <div className="dashboard-snapshot-list master-monitor-list">
+      {accounts.slice(0, 5).map((account) => (
         <article key={account.id} className="master-monitor-item">
           <div>
             <strong>{account.full_name || account.email || 'Unnamed account'}</strong>
-            <span>{account.email || 'Account record'}</span>
+            <span>{account.email || 'Account record'} • Updated {formatDate(account.updated_at)}</span>
           </div>
           <span className={`admin-status-badge ${account.account_status || 'active'}`}>{account.account_status || 'active'}</span>
         </article>
       ))}
+    </div>
+  );
+}
+
+function SnapshotFooter({ count, total, href }: { count: number; total: number; href: string }) {
+  return (
+    <div className="dashboard-snapshot-footer">
+      <span>Showing 1-{Math.min(count, total)} of {total}</span>
+      <a className="dashboard-card-link" href={href}>View all</a>
     </div>
   );
 }
@@ -114,13 +130,28 @@ export default async function MasterPage({ searchParams }: PageProps) {
                 </section>
 
                 <section className="admin-power-grid">
-                  <article className="admin-monitor-card native-operation-card">
-                    <div className="admin-monitor-card-header"><div><p>Monitoring</p><h2>Attention queue</h2></div><span>{attentionQueue.length} items</span></div>
+                  <article className="admin-monitor-card native-operation-card dashboard-snapshot-card">
+                    <div className="admin-monitor-card-header">
+                      <div><p>Monitoring</p><h2>Attention queue</h2></div>
+                      <a className="dashboard-card-link" href="/master/accounts?filter=attention">View all</a>
+                    </div>
                     <StatusList accounts={attentionQueue} />
+                    <SnapshotFooter count={5} total={attentionQueue.length} href="/master/accounts?filter=attention" />
                   </article>
-                  <article className="admin-monitor-card native-operation-card">
-                    <div className="admin-monitor-card-header"><div><p>Coverage</p><h2>Client-manager assignment</h2></div><span>{coverageRate}% linked</span></div>
-                    <div className="admin-power-list"><span>Linked clients: {linkedClients.length}</span><span>Unassigned clients: {unassignedClients.length}</span><span>Managers available: {managerProfiles.length}</span></div>
+                  <article className="admin-monitor-card native-operation-card dashboard-snapshot-card">
+                    <div className="admin-monitor-card-header">
+                      <div><p>Coverage</p><h2>Client-manager assignment</h2></div>
+                      <a className="dashboard-card-link" href="/master/accounts?filter=clients">View all</a>
+                    </div>
+                    <div className="dashboard-snapshot-list">
+                      <div className="admin-power-list">
+                        <span>Linked clients: {linkedClients.length}</span>
+                        <span>Unassigned clients: {unassignedClients.length}</span>
+                        <span>Managers available: {managerProfiles.length}</span>
+                        <span>Coverage rate: {coverageRate}%</span>
+                      </div>
+                    </div>
+                    <SnapshotFooter count={4} total={4} href="/master/accounts?filter=clients" />
                   </article>
                 </section>
               </>
