@@ -1,30 +1,34 @@
-import { activateAccount, demoteToClient, disableAccount, pauseAccount, promoteToAdmin } from './actions';
+import MasterAccountTable from './MasterAccountTable';
 import { listManagedAccounts } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+type MasterPanel = 'overview' | 'admins' | 'clients' | 'system';
+
+type PageProps = {
+  searchParams?: Promise<{
+    panel?: string | string[];
+  }>;
+};
+
+function normalizePanel(value: string | string[] | undefined): MasterPanel {
+  const panel = Array.isArray(value) ? value[0] : value;
+  if (panel === 'admins' || panel === 'clients' || panel === 'system') return panel;
+  return 'overview';
 }
 
-function AccountActionButton({ profileId, action, label }: { profileId: string; action: (formData: FormData) => Promise<void>; label: string }) {
-  return (
-    <form action={action}>
-      <input type="hidden" name="profileId" value={profileId} />
-      <button type="submit" className="admin-action-button">{label}</button>
-    </form>
-  );
+function MasterSidebarLink({ panel, activePanel, children }: { panel: MasterPanel; activePanel: MasterPanel; children: string }) {
+  return <a className={activePanel === panel ? 'active' : ''} href={`/master?panel=${panel}`}>{children}</a>;
 }
 
-export default async function MasterPage() {
+export default async function MasterPage({ searchParams }: PageProps) {
+  const params = searchParams ? await searchParams : {};
+  const activePanel = normalizePanel(params.panel);
   const { user, profile, supabase } = await requireRole('master');
   const { accounts: profiles, errorMessage: queryError } = await listManagedAccounts(supabase, 'master');
 
-  const masterUsers = profiles.filter((item) => item.role === 'master').length;
-  const adminUsers = profiles.filter((item) => item.role === 'admin').length;
-  const clientUsers = profiles.filter((item) => item.role === 'client').length;
+  const masterProfiles = profiles.filter((item) => item.role === 'master');
+  const adminProfiles = profiles.filter((item) => item.role === 'admin');
+  const clientProfiles = profiles.filter((item) => item.role === 'client');
   const pausedUsers = profiles.filter((item) => item.account_status === 'paused' || item.account_status === 'disabled').length;
 
   return (
@@ -39,9 +43,10 @@ export default async function MasterPage() {
         </div>
 
         <nav aria-label="Master navigation">
-          <a className="active" href="/master">Account control</a>
-          <a href="#admins">Manage admins</a>
-          <a href="#clients">Monitor clients</a>
+          <MasterSidebarLink panel="overview" activePanel={activePanel}>Overview</MasterSidebarLink>
+          <MasterSidebarLink panel="admins" activePanel={activePanel}>Manage admins</MasterSidebarLink>
+          <MasterSidebarLink panel="clients" activePanel={activePanel}>Manage clients</MasterSidebarLink>
+          <MasterSidebarLink panel="system" activePanel={activePanel}>System checks</MasterSidebarLink>
           <a href="/app">Role router</a>
           <a href="/api/account">Account JSON</a>
         </nav>
@@ -64,61 +69,77 @@ export default async function MasterPage() {
           </div>
         </header>
 
-        <section className="admin-monitor-stats" aria-label="Role statistics">
-          <article><p>Masters</p><strong>{masterUsers}</strong></article>
-          <article><p>Admins</p><strong>{adminUsers}</strong></article>
-          <article><p>Clients</p><strong>{clientUsers}</strong></article>
-          <article><p>Paused/Disabled</p><strong>{pausedUsers}</strong></article>
-        </section>
-
-        <section className="admin-monitor-card" id="admins">
-          <div className="admin-monitor-card-header">
-            <div><p>Master controls</p><h2>Account hierarchy</h2></div>
-            <span>{profiles.length} records</span>
-          </div>
-
-          {queryError ? (
+        {queryError ? (
+          <section className="admin-monitor-card">
             <div className="admin-monitor-empty">Could not load profile records: {queryError}</div>
-          ) : (
-            <div className="admin-monitor-table-wrap">
-              <table className="admin-monitor-table">
-                <thead>
-                  <tr>
-                    <th>User</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Updated</th>
-                    <th>Controls</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {profiles.length ? profiles.map((item) => (
-                    <tr key={item.id}>
-                      <td><strong>{item.full_name || item.email || 'Unnamed user'}</strong><small>{item.email || item.id}</small></td>
-                      <td><span className={`admin-role-badge ${item.role}`}>{item.role}</span></td>
-                      <td><span className={`admin-status-badge ${item.account_status || 'active'}`}>{item.account_status || 'active'}</span></td>
-                      <td>{formatDate(item.updated_at)}</td>
-                      <td>
-                        <div className="admin-actions-row">
-                          {item.role === 'client' && <AccountActionButton profileId={item.id} action={promoteToAdmin} label="Make admin" />}
-                          {item.role === 'admin' && <AccountActionButton profileId={item.id} action={demoteToClient} label="Demote" />}
-                          {(item.account_status === 'paused' || item.account_status === 'disabled') ? (
-                            <AccountActionButton profileId={item.id} action={activateAccount} label="Activate" />
-                          ) : (
-                            <AccountActionButton profileId={item.id} action={pauseAccount} label="Pause" />
-                          )}
-                          {item.id !== user.id && item.role !== 'master' && <AccountActionButton profileId={item.id} action={disableAccount} label="Disable" />}
-                        </div>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr><td colSpan={5} className="admin-monitor-empty">No profile records found yet.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+          </section>
+        ) : (
+          <>
+            {activePanel === 'overview' && (
+              <>
+                <section className="admin-monitor-stats" aria-label="Role statistics">
+                  <article><p>Masters</p><strong>{masterProfiles.length}</strong></article>
+                  <article><p>Admins</p><strong>{adminProfiles.length}</strong></article>
+                  <article><p>Clients</p><strong>{clientProfiles.length}</strong></article>
+                  <article><p>Paused/Disabled</p><strong>{pausedUsers}</strong></article>
+                </section>
+
+                <section className="admin-power-grid">
+                  <article className="admin-monitor-card">
+                    <div className="admin-monitor-card-header"><div><p>Function 01</p><h2>Admin control</h2></div></div>
+                    <div className="admin-power-links"><a href="/master?panel=admins">Open admin management</a></div>
+                  </article>
+                  <article className="admin-monitor-card">
+                    <div className="admin-monitor-card-header"><div><p>Function 02</p><h2>Client control</h2></div></div>
+                    <div className="admin-power-links"><a href="/master?panel=clients">Open client management</a></div>
+                  </article>
+                </section>
+              </>
+            )}
+
+            {activePanel === 'admins' && (
+              <section className="admin-monitor-card">
+                <div className="admin-monitor-card-header">
+                  <div><p>Master controls</p><h2>Manage admin accounts</h2></div>
+                  <span>{adminProfiles.length} admins</span>
+                </div>
+                <MasterAccountTable accounts={adminProfiles} currentUserId={user.id} emptyText="No admin accounts found yet. Promote a client to admin from the client panel." />
+              </section>
+            )}
+
+            {activePanel === 'clients' && (
+              <section className="admin-monitor-card">
+                <div className="admin-monitor-card-header">
+                  <div><p>Client controls</p><h2>Manage client accounts</h2></div>
+                  <span>{clientProfiles.length} clients</span>
+                </div>
+                <MasterAccountTable accounts={clientProfiles} currentUserId={user.id} emptyText="No client accounts found yet." />
+              </section>
+            )}
+
+            {activePanel === 'system' && (
+              <section className="admin-power-grid">
+                <article className="admin-monitor-card">
+                  <div className="admin-monitor-card-header"><div><p>System check</p><h2>Access contract</h2></div></div>
+                  <div className="admin-power-list">
+                    <span>Master route: /master</span>
+                    <span>Admin route: /admin</span>
+                    <span>Client route: /workspace</span>
+                    <span>Account state source: public.profiles.account_status</span>
+                  </div>
+                </article>
+                <article className="admin-monitor-card">
+                  <div className="admin-monitor-card-header"><div><p>Verification</p><h2>Debug links</h2></div></div>
+                  <div className="admin-power-links">
+                    <a href="/app">Open role router</a>
+                    <a href="/api/account">Inspect current account JSON</a>
+                    <a href="/admin">Test admin route guard</a>
+                  </div>
+                </article>
+              </section>
+            )}
+          </>
+        )}
       </section>
     </main>
   );
