@@ -10,12 +10,30 @@ type Props = {
 
 export default function HeaderNextAction({ action, status, statusTone = 'info' }: Props) {
   const hasStatus = Boolean(status?.trim());
-  return <div className={`header-next-action ${action.state} ${hasStatus ? `with-status ${statusTone}` : ''}`} aria-label="Next workflow action">
-    <span>{action.progressLabel}</span>
-    <div>
-      {hasStatus && <small className="header-chip-status" role={statusTone === 'error' ? 'alert' : 'status'} aria-live="polite">{status}</small>}
-      <strong>{action.title}</strong>
-      <small>{action.detail}</small>
+
+  return (
+    <div
+      className={`header-next-action ${action.state} ${hasStatus ? `with-status ${statusTone}` : ''}`}
+      aria-label="Next workflow action"
+    >
+      <span className="runtime-chip-dot" aria-hidden="true" />
+      <span className="runtime-chip-label">{action.progressLabel}</span>
+      <span className="runtime-chip-separator" aria-hidden="true">·</span>
+      {hasStatus && (
+        <>
+          <span
+            className="runtime-chip-status"
+            role={statusTone === 'error' ? 'alert' : 'status'}
+            aria-live="polite"
+          >
+            {status}
+          </span>
+          <span className="runtime-chip-separator" aria-hidden="true">·</span>
+        </>
+      )}
+      <span className="runtime-chip-title">{action.title}</span>
+      <span className="runtime-chip-separator" aria-hidden="true">·</span>
+      <span className="runtime-chip-detail">{action.detail}</span>
     </div>
-  </div>;
+  );
 }

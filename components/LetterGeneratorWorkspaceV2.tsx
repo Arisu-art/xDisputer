@@ -30,11 +30,23 @@ import { activeWorkflowDiagnostics, assessRouteCoverage, requiredGenerationFailu
 import { evaluateGenerationPreflight, preflightFailureMessage } from '../lib/preflight-validation';
 import { buildCasePipeline, nextCaseAction } from '../lib/case-pipeline';
 import { resolveUxVisibility } from '../lib/ux-visibility-contract';
-import { buildGenerationManifest, generationManifestText, normalizeGeneratedOutputForManifest } from '../lib/generation-manifest';
+import { buildGenerationManifest, generationManifestText, normalizeGeneratedOutputForManifest, type GenerationManifest } from '../lib/generation-manifest';
 
 type Panel = 'Dashboard' | 'Templates' | 'Source Data' | 'Outputs' | 'Filing Tracker' | 'Settings';
 type SourceDraftSnapshot = { text: string; normalized: boolean; label: string; capturedAt: string };
 type StatusTone = 'info' | 'success' | 'error';
+
+type RegistryTemplateAsset = {
+  id: string;
+  round_label: Round;
+  template_kind: 'LETTER' | 'EXHIBIT';
+  letter_type: LetterType | null;
+  exhibit_kind: ExhibitKind | null;
+  original_filename: string;
+  mime_type: string;
+  file_size: number | null;
+  contract_json: unknown;
+};
 
 const panels: Panel[] = ['Dashboard', 'Templates', 'Source Data', 'Outputs', 'Filing Tracker', 'Settings'];
 const labels: Record<LetterType, string> = { DISPUTE: 'Dispute Letter', LATE_PAYMENT: 'Late Payment Letter' };
@@ -84,6 +96,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   const [filings, setFilings] = useState<FilingRecord[]>([]);
   const [evidence, setEvidence] = useState<PacketAssets>(emptyEvidence);
   const [templates, setTemplates] = useState<TemplateExhibits>(emptyTemplates);
+  const [registryAssets, setRegistryAssets] = useState<RegistryTemplateAsset[]>([]);
   const [docs, setDocs] = useState<ReviewOutput[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [orderedZip, setOrderedZip] = useState<{ name: string; blob: Blob } | null>(null);
@@ -109,8 +122,61 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
     return () => { cancelled = true; };
   }, []);
   useEffect(() => setTemplates(loadTemplateExhibits(round)), [round]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/template-assets?round=${encodeURIComponent(round)}`)
+      .then((response) => response.ok ? response.json() : { assets: [] })
+      .then((payload) => {
+        if (!cancelled) setRegistryAssets(Array.isArray(payload.assets) ? payload.assets : []);
+      })
+      .catch(() => {
+        if (!cancelled) setRegistryAssets([]);
+      });
+
+    return () => { cancelled = true; };
+  }, [round]);
 
   const refs = references.filter((item) => item.round === round);
+  const effectiveRefs = useMemo(() => refs.map((slot) => {
+    const registryAsset = registryAssets.find((asset) =>
+      asset.template_kind === 'LETTER' &&
+      asset.letter_type === slot.type
+    );
+
+    if (!registryAsset || slot.file) return slot;
+
+    return {
+      ...slot,
+      file: registryAsset.original_filename,
+      size: registryAsset.file_size || undefined,
+      contract: registryAsset.contract_json as any
+    };
+  }), [refs, registryAssets]);
+
+  const effectiveTemplates = useMemo(() => {
+    const next = { ...templates };
+
+    (['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'] as ExhibitKind[]).forEach((kind) => {
+      const registryAsset = registryAssets.find((asset) =>
+        asset.template_kind === 'EXHIBIT' &&
+        asset.exhibit_kind === kind
+      );
+
+      if (!registryAsset || next[kind]) return;
+
+      next[kind] = {
+        id: registryAsset.id,
+        kind,
+        mode: kind === 'FCRA' || kind === 'ATTACHMENT' ? 'STATIC_PDF' : 'GENERATED_DOCX',
+        name: registryAsset.original_filename,
+        type: registryAsset.mime_type,
+        size: registryAsset.file_size || 0,
+        contract: registryAsset.contract_json as any
+      };
+    });
+
+    return next;
+  }, [templates, registryAssets]);
   const parsed = useMemo(() => parseSource(source), [source]);
   const routes = useMemo(() => detectRoutes(parsed), [parsed]);
   const verified = normalized && Boolean(parsed.name);
@@ -123,13 +189,13 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   const affidavitSource = useMemo(() => ({ ...parsed, address: parsed.address.length ? parsed.address : ['N/A'], affidavitState: affidavitJurisdiction.state, affidavitCounty: affidavitJurisdiction.county }), [parsed, affidavitJurisdiction]);
   const sourceWarnings = [...activeWorkflowDiagnostics(parsed.diagnostics.filter((item) => item.level === 'warning')), ...(affidavitRequired && affidavitJurisdiction.reviewRequired ? [{ message: affidavitJurisdiction.explanation }] : [])];
   const affidavitReady = !affidavitRequired || Boolean(affidavitSource.affidavitState.trim() && affidavitSource.affidavitCounty.trim());
-  const activeTemplateContracts = [templates.FCRA, templates.AFFIDAVIT, templates.ATTACHMENT, templates.FTC].map((item) => item?.contract);
-  const customFields = unresolvedCustomTemplateFields([...refs.map((item) => item.contract), ...activeTemplateContracts]);
+  const activeTemplateContracts = [effectiveTemplates.FCRA, effectiveTemplates.AFFIDAVIT, effectiveTemplates.ATTACHMENT, effectiveTemplates.FTC].map((item) => item?.contract);
+  const customFields = unresolvedCustomTemplateFields([...effectiveRefs.map((item) => item.contract), ...activeTemplateContracts]);
   const customReady = customFields.every((item) => !item.required || Boolean(parsed.templateFields[item.key]?.trim()));
-  const missingNodes = dispute ? requirements.filter((kind) => !templates[kind]) : [];
+  const missingNodes = dispute ? requirements.filter((kind) => !effectiveTemplates[kind]) : [];
   const canGenerate = verified && routes.length > 0;
-  const preflight = useMemo(() => evaluateGenerationPreflight({ round, source, normalized, parsed: affidavitRequired ? affidavitSource : parsed, routes, references: refs, templates, evidence, affidavitReady, customReady, strictValidation: preferences.strictValidation, preferences }), [source, normalized, parsed, affidavitRequired, affidavitSource, routes, refs, templates, evidence, affidavitReady, customReady, preferences]);
-  const pipelineStages = useMemo(() => buildCasePipeline({ round, hasCase: Boolean(caseId || parsed.name), clientName: parsed.name, routes, references: refs, templates, evidence, preflight, outputCount: docs.length, orderedZipReady: Boolean(orderedZip), reviewedCount: docs.length ? docs.length : 0, downloaded: false, filedCount: filings.length }), [round, caseId, parsed.name, routes, refs, templates, evidence, preflight, docs.length, orderedZip, filings.length]);
+  const preflight = useMemo(() => evaluateGenerationPreflight({ round, source, normalized, parsed: affidavitRequired ? affidavitSource : parsed, routes, references: effectiveRefs, templates: effectiveTemplates, evidence, affidavitReady, customReady, strictValidation: preferences.strictValidation, preferences }), [source, normalized, parsed, affidavitRequired, affidavitSource, routes, effectiveRefs, effectiveTemplates, evidence, affidavitReady, customReady, preferences]);
+  const pipelineStages = useMemo(() => buildCasePipeline({ round, hasCase: Boolean(caseId || parsed.name), clientName: parsed.name, routes, references: effectiveRefs, templates: effectiveTemplates, evidence, preflight, outputCount: docs.length, orderedZipReady: Boolean(orderedZip), reviewedCount: docs.length ? docs.length : 0, downloaded: false, filedCount: filings.length }), [round, caseId, parsed.name, routes, effectiveRefs, effectiveTemplates, evidence, preflight, docs.length, orderedZip, filings.length]);
   const pipelineNextAction = useMemo(() => nextCaseAction(pipelineStages), [pipelineStages]);
   const uxRules = useMemo(() => resolveUxVisibility({ panel, statusTone, hasSource: Boolean(source.trim()), hasPreflightBlockers: preflight.blockers.length > 0, hasPreflightWarnings: preflight.warnings.length > 0, generateAttempted, busy, hasGeneratedOutput: docs.length > 0 }), [panel, statusTone, source, preflight.blockers.length, preflight.warnings.length, generateAttempted, busy, docs.length]);
 
@@ -137,6 +203,26 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
 
   function report(message: string, tone: StatusTone = 'info') { setStatus(message); setStatusTone(tone); }
   function clearOutputs() { setDocs([]); setWarnings([]); setOrderedZip(null); setDocDate(''); setGenerateAttempted(false); }
+  async function persistGenerationRun(manifest: GenerationManifest) {
+    try {
+      const response = await fetch('/api/generation-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientName: manifest.clientName,
+          round: manifest.round,
+          manifest,
+          status: 'generated'
+        })
+      });
+
+      if (!response.ok) {
+        console.warn('Generation run was not saved.', await response.text());
+      }
+    } catch (error) {
+      console.warn('Generation run persistence failed.', error);
+    }
+  }
   function captureDraft(label: string) { if (source.trim()) setRecoveryDraft({ text: source, normalized, label, capturedAt: new Date().toISOString() }); }
   function saveCase(statusValue: ClientCaseStatus, data: Partial<ClientCaseRecord> = {}) {
     const id = data.id || caseId;
@@ -244,8 +330,41 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
         });
   }
 
+  async function readSupabaseTemplateFile(params: Record<string, string>) {
+    const url = `/api/template-assets/file?${new URLSearchParams(params).toString()}`;
+    const response = await fetch(url);
+
+    if (!response.ok) return null;
+
+    const blob = await response.blob();
+    const name = response.headers.get('x-template-file-name') || 'template-file';
+    return new File([blob], name, { type: blob.type || 'application/octet-stream' });
+  }
+
+  async function readLetterTemplate(reference: LetterReference, type: LetterType) {
+    const local = reference.id ? await readReferenceFile(reference.id).catch(() => null) : null;
+    if (local) return local;
+
+    return readSupabaseTemplateFile({
+      round,
+      templateKind: 'LETTER',
+      letterType: type
+    });
+  }
+
+  async function readExhibitTemplate(kind: ExhibitKind) {
+    const local = await readTemplateExhibit(round, kind).catch(() => null);
+    if (local) return local;
+
+    return readSupabaseTemplateFile({
+      round,
+      templateKind: 'EXHIBIT',
+      exhibitKind: kind
+    });
+  }
+
   async function affidavit(bureau: Bureau, date: string) {
-    const file = await readTemplateExhibit(round, 'AFFIDAVIT');
+    const file = await readExhibitTemplate('AFFIDAVIT');
 
     if (!file) return null;
 
@@ -278,8 +397,8 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
       round,
       parsed,
       routes,
-      references: refs,
-      templates,
+      references: effectiveRefs,
+      templates: effectiveTemplates,
       outputs: items.map((item, index) => normalizeGeneratedOutputForManifest({
         id: item.id,
         path: item.path,
@@ -307,10 +426,10 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
     const notes: string[] = [];
     try {
       for (const route of routes) {
-        const reference = refs.find((item) => item.type === route.type);
+        const reference = effectiveRefs.find((item) => item.type === route.type);
         report(`Generating ${route.bureau} ${labels[route.type]}…`);
         try {
-          const file = reference?.file ? await withTimeout(`Reading ${route.bureau} ${labels[route.type]} template`, () => readReferenceFile(reference.id), 30_000) : null;
+          const file = reference?.file ? await withTimeout(`Reading ${route.bureau} ${labels[route.type]} template`, () => readLetterTemplate(reference, route.type), 30_000) : null;
           if (!file) { notes.push(`${labels[route.type]} / ${route.bureau}: DOCX reference is missing.`); continue; }
           const blob = await withTimeout(`Generating ${route.bureau} ${labels[route.type]}`, () => letter(route, file, date));
           output.push({ id: `${route.type}-${route.bureau}-LETTER`, path: `Editable Documents/${clean(parsed.name)} ${route.bureau} ${labels[route.type]}.docx`, type: route.type, role: 'LETTER', sequence: 1, bureau: route.bureau, count: route.items.length, detail: route.reason, blob, packetSteps: order(route.type) });
@@ -338,6 +457,24 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
       }
       report('Preparing complete ordered component package…');
       const zip = await withTimeout('Preparing ordered package ZIP', () => makeZip(output, notes, date), ARCHIVE_TIMEOUT_MS);
+      const persistedManifest = buildGenerationManifest({
+        round,
+        parsed,
+        routes,
+        references: refs,
+        templates,
+        outputs: output.map((item, index) => normalizeGeneratedOutputForManifest({
+          id: item.id,
+          path: item.path,
+          type: item.type,
+          role: item.role,
+          bureau: item.bureau,
+          sequence: item.sequence,
+          count: item.count
+        }, index)),
+        warnings: notes
+      });
+      void persistGenerationRun(persistedManifest);
       const zipName = `${clean(parsed.name)}.zip`;
       setDocs(output); setWarnings(notes); setOrderedZip({ name: zipName, blob: zip }); setDocDate(date);
       saveCase('REVIEW_READY', { editableCount: output.length, evidenceCount: evidence.supporting.length, pdfCount: 0 });
@@ -381,5 +518,5 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   function dashboard() { return <DashboardOperationsWorkspace cases={cases} filings={filings} activeCaseId={caseId} onNewCase={begin} onOpenTemplates={() => setPanel('Templates')} onOpenOutputs={() => setPanel(orderedZip ? 'Outputs' : 'Dashboard')} onOpenTracker={() => setPanel('Filing Tracker')} onContinueCase={(item) => setPanel(item.id === caseId && item.status !== 'PDF_READY' ? (item.status === 'REVIEW_READY' ? 'Outputs' : 'Source Data') : 'Filing Tracker')} />; }
   function sourceView() { return <>{uxRules.showPreflightPanel && <GenerationPreflightChecklist result={preflight} />}<GuidedSourceDataFlow source={source} originalSource={originalSource} recoveryDraft={recoveryDraft} normalized={normalized} verified={verified} parsed={affidavitRequired ? affidavitSource : parsed} routes={routes} sourceWarnings={sourceWarnings} evidenceKey={evidenceKey} evidence={evidence} canGenerate={preflight.ready && canGenerate} missingLetters={missingLetters.map((item) => labels[item])} missingInsertCount={missingNodes.length} affidavitRequired={affidavitRequired} ftcRequired={Boolean(parsed.ftcAccounts.length)} customFields={customFields} strict={preferences.strictValidation} busy={busy} onImportSource={importSource} onStandardizeDraft={standardizeDraft} onStartManualDraft={startManualDraft} onEditSource={(value) => { setSource(value); setNormalized(false); clearOutputs(); }} onSourceFieldChange={setLine} onFtcAccountChange={() => {}} onFtcAccountAdd={() => {}} onFtcAccountRemove={() => {}} onFtcAccountSeed={() => {}} onRestoreOriginal={restoreOriginal} onRecoverDraft={recoverDraft} onEvidenceChanged={(value) => { setEvidence(value); clearOutputs(); saveCase(value.supporting.length ? 'EVIDENCE_READY' : 'SOURCE_LOCKED', { evidenceCount: value.supporting.length, editableCount: 0 }); }} onMessage={(message) => report(message)} onGenerate={generate} /></>; }
   function settingsView() { return <><WorkspaceSettingsPanel preferences={preferences} caseCount={cases.length} filingCount={filings.length} onChange={(value) => setPreferences(saveWorkspacePreferences(value))} onExportRecords={() => download('LETTERGENERATOR_OPERATIONAL_RECORDS.json', new Blob([JSON.stringify(exportOperationsRecords(), null, 2)], { type: 'application/json' }))} onClearRecords={() => { const value = clearOperationsRecords(); setCases(value.cases); setFilings(value.filings); }} /><WorkspacePortabilityPanel round={round} caseId={caseId} clientName={parsed.name} source={source} originalSource={originalSource} normalized={normalized} preferences={preferences} disabled={busy} onImported={applyWorkspaceImport} onMessage={(message, tone) => report(message, tone)} /></>; }
-  return <main className="app-shell"><aside className="sidebar"><div className="brand"><span /><div><strong>LetterGenerator</strong><small>Packet workflow</small></div></div><nav>{panels.map((item) => <button key={item} className={panel === item ? 'active' : ''} disabled={item === 'Outputs' && !orderedZip} onClick={() => setPanel(item)}><strong>{item}</strong></button>)}</nav><div className="workspace-account-card"><div><span>{(accountEmail || 'CL').slice(0, 2).toUpperCase()}</span><div><strong>{accountRole === 'admin' ? 'Admin account' : 'Client account'}</strong><small>{accountEmail || 'Signed in'}</small></div></div><button type="button" onClick={() => setPanel('Settings')}>Account settings</button><form action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form></div></aside><section className="main-area"><header className="header"><div><p className="eyebrow">{panel === 'Dashboard' ? 'Client operations' : `${round} workflow`}</p><h1>{panel}</h1>{uxRules.showStatusText && <p className={`workspace-operation-status ${statusTone}`} role={statusTone === 'error' ? 'alert' : 'status'} aria-live="polite">{status}</p>}</div>{uxRules.showHeaderNextAction && <CasePipelineStatus stages={pipelineStages} nextAction={pipelineNextAction} />}</header>{panel === 'Dashboard' && dashboard()}{panel === 'Templates' && <TemplateProgressiveWorkspace round={round} slots={refs} supportingReady={evidence.supporting.length > 0} onSelectRound={(value) => { setRound(value); clearOutputs(); report(`${value} selected. Templates and generation will use this round.`, 'success'); }} onUploadLetter={uploadRef} onRemoveLetter={removeRef} onExhibitsChange={(value) => { setTemplates(value); clearOutputs(); }} onMessage={(message) => report(message)} onUseRoundForSourceData={() => { clearOutputs(); report(`${round} is active. Source Data generation will use this round's templates.`, 'success'); setPanel('Source Data'); }} />}{panel === 'Source Data' && sourceView()}{panel === 'Outputs' && <OutputReviewWorkspace round={round} outputs={docs} expectedRoutes={routes} zipName={orderedZip?.name} warnings={uxRules.showOutputWarnings ? warnings : []} evidenceKey={evidenceKey} evidence={evidence} onEvidenceChanged={(value) => void updateOutputEvidence(value)} onMessage={(message) => report(message)} onZip={() => orderedZip && download(orderedZip.name, orderedZip.blob)} onReplace={saveEdited} />}{panel === 'Filing Tracker' && <FilingTrackerWorkspace records={filings} outputsAvailable={Boolean(orderedZip)} onReturnToOutputs={() => setPanel('Outputs')} onStartCase={begin} onMarkSent={(id) => setFilings(markFilingSent(id))} />}{panel === 'Settings' && settingsView()}</section></main>;
+  return <main className="app-shell"><aside className="sidebar"><div className="brand"><span /><div><strong>LetterGenerator</strong><small>Packet workflow</small></div></div><nav>{panels.map((item) => <button key={item} className={panel === item ? 'active' : ''} disabled={item === 'Outputs' && !orderedZip} onClick={() => setPanel(item)}><strong>{item}</strong></button>)}</nav><div className="workspace-account-card"><div><span>{(accountEmail || 'CL').slice(0, 2).toUpperCase()}</span><div><strong>{accountRole === 'admin' ? 'Admin account' : 'Client account'}</strong><small>{accountEmail || 'Signed in'}</small></div></div><button type="button" onClick={() => setPanel('Settings')}>Account settings</button><form action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form></div></aside><section className="main-area"><header className="header"><div><p className="eyebrow">{panel === 'Dashboard' ? 'Client operations' : `${round} workflow`}</p><h1>{panel}</h1>{uxRules.showStatusText && <p className={`workspace-operation-status ${statusTone}`} role={statusTone === 'error' ? 'alert' : 'status'} aria-live="polite">{status}</p>}</div>{uxRules.showHeaderNextAction && <CasePipelineStatus stages={pipelineStages} nextAction={pipelineNextAction} status={status} statusTone={statusTone} />}</header>{panel === 'Dashboard' && dashboard()}{panel === 'Templates' && <TemplateProgressiveWorkspace round={round} slots={refs} supportingReady={evidence.supporting.length > 0} onSelectRound={(value) => { setRound(value); clearOutputs(); report(`${value} selected. Templates and generation will use this round.`, 'success'); }} onUploadLetter={uploadRef} onRemoveLetter={removeRef} onExhibitsChange={(value) => { setTemplates(value); clearOutputs(); }} onMessage={(message) => report(message)} onUseRoundForSourceData={() => { clearOutputs(); report(`${round} is active. Source Data generation will use this round's templates.`, 'success'); setPanel('Source Data'); }} />}{panel === 'Source Data' && sourceView()}{panel === 'Outputs' && <OutputReviewWorkspace round={round} outputs={docs} expectedRoutes={routes} zipName={orderedZip?.name} warnings={uxRules.showOutputWarnings ? warnings : []} evidenceKey={evidenceKey} evidence={evidence} onEvidenceChanged={(value) => void updateOutputEvidence(value)} onMessage={(message) => report(message)} onZip={() => orderedZip && download(orderedZip.name, orderedZip.blob)} onReplace={saveEdited} />}{panel === 'Filing Tracker' && <FilingTrackerWorkspace records={filings} outputsAvailable={Boolean(orderedZip)} onReturnToOutputs={() => setPanel('Outputs')} onStartCase={begin} onMarkSent={(id) => setFilings(markFilingSent(id))} />}{panel === 'Settings' && settingsView()}</section></main>;
 }

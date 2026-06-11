@@ -1,0 +1,123 @@
+/* xDisputer production UI lock
+   Purpose: force the latest compact workflow header and disable old duplicated header UI.
+*/
+
+.header .workspace-operation-status {
+  display: none !important;
+}
+
+.header {
+  align-items: center !important;
+  gap: 1rem !important;
+}
+
+.header-next-action {
+  width: auto !important;
+  min-width: 280px !important;
+  max-width: 520px !important;
+  min-height: 44px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0.55rem !important;
+  padding: 0.55rem 0.8rem !important;
+  border-radius: 999px !important;
+  border: 1px solid #dbe3ed !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07) !important;
+  overflow: hidden !important;
+}
+
+.header-next-action.complete,
+.header-next-action.with-status.success {
+  border-color: #bbf7d0 !important;
+  background: #ecfdf5 !important;
+}
+
+.header-next-action.blocked,
+.header-next-action.with-status.error {
+  border-color: #fecaca !important;
+  background: #fef2f2 !important;
+}
+
+.header-next-action .runtime-chip-dot {
+  width: 0.62rem !important;
+  height: 0.62rem !important;
+  border-radius: 999px !important;
+  flex: 0 0 auto !important;
+  background: #64748b !important;
+}
+
+.header-next-action.complete .runtime-chip-dot,
+.header-next-action.with-status.success .runtime-chip-dot {
+  background: #10b981 !important;
+}
+
+.header-next-action.blocked .runtime-chip-dot,
+.header-next-action.with-status.error .runtime-chip-dot {
+  background: #ef4444 !important;
+}
+
+.header-next-action .runtime-chip-label,
+.header-next-action .runtime-chip-title,
+.header-next-action .runtime-chip-detail,
+.header-next-action .runtime-chip-status {
+  min-width: 0 !important;
+  display: inline !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+}
+
+.header-next-action .runtime-chip-label {
+  color: #334155 !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+}
+
+.header-next-action .runtime-chip-title {
+  color: #0f172a !important;
+  font-size: 0.8rem !important;
+  font-weight: 900 !important;
+}
+
+.header-next-action .runtime-chip-detail {
+  color: #64748b !important;
+  font-size: 0.74rem !important;
+  font-weight: 650 !important;
+}
+
+.header-next-action .runtime-chip-status {
+  color: #047857 !important;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+}
+
+.header-next-action.with-status.error .runtime-chip-status {
+  color: #b91c1c !important;
+}
+
+.runtime-chip-separator {
+  color: #94a3b8 !important;
+  font-weight: 800 !important;
+}
+
+@media (max-width: 780px) {
+  .header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .header-next-action {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  .header-next-action .runtime-chip-detail {
+    display: none !important;
+  }
+}
