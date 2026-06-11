@@ -75,21 +75,37 @@ export async function updateManagedAccount(supabase: SupabaseServerClient, input
 }
 
 export async function ensureManagerInviteCode(supabase: SupabaseServerClient, managerId: string) {
-  const { data, error } = await supabase.rpc('control_ensure_manager_invite_code');
+  const modern = await supabase.rpc('access_ensure_manager_invite_code', {
+    target_manager_id: managerId
+  });
 
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error('Manager invite code was not returned.');
+  if (!modern.error && modern.data) return String(modern.data);
 
-  return String(data);
+  const legacy = await supabase.rpc('control_ensure_manager_invite_code');
+
+  if (legacy.error) throw new Error(modern.error?.message || legacy.error.message);
+  if (!legacy.data) throw new Error('Manager invite code was not returned.');
+
+  return String(legacy.data);
 }
 
 export async function rotateManagerInviteCode(supabase: SupabaseServerClient, managerId: string) {
-  const { data, error } = await supabase.rpc('control_rotate_manager_invite_code');
+  const code = generateInviteCode(managerId);
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      manager_invite_code: code,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', managerId)
+    .select(profileSelect)
+    .single();
 
   if (error) throw new Error(error.message);
-  if (!data) throw new Error('Manager invite code was not returned.');
+  if (!data?.manager_invite_code) throw new Error('Manager invite code was not returned.');
 
-  return String(data);
+  return String(data.manager_invite_code);
 }
 
 export async function joinManagerByInviteCode(supabase: SupabaseServerClient, clientId: string, inviteCode: string) {

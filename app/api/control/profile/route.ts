@@ -1,10 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createSupabaseServerClient } from '../../../../lib/supabase/server';
 
-type ControlIntent = 'make_manager' | 'demote_client' | 'disable' | 'activate' | 'clear_manager';
+type ControlIntent =
+  | 'make_manager'
+  | 'demote_client'
+  | 'approve'
+  | 'reject'
+  | 'disable'
+  | 'activate'
+  | 'clear_manager';
 
 function redirectBack(request: NextRequest, status: 'ok' | 'error', message?: string) {
-  const fallback = new URL('/master', request.url);
+  const fallback = new URL('/admin?panel=access', request.url);
   const referer = request.headers.get('referer');
   const target = referer ? new URL(referer) : fallback;
 
@@ -22,14 +29,25 @@ function controlPatch(intent: ControlIntent) {
   switch (intent) {
     case 'make_manager':
       return { next_role: 'manager', next_status: 'active', clear_manager: false };
+
     case 'demote_client':
-      return { next_role: 'client', next_status: 'active', clear_manager: true };
+      return { next_role: 'client', next_status: 'pending_manager_assignment', clear_manager: true };
+
+    case 'approve':
+      return { next_role: null, next_status: 'active', clear_manager: false };
+
+    case 'reject':
+      return { next_role: null, next_status: 'pending_manager_assignment', clear_manager: true };
+
     case 'disable':
       return { next_role: null, next_status: 'disabled', clear_manager: false };
+
     case 'activate':
       return { next_role: null, next_status: 'active', clear_manager: false };
+
     case 'clear_manager':
-      return { next_role: null, next_status: null, clear_manager: true };
+      return { next_role: null, next_status: 'pending_manager_assignment', clear_manager: true };
+
     default:
       return null;
   }

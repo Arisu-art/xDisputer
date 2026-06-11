@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createSupabaseServerClient } from '../../../../lib/supabase/server';
+import { appRedirect } from '../../../../lib/supabase/origin';
+import { rotateManagerInviteCode } from '../../../../lib/saas/account-management';
+import { requireRole } from '../../../../lib/saas/session';
 
 function redirectBack(request: NextRequest, status: 'ok' | 'error', message?: string) {
-  const fallback = new URL('/admin', request.url);
+  const fallback = appRedirect(request, '/admin', { panel: 'intake' });
   const referer = request.headers.get('referer');
   const target = referer ? new URL(referer) : fallback;
 
@@ -14,18 +16,8 @@ function redirectBack(request: NextRequest, status: 'ok' | 'error', message?: st
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { data: userResult } = await supabase.auth.getUser();
-
-    if (!userResult.user) {
-      const login = new URL('/login', request.url);
-      login.searchParams.set('next', '/app');
-      return NextResponse.redirect(login, 303);
-    }
-
-    const { error } = await supabase.rpc('control_rotate_manager_invite_code');
-
-    if (error) return redirectBack(request, 'error', error.message);
+    const { user, supabase } = await requireRole('manager');
+    await rotateManagerInviteCode(supabase, user.id);
 
     return redirectBack(request, 'ok');
   } catch (error) {
