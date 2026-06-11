@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { updateManagedAccount } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
 import type { AccountStatus } from '../../lib/supabase/roles';
 
@@ -8,31 +9,29 @@ function valueFromForm(formData: FormData, key: string) {
   return String(formData.get(key) || '').trim();
 }
 
-async function updateClientStatus(profileId: string, account_status: AccountStatus) {
-  if (!profileId) return;
+async function updateClientStatus(formData: FormData, account_status: AccountStatus) {
+  const targetProfileId = valueFromForm(formData, 'profileId');
+  const { supabase, user } = await requireRole('admin');
 
-  const { supabase } = await requireRole('admin');
-
-  await supabase
-    .from('profiles')
-    .update({
-      account_status,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', profileId)
-    .eq('role', 'client');
+  await updateManagedAccount(supabase, {
+    actorUserId: user.id,
+    actorRole: 'admin',
+    targetProfileId,
+    nextStatus: account_status
+  });
 
   revalidatePath('/admin');
+  revalidatePath('/api/account');
 }
 
 export async function pauseClientAccount(formData: FormData) {
-  await updateClientStatus(valueFromForm(formData, 'profileId'), 'paused');
+  await updateClientStatus(formData, 'paused');
 }
 
 export async function activateClientAccount(formData: FormData) {
-  await updateClientStatus(valueFromForm(formData, 'profileId'), 'active');
+  await updateClientStatus(formData, 'active');
 }
 
 export async function disableClientAccount(formData: FormData) {
-  await updateClientStatus(valueFromForm(formData, 'profileId'), 'disabled');
+  await updateClientStatus(formData, 'disabled');
 }
