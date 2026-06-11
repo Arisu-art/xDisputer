@@ -71,18 +71,18 @@ function ClientRows({ clients, emptyText }: { clients: ManagedAccount[]; emptyTe
         <tbody>
           {clients.length ? clients.map((item) => (
             <tr key={item.id}>
-              <td>
+              <td data-label="Client">
                 <strong>{item.full_name || item.email || 'Unnamed client'}</strong>
                 <small>{item.email || 'Client account'}</small>
               </td>
-              <td>
+              <td data-label="Status">
                 <span className={`admin-status-badge ${item.account_status || 'pending'}`}>
                   {statusText(item.account_status)}
                 </span>
               </td>
-              <td>{formatDate(item.created_at)}</td>
-              <td>{formatDate(item.updated_at)}</td>
-              <td>
+              <td data-label="Joined">{formatDate(item.created_at)}</td>
+              <td data-label="Updated">{formatDate(item.updated_at)}</td>
+              <td data-label="Controls">
                 <div className="admin-actions-row">
                   {item.account_status === 'pending_manager_approval' && (
                     <>

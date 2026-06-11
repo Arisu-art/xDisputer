@@ -72,15 +72,15 @@ function RunsTable({ rows }: { rows: GenerationReportRow[] }) {
         <tbody>
           {rows.length ? rows.map((row) => (
             <tr key={row.run_id}>
-              <td>{formatDate(row.created_at)}</td>
-              <td>
+              <td data-label="Created">{formatDate(row.created_at)}</td>
+              <td data-label="Client account">
                 <strong>{row.owner_email || row.owner_full_name || 'Unknown client account'}</strong>
                 <small>{row.owner_id || 'No owner id'}</small>
               </td>
-              <td>{row.manager_email || row.manager_id || 'Unassigned'}</td>
-              <td>{row.client_name || '—'}</td>
-              <td>{row.round_label || '—'}</td>
-              <td><span className={`admin-status-badge ${row.output_status || 'unknown'}`}>{row.output_status || 'unknown'}</span></td>
+              <td data-label="Manager">{row.manager_email || row.manager_id || 'Unassigned'}</td>
+              <td data-label="Client name">{row.client_name || '—'}</td>
+              <td data-label="Round">{row.round_label || '—'}</td>
+              <td data-label="Status"><span className={`admin-status-badge ${row.output_status || 'unknown'}`}>{row.output_status || 'unknown'}</span></td>
             </tr>
           )) : (
             <tr>

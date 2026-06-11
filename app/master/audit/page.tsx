@@ -36,12 +36,12 @@ function AuditTable({ events }: { events: AccessAuditEvent[] }) {
         <tbody>
           {events.length ? events.map((event) => (
             <tr key={event.id}>
-              <td>{formatDate(event.created_at)}</td>
-              <td><strong>{readableAuditEventType(event.event_type)}</strong></td>
-              <td>{event.actor_email || '—'}<small>{event.actor_role || '—'}</small></td>
-              <td>{event.target_email || '—'}<small>{event.target_role || '—'}</small></td>
-              <td>{event.event_detail || '—'}</td>
-              <td>{formatMetadata(event.metadata_json)}</td>
+              <td data-label="Time">{formatDate(event.created_at)}</td>
+              <td data-label="Event"><strong>{readableAuditEventType(event.event_type)}</strong></td>
+              <td data-label="Actor">{event.actor_email || '—'}<small>{event.actor_role || '—'}</small></td>
+              <td data-label="Target">{event.target_email || '—'}<small>{event.target_role || '—'}</small></td>
+              <td data-label="Detail">{event.event_detail || '—'}</td>
+              <td data-label="Metadata">{formatMetadata(event.metadata_json)}</td>
             </tr>
           )) : (
             <tr>

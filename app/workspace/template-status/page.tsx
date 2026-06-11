@@ -146,11 +146,11 @@ export default async function WorkspaceTemplateStatusPage() {
                 {assets?.length ? assets.map((item) => (
                   <tr key={item.id}>
                     <td><strong>{item.original_filename}</strong></td>
-                    <td>{item.round_label}</td>
-                    <td>{item.template_kind}</td>
-                    <td>{item.letter_type || item.exhibit_kind}</td>
-                    <td>v{item.version_number}</td>
-                    <td>{new Date(item.created_at).toLocaleString()}</td>
+                    <td data-label="Round">{item.round_label}</td>
+                    <td data-label="Kind">{item.template_kind}</td>
+                    <td data-label="Type">{item.letter_type || item.exhibit_kind}</td>
+                    <td data-label="Version">v{item.version_number}</td>
+                    <td data-label="Saved">{new Date(item.created_at).toLocaleString()}</td>
                   </tr>
                 )) : (
                   <tr>
@@ -184,9 +184,9 @@ export default async function WorkspaceTemplateStatusPage() {
                 {runs?.length ? runs.map((item) => (
                   <tr key={item.id}>
                     <td><strong>{item.client_name || 'Unknown client'}</strong></td>
-                    <td>{item.round_label}</td>
-                    <td>{item.output_status}</td>
-                    <td>{new Date(item.created_at).toLocaleString()}</td>
+                    <td data-label="Round">{item.round_label}</td>
+                    <td data-label="Status">{item.output_status}</td>
+                    <td data-label="Saved">{new Date(item.created_at).toLocaleString()}</td>
                   </tr>
                 )) : (
                   <tr>

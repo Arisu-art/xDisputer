@@ -3910,3 +3910,555 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------------------------
+   Professional Data Presentation System
+   Purpose:
+   - remove horizontal table scrollbars from admin/master/report pages
+   - keep datasets readable inside cards
+   - convert dense tables into clean record cards on constrained widths
+------------------------------------------------------------------- */
+
+.admin-monitor-main,
+.native-console-main,
+.admin-monitor-card,
+.native-operation-card,
+.dashboard-snapshot-card,
+.master-access-stack,
+.admin-power-grid,
+.admin-monitor-table-wrap,
+.admin-monitor-table {
+  min-width: 0 !important;
+}
+
+.admin-power-grid,
+.master-access-stack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-monitor-card,
+.native-operation-card,
+.dashboard-snapshot-card {
+  overflow: hidden;
+}
+
+.admin-monitor-card-header {
+  min-width: 0;
+}
+
+.admin-monitor-card-header > div {
+  min-width: 0;
+}
+
+.admin-monitor-card-header h2,
+.admin-monitor-card-header p,
+.admin-monitor-card-header span {
+  overflow-wrap: anywhere;
+}
+
+.admin-monitor-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip !important;
+  overflow-y: visible;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.admin-monitor-table {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0 !important;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-monitor-table thead {
+  background: #f8fafc;
+}
+
+.admin-monitor-table th,
+.admin-monitor-table td {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.92rem 1rem;
+  vertical-align: top;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.admin-monitor-table th {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-monitor-table td {
+  color: #0f172a;
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
+  font-size: 0.9rem;
+  line-height: 1.42;
+}
+
+.admin-monitor-table td strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+
+.admin-monitor-table td small {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 0.2rem;
+  color: #64748b;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.admin-status-badge,
+.admin-role-badge,
+.admin-relation-badge {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  white-space: normal;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.admin-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.admin-actions-row form {
+  min-width: 0;
+}
+
+.admin-action-button {
+  max-width: 100%;
+  min-height: 36px;
+  padding: 0.62rem 0.78rem;
+  white-space: normal;
+  line-height: 1.12;
+  text-align: center;
+}
+
+/* Snapshot cards should not create oversized blank areas. */
+.manager-monitor-list,
+.master-monitor-list,
+.dashboard-snapshot-list {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.manager-monitor-item,
+.master-monitor-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.manager-monitor-item > div,
+.master-monitor-item > div {
+  min-width: 0;
+}
+
+.manager-monitor-item strong,
+.master-monitor-item strong,
+.manager-monitor-item span,
+.master-monitor-item span {
+  overflow-wrap: anywhere;
+}
+
+/* Medium cards: use a record-card layout instead of forcing horizontal scroll. */
+@media (max-width: 1280px) {
+  .admin-monitor-table-wrap {
+    overflow: visible !important;
+    border: 0;
+    background: transparent;
+  }
+
+  .admin-monitor-table,
+  .admin-monitor-table thead,
+  .admin-monitor-table tbody,
+  .admin-monitor-table tr,
+  .admin-monitor-table th,
+  .admin-monitor-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-monitor-table thead {
+    display: none;
+  }
+
+  .admin-monitor-table tbody {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  .admin-monitor-table tr {
+    padding: 0.95rem;
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  }
+
+  .admin-monitor-table td {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.38fr) minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: start;
+    padding: 0.48rem 0;
+    border-top: 0;
+  }
+
+  .admin-monitor-table td::before {
+    content: attr(data-label);
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .admin-monitor-table td:not([data-label]) {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-monitor-table td:not([data-label])::before {
+    content: none;
+  }
+
+  .admin-actions-row {
+    justify-content: flex-start;
+  }
+}
+
+/* Small screens: single-column records. */
+@media (max-width: 720px) {
+  .admin-power-grid,
+  .master-access-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-monitor-table td {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .manager-monitor-item,
+  .master-monitor-item {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-actions-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-actions-row form,
+  .admin-actions-row button {
+    width: 100%;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Professional Data Presentation System
+   Purpose:
+   - remove horizontal table scrollbars from admin/master/report pages
+   - keep datasets readable inside cards
+   - convert dense tables into clean record cards on constrained widths
+------------------------------------------------------------------- */
+
+.admin-monitor-main,
+.native-console-main,
+.admin-monitor-card,
+.native-operation-card,
+.dashboard-snapshot-card,
+.master-access-stack,
+.admin-power-grid,
+.admin-monitor-table-wrap,
+.admin-monitor-table {
+  min-width: 0 !important;
+}
+
+.admin-power-grid,
+.master-access-stack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-monitor-card,
+.native-operation-card,
+.dashboard-snapshot-card {
+  overflow: hidden;
+}
+
+.admin-monitor-card-header {
+  min-width: 0;
+}
+
+.admin-monitor-card-header > div {
+  min-width: 0;
+}
+
+.admin-monitor-card-header h2,
+.admin-monitor-card-header p,
+.admin-monitor-card-header span {
+  overflow-wrap: anywhere;
+}
+
+.admin-monitor-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip !important;
+  overflow-y: visible;
+  border: 1px solid rgba(203, 213, 225, 0.75);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.admin-monitor-table {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0 !important;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-monitor-table thead {
+  background: #f8fafc;
+}
+
+.admin-monitor-table th,
+.admin-monitor-table td {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.92rem 1rem;
+  vertical-align: top;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.admin-monitor-table th {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-monitor-table td {
+  color: #0f172a;
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
+  font-size: 0.9rem;
+  line-height: 1.42;
+}
+
+.admin-monitor-table td strong {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+
+.admin-monitor-table td small {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 0.2rem;
+  color: #64748b;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.admin-status-badge,
+.admin-role-badge,
+.admin-relation-badge {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  white-space: normal;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.admin-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.admin-actions-row form {
+  min-width: 0;
+}
+
+.admin-action-button {
+  max-width: 100%;
+  min-height: 36px;
+  padding: 0.62rem 0.78rem;
+  white-space: normal;
+  line-height: 1.12;
+  text-align: center;
+}
+
+/* Snapshot cards should not create oversized blank areas. */
+.manager-monitor-list,
+.master-monitor-list,
+.dashboard-snapshot-list {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.manager-monitor-item,
+.master-monitor-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.manager-monitor-item > div,
+.master-monitor-item > div {
+  min-width: 0;
+}
+
+.manager-monitor-item strong,
+.master-monitor-item strong,
+.manager-monitor-item span,
+.master-monitor-item span {
+  overflow-wrap: anywhere;
+}
+
+/* Medium cards: use a record-card layout instead of forcing horizontal scroll. */
+@media (max-width: 1280px) {
+  .admin-monitor-table-wrap {
+    overflow: visible !important;
+    border: 0;
+    background: transparent;
+  }
+
+  .admin-monitor-table,
+  .admin-monitor-table thead,
+  .admin-monitor-table tbody,
+  .admin-monitor-table tr,
+  .admin-monitor-table th,
+  .admin-monitor-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-monitor-table thead {
+    display: none;
+  }
+
+  .admin-monitor-table tbody {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  .admin-monitor-table tr {
+    padding: 0.95rem;
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  }
+
+  .admin-monitor-table td {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.38fr) minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: start;
+    padding: 0.48rem 0;
+    border-top: 0;
+  }
+
+  .admin-monitor-table td::before {
+    content: attr(data-label);
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .admin-monitor-table td:not([data-label]) {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-monitor-table td:not([data-label])::before {
+    content: none;
+  }
+
+  .admin-actions-row {
+    justify-content: flex-start;
+  }
+}
+
+/* Small screens: single-column records. */
+@media (max-width: 720px) {
+  .admin-power-grid,
+  .master-access-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-monitor-table td {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .manager-monitor-item,
+  .master-monitor-item {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-actions-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-actions-row form,
+  .admin-actions-row button {
+    width: 100%;
+  }
+}

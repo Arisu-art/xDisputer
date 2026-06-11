@@ -115,24 +115,24 @@ export default function MasterAccountTable({
         <tbody>
           {accounts.length ? accounts.map((item) => (
             <tr key={item.id}>
-              <td>
+              <td data-label="Account">
                 <strong>{item.full_name || item.email || 'Unnamed user'}</strong>
                 <small>{item.email || 'Protected account'}</small>
               </td>
-              <td>
+              <td data-label="Role">
                 <span className={`admin-role-badge ${item.role}`}>
                   {item.role === 'admin' ? 'manager' : item.role}
                 </span>
               </td>
-              <td>
+              <td data-label="Status">
                 <span className={`admin-status-badge ${item.account_status || 'pending'}`}>
                   {statusText(item.account_status)}
                 </span>
               </td>
-              <td><RelationshipBadge account={item} /></td>
-              <td>{item.role === 'manager' || item.role === 'admin' ? item.manager_invite_code || 'Not created yet' : '—'}</td>
-              <td>{formatDate(item.updated_at)}</td>
-              <td><AccountControls account={item} currentUserId={currentUserId} /></td>
+              <td data-label="Relationship"><RelationshipBadge account={item} /></td>
+              <td data-label="Invite code">{item.role === 'manager' || item.role === 'admin' ? item.manager_invite_code || 'Not created yet' : '—'}</td>
+              <td data-label="Updated">{formatDate(item.updated_at)}</td>
+              <td data-label="Controls"><AccountControls account={item} currentUserId={currentUserId} /></td>
             </tr>
           )) : (
             <tr>
