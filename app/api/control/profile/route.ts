@@ -2,12 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createSupabaseServerClient } from '../../../../lib/supabase/server';
 
 type ControlIntent =
-  | 'make_manager'
-  | 'demote_client'
   | 'approve'
   | 'reject'
   | 'disable'
   | 'activate'
+  | 'reactivate'
   | 'clear_manager';
 
 function redirectBack(request: NextRequest, status: 'ok' | 'error', message?: string) {
@@ -25,42 +24,24 @@ function cleanValue(formData: FormData, key: string) {
   return String(formData.get(key) || '').trim();
 }
 
-function controlPatch(intent: ControlIntent) {
-  switch (intent) {
-    case 'make_manager':
-      return { next_role: 'manager', next_status: 'active', clear_manager: false };
-
-    case 'demote_client':
-      return { next_role: 'client', next_status: 'pending_manager_assignment', clear_manager: true };
-
-    case 'approve':
-      return { next_role: null, next_status: 'active', clear_manager: false };
-
-    case 'reject':
-      return { next_role: null, next_status: 'pending_manager_assignment', clear_manager: true };
-
-    case 'disable':
-      return { next_role: null, next_status: 'disabled', clear_manager: false };
-
-    case 'activate':
-      return { next_role: null, next_status: 'active', clear_manager: false };
-
-    case 'clear_manager':
-      return { next_role: null, next_status: 'pending_manager_assignment', clear_manager: true };
-
-    default:
-      return null;
-  }
+function isControlIntent(value: string): value is ControlIntent {
+  return (
+    value === 'approve' ||
+    value === 'reject' ||
+    value === 'disable' ||
+    value === 'activate' ||
+    value === 'reactivate' ||
+    value === 'clear_manager'
+  );
 }
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const targetProfileId = cleanValue(formData, 'profileId');
-    const intent = cleanValue(formData, 'intent') as ControlIntent;
-    const patch = controlPatch(intent);
+    const intent = cleanValue(formData, 'intent');
 
-    if (!targetProfileId || !patch) {
+    if (!targetProfileId || !isControlIntent(intent)) {
       return redirectBack(request, 'error', 'Invalid control request.');
     }
 
@@ -73,12 +54,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.redirect(login, 303);
     }
 
-    const { error } = await supabase.rpc('control_update_profile', {
+    const { error } = await supabase.rpc('access_control_profile', {
       target_profile_id: targetProfileId,
-      next_role: patch.next_role,
-      next_status: patch.next_status,
-      next_manager_id: null,
-      clear_manager: patch.clear_manager
+      control_intent: intent
     });
 
     if (error) return redirectBack(request, 'error', error.message);

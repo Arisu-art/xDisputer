@@ -90,22 +90,16 @@ export async function ensureManagerInviteCode(supabase: SupabaseServerClient, ma
 }
 
 export async function rotateManagerInviteCode(supabase: SupabaseServerClient, managerId: string) {
-  const code = generateInviteCode(managerId);
+  const modern = await supabase.rpc('access_rotate_manager_invite_code');
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({
-      manager_invite_code: code,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', managerId)
-    .select(profileSelect)
-    .single();
+  if (!modern.error && modern.data) return String(modern.data);
 
-  if (error) throw new Error(error.message);
-  if (!data?.manager_invite_code) throw new Error('Manager invite code was not returned.');
+  const legacy = await supabase.rpc('control_rotate_manager_invite_code');
 
-  return String(data.manager_invite_code);
+  if (legacy.error) throw new Error(modern.error?.message || legacy.error.message);
+  if (!legacy.data) throw new Error('Manager invite code was not returned.');
+
+  return String(legacy.data);
 }
 
 export async function joinManagerByInviteCode(supabase: SupabaseServerClient, clientId: string, inviteCode: string) {

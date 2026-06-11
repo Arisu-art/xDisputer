@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import { ensureManagerInviteCode, listManagedAccounts, type ManagedAccount } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
 
@@ -150,9 +151,14 @@ export default async function AdminPage({ searchParams }: PageProps) {
   const controlStatus = stringParam(params.control);
   const controlMessage = stringParam(params.message);
 
+  const requestHeaders = await headers();
+  const host = requestHeaders.get('x-forwarded-host') || requestHeaders.get('host') || 'x-disputer.vercel.app';
+  const protocol = requestHeaders.get('x-forwarded-proto') || 'https';
+  const origin = `${protocol}://${host}`;
+
   const { user, profile, supabase } = await requireRole('manager');
   const inviteCode = await ensureManagerInviteCode(supabase, user.id);
-  const inviteLink = `/signup?invite=${encodeURIComponent(inviteCode)}`;
+  const inviteLink = `${origin}/signup?invite=${encodeURIComponent(inviteCode)}`;
 
   const { accounts: clients, errorMessage: queryError } = await listManagedAccounts(supabase, 'manager', user.id);
 
