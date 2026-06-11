@@ -3,12 +3,14 @@ import { listManagedAccounts, type ManagedAccount } from '../../lib/saas/account
 import { requireRole } from '../../lib/saas/session';
 
 type MasterPanel = 'monitoring' | 'access' | 'managers' | 'clients' | 'reports';
+type MasterAccessWorkflowView = 'overview' | 'managers' | 'clients' | 'pending';
 
 type PageProps = {
   searchParams?: Promise<{
     panel?: string | string[];
     control?: string | string[];
     message?: string | string[];
+    view?: string | string[];
   }>;
 };
 
@@ -16,6 +18,12 @@ function normalizePanel(value: string | string[] | undefined): MasterPanel {
   const panel = Array.isArray(value) ? value[0] : value;
   if (panel === 'access' || panel === 'managers' || panel === 'clients' || panel === 'reports') return panel;
   return 'monitoring';
+}
+
+function normalizeMasterAccessWorkflowView(value: string | string[] | undefined): MasterAccessWorkflowView {
+  const view = Array.isArray(value) ? value[0] : value;
+  if (view === 'managers' || view === 'clients' || view === 'pending') return view;
+  return 'overview';
 }
 
 function stringParam(value: string | string[] | undefined) {
@@ -63,6 +71,7 @@ function SnapshotFooter({ count, total, href }: { count: number; total: number; 
 export default async function MasterPage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : {};
   const activePanel = normalizePanel(params.panel);
+  const activeAccessView = normalizeMasterAccessWorkflowView(params.view);
   const controlStatus = stringParam(params.control);
   const controlMessage = stringParam(params.message);
 
@@ -165,37 +174,98 @@ export default async function MasterPage({ searchParams }: PageProps) {
                 </section>
               </>
             )}
-
             {activePanel === 'access' && (
-              <section className="progressive-dataset-grid">
-                <a className="progressive-dataset-card" href="/master?panel=managers">
-                  <p>Manager control</p>
-                  <h2>Manage manager accounts</h2>
-                  <span>{managerProfiles.length} manager account(s)</span>
-                  <strong>Promote, demote, disable, reactivate, or rotate invite codes.</strong>
-                </a>
+              <>
+                {activeAccessView === 'overview' && (
+                  <section className="progressive-dataset-grid access-workflow-grid">
+                    <a className="progressive-dataset-card access-workflow-card" href="/master?panel=access&view=managers">
+                      <p>Manager control</p>
+                      <h2>Manager accounts</h2>
+                      <span>{managerProfiles.length} manager account(s)</span>
+                      <strong>Promote, demote, suspend, disable, reactivate, and rotate invite codes.</strong>
+                    </a>
 
-                <a className="progressive-dataset-card" href="/master?panel=clients">
-                  <p>Client control</p>
-                  <h2>Manage client accounts</h2>
-                  <span>{clientProfiles.length} client account(s)</span>
-                  <strong>Review pending clients, unlink assignments, or promote trusted users.</strong>
-                </a>
+                    <a className="progressive-dataset-card access-workflow-card" href="/master?panel=access&view=clients">
+                      <p>Client control</p>
+                      <h2>Client accounts</h2>
+                      <span>{clientProfiles.length} client account(s)</span>
+                      <strong>Review client ownership, manager assignment, and account access state.</strong>
+                    </a>
 
-                <a className="progressive-dataset-card" href="/master/reports">
-                  <p>Reports</p>
-                  <h2>Generation activity</h2>
-                  <span>{coverageRate}% coverage</span>
-                  <strong>View read-only usage reports without quota enforcement.</strong>
-                </a>
+                    <a className="progressive-dataset-card access-workflow-card" href="/master?panel=access&view=pending">
+                      <p>Pending</p>
+                      <h2>Pending / unassigned</h2>
+                      <span>{pendingClients.length} pending</span>
+                      <strong>Find users who still need manager assignment or approval.</strong>
+                    </a>
 
-                <a className="progressive-dataset-card" href="/master/audit">
-                  <p>Audit</p>
-                  <h2>Access history</h2>
-                  <span>{attentionQueue.length} attention item(s)</span>
-                  <strong>Review who changed access, approval, manager, and invite states.</strong>
-                </a>
-              </section>
+                    <a className="progressive-dataset-card access-workflow-card" href="/master/reports">
+                      <p>Reports</p>
+                      <h2>Generation reports</h2>
+                      <span>{coverageRate}% coverage</span>
+                      <strong>Open read-only platform activity reports and CSV export.</strong>
+                    </a>
+
+                    <a className="progressive-dataset-card access-workflow-card" href="/master/audit">
+                      <p>Audit</p>
+                      <h2>Access history</h2>
+                      <span>{attentionQueue.length} attention item(s)</span>
+                      <strong>Review promotion, approval, rejection, and invite activity.</strong>
+                    </a>
+                  </section>
+                )}
+
+                {activeAccessView === 'managers' && (
+                  <section className="master-access-stack">
+                    <div className="access-workflow-toolbar">
+                      <a className="access-workflow-back" href="/master?panel=access">← Access control</a>
+                      <span>{managerProfiles.length} manager account(s)</span>
+                    </div>
+
+                    <article className="admin-monitor-card native-operation-card">
+                      <div className="admin-monitor-card-header">
+                        <div><p>Manager control</p><h2>Manager accounts</h2></div>
+                        <span>{managerProfiles.length} managers</span>
+                      </div>
+                      <MasterAccountTable accounts={managerProfiles} currentUserId={user.id} emptyText="No manager accounts found yet." />
+                    </article>
+                  </section>
+                )}
+
+                {activeAccessView === 'clients' && (
+                  <section className="master-access-stack">
+                    <div className="access-workflow-toolbar">
+                      <a className="access-workflow-back" href="/master?panel=access">← Access control</a>
+                      <span>{clientProfiles.length} client account(s)</span>
+                    </div>
+
+                    <article className="admin-monitor-card native-operation-card">
+                      <div className="admin-monitor-card-header">
+                        <div><p>Client control</p><h2>Client accounts</h2></div>
+                        <span>{clientProfiles.length} clients</span>
+                      </div>
+                      <MasterAccountTable accounts={clientProfiles} currentUserId={user.id} emptyText="No client accounts found yet." />
+                    </article>
+                  </section>
+                )}
+
+                {activeAccessView === 'pending' && (
+                  <section className="master-access-stack">
+                    <div className="access-workflow-toolbar">
+                      <a className="access-workflow-back" href="/master?panel=access">← Access control</a>
+                      <span>{pendingClients.length} pending / unassigned</span>
+                    </div>
+
+                    <article className="admin-monitor-card native-operation-card">
+                      <div className="admin-monitor-card-header">
+                        <div><p>Client control</p><h2>Pending / unassigned clients</h2></div>
+                        <span>{pendingClients.length} pending</span>
+                      </div>
+                      <MasterAccountTable accounts={pendingClients} currentUserId={user.id} emptyText="No pending clients." />
+                    </article>
+                  </section>
+                )}
+              </>
             )}
 
             {activePanel === 'managers' && (

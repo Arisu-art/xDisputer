@@ -5193,3 +5193,89 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
     width: 100% !important;
   }
 }
+
+/* ------------------------------------------------------------------
+   Progressive Access Workflow
+   Access pages should choose a dataset first, then show one focused table.
+   This prevents compressed tables and keeps side navigation clean.
+------------------------------------------------------------------- */
+
+.access-workflow-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)) !important;
+  gap: 1rem !important;
+  align-items: stretch !important;
+}
+
+.access-workflow-card {
+  min-height: 180px !important;
+}
+
+.access-workflow-card h2 {
+  max-width: 18rem !important;
+}
+
+.access-workflow-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.2rem;
+}
+
+.access-workflow-toolbar span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 34px;
+  padding: 0.48rem 0.76rem;
+  border-radius: 999px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.access-workflow-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 36px;
+  padding: 0.56rem 0.84rem;
+  border-radius: 999px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: #ffffff;
+  color: #2563eb;
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.access-workflow-back:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.admin-dataset-stack,
+.master-access-stack {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 1rem !important;
+}
+
+@media (max-width: 720px) {
+  .access-workflow-toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+  }
+
+  .access-workflow-toolbar span,
+  .access-workflow-back {
+    width: 100%;
+  }
+}

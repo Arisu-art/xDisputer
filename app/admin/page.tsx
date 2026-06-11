@@ -3,12 +3,14 @@ import { ensureManagerInviteCode, listManagedAccounts, type ManagedAccount } fro
 import { requireRole } from '../../lib/saas/session';
 
 type ManagerPanel = 'monitoring' | 'access' | 'intake' | 'review' | 'reports';
+type AccessWorkflowView = 'overview' | 'pending' | 'active' | 'blocked';
 
 type PageProps = {
   searchParams?: Promise<{
     panel?: string | string[];
     control?: string | string[];
     message?: string | string[];
+    view?: string | string[];
   }>;
 };
 
@@ -19,6 +21,12 @@ function normalizePanel(value: string | string[] | undefined): ManagerPanel {
   if (panel === 'review') return 'review';
   if (panel === 'reports' || panel === 'health') return 'reports';
   return 'monitoring';
+}
+
+function normalizeAccessWorkflowView(value: string | string[] | undefined): AccessWorkflowView {
+  const view = Array.isArray(value) ? value[0] : value;
+  if (view === 'pending' || view === 'active' || view === 'blocked') return view;
+  return 'overview';
 }
 
 function stringParam(value: string | string[] | undefined) {
@@ -148,6 +156,7 @@ function SnapshotFooter({ count, total, href }: { count: number; total: number; 
 export default async function AdminPage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : {};
   const activePanel = normalizePanel(params.panel);
+  const activeAccessView = normalizeAccessWorkflowView(params.view);
   const controlStatus = stringParam(params.control);
   const controlMessage = stringParam(params.message);
 
@@ -248,33 +257,91 @@ export default async function AdminPage({ searchParams }: PageProps) {
                 </section>
               </>
             )}
-
             {activePanel === 'access' && (
-              <section className="admin-dataset-stack">
-                <article className="admin-monitor-card native-operation-card">
-                  <div className="admin-monitor-card-header">
-                    <div><p>Access control</p><h2>Pending approval</h2></div>
-                    <span>{pendingClients.length} pending</span>
-                  </div>
-                  <ClientRows clients={pendingClients} emptyText="No clients are waiting for approval." />
-                </article>
+              <>
+                {activeAccessView === 'overview' && (
+                  <section className="progressive-dataset-grid access-workflow-grid">
+                    <a className="progressive-dataset-card access-workflow-card" href="/admin?panel=access&view=pending">
+                      <p>Access control</p>
+                      <h2>Pending approval</h2>
+                      <span>{pendingClients.length} pending</span>
+                      <strong>Review users waiting for manager approval.</strong>
+                    </a>
 
-                <article className="admin-monitor-card native-operation-card">
-                  <div className="admin-monitor-card-header">
-                    <div><p>Access control</p><h2>Active clients</h2></div>
-                    <span>{activeClients.length} active</span>
-                  </div>
-                  <ClientRows clients={activeClients} emptyText="No active clients assigned yet." />
-                </article>
+                    <a className="progressive-dataset-card access-workflow-card" href="/admin?panel=access&view=active">
+                      <p>Access control</p>
+                      <h2>Active clients</h2>
+                      <span>{activeClients.length} active</span>
+                      <strong>Manage approved clients that can use the workspace.</strong>
+                    </a>
 
-                <article className="admin-monitor-card native-operation-card">
-                  <div className="admin-monitor-card-header">
-                    <div><p>Access control</p><h2>Disabled / suspended</h2></div>
-                    <span>{disabledClients.length} blocked</span>
-                  </div>
-                  <ClientRows clients={disabledClients} emptyText="No disabled or suspended clients." />
-                </article>
-              </section>
+                    <a className="progressive-dataset-card access-workflow-card" href="/admin?panel=access&view=blocked">
+                      <p>Access control</p>
+                      <h2>Disabled / suspended</h2>
+                      <span>{disabledClients.length} blocked</span>
+                      <strong>Review clients whose workspace access is currently blocked.</strong>
+                    </a>
+
+                    <a className="progressive-dataset-card access-workflow-card" href="/admin/audit">
+                      <p>Audit</p>
+                      <h2>Access history</h2>
+                      <span>Review events</span>
+                      <strong>Check approvals, rejections, account controls, and invite activity.</strong>
+                    </a>
+                  </section>
+                )}
+
+                {activeAccessView === 'pending' && (
+                  <section className="admin-dataset-stack">
+                    <div className="access-workflow-toolbar">
+                      <a className="access-workflow-back" href="/admin?panel=access">← Access control</a>
+                      <span>{pendingClients.length} pending approval</span>
+                    </div>
+
+                    <article className="admin-monitor-card native-operation-card">
+                      <div className="admin-monitor-card-header">
+                        <div><p>Access control</p><h2>Pending approval</h2></div>
+                        <span>{pendingClients.length} pending</span>
+                      </div>
+                      <ClientRows clients={pendingClients} emptyText="No clients are waiting for approval." />
+                    </article>
+                  </section>
+                )}
+
+                {activeAccessView === 'active' && (
+                  <section className="admin-dataset-stack">
+                    <div className="access-workflow-toolbar">
+                      <a className="access-workflow-back" href="/admin?panel=access">← Access control</a>
+                      <span>{activeClients.length} active clients</span>
+                    </div>
+
+                    <article className="admin-monitor-card native-operation-card">
+                      <div className="admin-monitor-card-header">
+                        <div><p>Access control</p><h2>Active clients</h2></div>
+                        <span>{activeClients.length} active</span>
+                      </div>
+                      <ClientRows clients={activeClients} emptyText="No active clients assigned yet." />
+                    </article>
+                  </section>
+                )}
+
+                {activeAccessView === 'blocked' && (
+                  <section className="admin-dataset-stack">
+                    <div className="access-workflow-toolbar">
+                      <a className="access-workflow-back" href="/admin?panel=access">← Access control</a>
+                      <span>{disabledClients.length} disabled / suspended</span>
+                    </div>
+
+                    <article className="admin-monitor-card native-operation-card">
+                      <div className="admin-monitor-card-header">
+                        <div><p>Access control</p><h2>Disabled / suspended</h2></div>
+                        <span>{disabledClients.length} blocked</span>
+                      </div>
+                      <ClientRows clients={disabledClients} emptyText="No disabled or suspended clients." />
+                    </article>
+                  </section>
+                )}
+              </>
             )}
 
             {activePanel === 'intake' && (
