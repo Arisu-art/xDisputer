@@ -183,7 +183,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
           <ManagerSidebarLink panel="access" activePanel={activePanel}>Access control</ManagerSidebarLink>
           <ManagerSidebarLink panel="intake" activePanel={activePanel}>Client intake</ManagerSidebarLink>
           <ManagerSidebarLink panel="review" activePanel={activePanel}>Review queue</ManagerSidebarLink>
-          <ManagerSidebarLink panel="reports" activePanel={activePanel}>Reports</ManagerSidebarLink>
+          <a className={activePanel === "reports" ? "active" : ""} href="/admin/reports">Reports</a>
           <a href="/admin/audit">Audit log</a>
         </nav>
 

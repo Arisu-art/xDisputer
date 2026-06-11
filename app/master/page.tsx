@@ -93,7 +93,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
           <MasterSidebarLink panel="access" activePanel={activePanel}>All accounts</MasterSidebarLink>
           <MasterSidebarLink panel="managers" activePanel={activePanel}>Managers</MasterSidebarLink>
           <MasterSidebarLink panel="clients" activePanel={activePanel}>Clients</MasterSidebarLink>
-          <MasterSidebarLink panel="reports" activePanel={activePanel}>Reports</MasterSidebarLink>
+          <a className={activePanel === "reports" ? "active" : ""} href="/master/reports">Reports</a>
           <a href="/master/audit">Audit log</a>
         </nav>
 
