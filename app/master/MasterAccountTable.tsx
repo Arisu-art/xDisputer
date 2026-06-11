@@ -8,13 +8,8 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
 }
 
-function AccountActionButton({ profileId, action, label }: { profileId: string; action: (formData: FormData) => Promise<void>; label: string }) {
-  return (
-    <form action={action}>
-      <input type="hidden" name="profileId" value={profileId} />
-      <button type="submit" className="admin-action-button">{label}</button>
-    </form>
-  );
+function HiddenProfileId({ profileId }: { profileId: string }) {
+  return <input type="hidden" name="profileId" value={profileId} />;
 }
 
 function AccountControls({ account, currentUserId }: { account: ManagedAccount; currentUserId: string }) {
@@ -22,14 +17,40 @@ function AccountControls({ account, currentUserId }: { account: ManagedAccount; 
 
   return (
     <div className="admin-actions-row">
-      {account.role === 'client' && <AccountActionButton profileId={account.id} action={promoteToManager} label="Make manager" />}
-      {account.role === 'manager' && <AccountActionButton profileId={account.id} action={demoteToClient} label="Demote" />}
-      {account.account_status === 'disabled' ? (
-        <AccountActionButton profileId={account.id} action={activateAccount} label="Activate" />
-      ) : (
-        account.id !== currentUserId && <AccountActionButton profileId={account.id} action={disableAccount} label="Disable" />
+      {account.role === 'client' && (
+        <form action={promoteToManager}>
+          <HiddenProfileId profileId={account.id} />
+          <button type="submit" className="admin-action-button">Make manager</button>
+        </form>
       )}
-      {account.role === 'client' && account.manager_id && <AccountActionButton profileId={account.id} action={clearManagerAssignment} label="Remove manager" />}
+
+      {account.role === 'manager' && (
+        <form action={demoteToClient}>
+          <HiddenProfileId profileId={account.id} />
+          <button type="submit" className="admin-action-button">Demote</button>
+        </form>
+      )}
+
+      {account.account_status === 'disabled' ? (
+        <form action={activateAccount}>
+          <HiddenProfileId profileId={account.id} />
+          <button type="submit" className="admin-action-button">Activate</button>
+        </form>
+      ) : (
+        account.id !== currentUserId && (
+          <form action={disableAccount}>
+            <HiddenProfileId profileId={account.id} />
+            <button type="submit" className="admin-action-button">Disable</button>
+          </form>
+        )
+      )}
+
+      {account.role === 'client' && account.manager_id && (
+        <form action={clearManagerAssignment}>
+          <HiddenProfileId profileId={account.id} />
+          <button type="submit" className="admin-action-button">Remove manager</button>
+        </form>
+      )}
     </div>
   );
 }
