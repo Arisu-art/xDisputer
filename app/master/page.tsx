@@ -1,8 +1,8 @@
 import MasterAccountTable from './MasterAccountTable';
-import { listManagedAccounts } from '../../lib/saas/account-management';
+import { listManagedAccounts, type ManagedAccount } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
 
-type MasterPanel = 'overview' | 'managers' | 'clients' | 'system';
+type MasterPanel = 'monitoring' | 'access' | 'reports';
 
 type PageProps = {
   searchParams?: Promise<{
@@ -14,9 +14,9 @@ type PageProps = {
 
 function normalizePanel(value: string | string[] | undefined): MasterPanel {
   const panel = Array.isArray(value) ? value[0] : value;
-  if (panel === 'admins' || panel === 'managers') return 'managers';
-  if (panel === 'clients' || panel === 'system') return panel;
-  return 'overview';
+  if (panel === 'access' || panel === 'reports') return panel;
+  if (panel === 'managers' || panel === 'clients' || panel === 'system' || panel === 'overview') return 'monitoring';
+  return 'monitoring';
 }
 
 function stringParam(value: string | string[] | undefined) {
@@ -27,6 +27,24 @@ function MasterSidebarLink({ panel, activePanel, children }: { panel: MasterPane
   return <a className={activePanel === panel ? 'active' : ''} href={`/master?panel=${panel}`}>{children}</a>;
 }
 
+function StatusList({ accounts }: { accounts: ManagedAccount[] }) {
+  if (!accounts.length) return <div className="admin-monitor-empty">No accounts need attention right now.</div>;
+
+  return (
+    <div className="master-monitor-list">
+      {accounts.map((account) => (
+        <article key={account.id} className="master-monitor-item">
+          <div>
+            <strong>{account.full_name || account.email || 'Unnamed account'}</strong>
+            <span>{account.email || 'Account record'}</span>
+          </div>
+          <span className={`admin-status-badge ${account.account_status || 'active'}`}>{account.account_status || 'active'}</span>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 export default async function MasterPage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : {};
   const activePanel = normalizePanel(params.panel);
@@ -35,27 +53,28 @@ export default async function MasterPage({ searchParams }: PageProps) {
   const { user, profile, supabase } = await requireRole('master');
   const { accounts: profiles, errorMessage: queryError } = await listManagedAccounts(supabase, 'master');
 
-  const masterProfiles = profiles.filter((item) => item.role === 'master');
+  const ownerProfiles = profiles.filter((item) => item.role === 'master');
   const managerProfiles = profiles.filter((item) => item.role === 'manager' || item.role === 'admin');
   const clientProfiles = profiles.filter((item) => item.role === 'client');
-  const disabledUsers = profiles.filter((item) => item.account_status === 'disabled').length;
-  const unassignedClients = clientProfiles.filter((item) => !item.manager_id).length;
+  const disabledAccounts = profiles.filter((item) => item.account_status === 'disabled');
+  const unassignedClients = clientProfiles.filter((item) => !item.manager_id);
+  const linkedClients = clientProfiles.filter((item) => item.manager_id);
+  const attentionQueue = [...disabledAccounts, ...unassignedClients.filter((item) => item.account_status !== 'disabled')];
+  const coverageRate = clientProfiles.length ? Math.round((linkedClients.length / clientProfiles.length) * 100) : 0;
 
   return (
-    <main className="admin-monitor-page native-console">
+    <main className="admin-monitor-page native-console master-ops-console">
       <aside className="admin-monitor-sidebar native-console-sidebar">
         <div className="admin-monitor-brand">
           <span>xD</span>
           <div><strong>xDisputer</strong><small>Master console</small></div>
         </div>
 
-        <div className="admin-sidebar-section-title">Owner workflow</div>
+        <div className="admin-sidebar-section-title">Operations</div>
         <nav aria-label="Master navigation">
-          <MasterSidebarLink panel="overview" activePanel={activePanel}>Dashboard</MasterSidebarLink>
-          <MasterSidebarLink panel="managers" activePanel={activePanel}>Manager control</MasterSidebarLink>
-          <MasterSidebarLink panel="clients" activePanel={activePanel}>Client control</MasterSidebarLink>
-          <MasterSidebarLink panel="system" activePanel={activePanel}>Governance</MasterSidebarLink>
-          <a href="/app">Role router</a>
+          <MasterSidebarLink panel="monitoring" activePanel={activePanel}>Monitoring</MasterSidebarLink>
+          <MasterSidebarLink panel="access" activePanel={activePanel}>Access control</MasterSidebarLink>
+          <MasterSidebarLink panel="reports" activePanel={activePanel}>Reports</MasterSidebarLink>
         </nav>
 
         <div className="admin-monitor-account">
@@ -66,11 +85,11 @@ export default async function MasterPage({ searchParams }: PageProps) {
       </aside>
 
       <section className="admin-monitor-main native-console-main">
-        <header className="admin-monitor-header native-command-hero">
+        <header className="admin-monitor-header native-command-hero master-compact-hero">
           <div>
-            <p>Master administration</p>
-            <h1>Control managers and clients.</h1>
-            <span>Promote managers, supervise client access, and maintain the account hierarchy without exposing backend records.</span>
+            <p>Master operations</p>
+            <h1>Account command center.</h1>
+            <span>Monitor platform accounts, control access, and review operational coverage.</span>
           </div>
         </header>
 
@@ -85,40 +104,51 @@ export default async function MasterPage({ searchParams }: PageProps) {
           <section className="admin-monitor-card"><div className="admin-monitor-empty">Could not load account records: {queryError}</div></section>
         ) : (
           <>
-            {activePanel === 'overview' && (
+            {activePanel === 'monitoring' && (
               <>
-                <section className="admin-monitor-stats" aria-label="Role statistics">
-                  <article><p>Owners</p><strong>{masterProfiles.length}</strong></article>
+                <section className="admin-monitor-stats master-monitoring-stats" aria-label="Monitoring metrics">
+                  <article><p>Total users</p><strong>{profiles.length}</strong></article>
                   <article><p>Managers</p><strong>{managerProfiles.length}</strong></article>
-                  <article><p>Clients</p><strong>{clientProfiles.length}</strong></article>
-                  <article><p>Unassigned</p><strong>{unassignedClients}</strong></article>
+                  <article><p>Coverage</p><strong>{coverageRate}%</strong></article>
+                  <article><p>Attention</p><strong>{attentionQueue.length}</strong></article>
                 </section>
 
                 <section className="admin-power-grid">
-                  <article className="admin-monitor-card native-operation-card"><div className="admin-monitor-card-header"><div><p>Command 01</p><h2>Manager control</h2></div></div><div className="admin-power-list"><span>Create or remove manager access from client accounts.</span><span>Managers can supervise only their assigned clients.</span></div><div className="admin-power-links"><a href="/master?panel=managers">Open manager control</a></div></article>
-                  <article className="admin-monitor-card native-operation-card"><div className="admin-monitor-card-header"><div><p>Command 02</p><h2>Client access</h2></div></div><div className="admin-power-list"><span>Disable, activate, or clear manager assignment for client accounts.</span><span>{disabledUsers} accounts are currently disabled.</span></div><div className="admin-power-links"><a href="/master?panel=clients">Open client control</a></div></article>
+                  <article className="admin-monitor-card native-operation-card">
+                    <div className="admin-monitor-card-header"><div><p>Monitoring</p><h2>Attention queue</h2></div><span>{attentionQueue.length} items</span></div>
+                    <StatusList accounts={attentionQueue} />
+                  </article>
+                  <article className="admin-monitor-card native-operation-card">
+                    <div className="admin-monitor-card-header"><div><p>Coverage</p><h2>Client-manager assignment</h2></div><span>{coverageRate}% linked</span></div>
+                    <div className="admin-power-list"><span>Linked clients: {linkedClients.length}</span><span>Unassigned clients: {unassignedClients.length}</span><span>Managers available: {managerProfiles.length}</span></div>
+                  </article>
                 </section>
               </>
             )}
 
-            {activePanel === 'managers' && (
-              <section className="admin-monitor-card native-operation-card">
-                <div className="admin-monitor-card-header"><div><p>Master controls</p><h2>Manager accounts</h2></div><span>{managerProfiles.length} managers</span></div>
-                <MasterAccountTable accounts={managerProfiles} currentUserId={user.id} emptyText="No manager accounts found yet. Promote a client to manager from the client control panel." />
+            {activePanel === 'access' && (
+              <section className="master-access-stack">
+                <article className="admin-monitor-card native-operation-card">
+                  <div className="admin-monitor-card-header"><div><p>Access control</p><h2>Manager accounts</h2></div><span>{managerProfiles.length} managers</span></div>
+                  <MasterAccountTable accounts={managerProfiles} currentUserId={user.id} emptyText="No manager accounts found yet. Promote a client into manager access from the client section below." />
+                </article>
+                <article className="admin-monitor-card native-operation-card">
+                  <div className="admin-monitor-card-header"><div><p>Access control</p><h2>Client accounts</h2></div><span>{clientProfiles.length} clients</span></div>
+                  <MasterAccountTable accounts={clientProfiles} currentUserId={user.id} emptyText="No client accounts found yet." />
+                </article>
               </section>
             )}
 
-            {activePanel === 'clients' && (
-              <section className="admin-monitor-card native-operation-card">
-                <div className="admin-monitor-card-header"><div><p>Client controls</p><h2>Client accounts</h2></div><span>{clientProfiles.length} clients</span></div>
-                <MasterAccountTable accounts={clientProfiles} currentUserId={user.id} emptyText="No client accounts found yet." />
-              </section>
-            )}
-
-            {activePanel === 'system' && (
+            {activePanel === 'reports' && (
               <section className="admin-power-grid">
-                <article className="admin-monitor-card native-operation-card"><div className="admin-monitor-card-header"><div><p>Governance</p><h2>Access contract</h2></div></div><div className="admin-power-list"><span>Master supervises account hierarchy.</span><span>Manager supervises assigned clients.</span><span>Client uses the document workspace and may join a manager.</span></div></article>
-                <article className="admin-monitor-card native-operation-card"><div className="admin-monitor-card-header"><div><p>Workflow</p><h2>Recommended process</h2></div></div><div className="admin-power-list"><span>1. Promote a trusted account into manager.</span><span>2. Manager shares invite code with client.</span><span>3. Client joins from workspace dock.</span><span>4. Manager monitors client readiness.</span></div></article>
+                <article className="admin-monitor-card native-operation-card">
+                  <div className="admin-monitor-card-header"><div><p>Report</p><h2>Account coverage</h2></div><span>{coverageRate}%</span></div>
+                  <div className="admin-power-list"><span>Owners: {ownerProfiles.length}</span><span>Managers: {managerProfiles.length}</span><span>Clients: {clientProfiles.length}</span><span>Assigned clients: {linkedClients.length}</span><span>Unassigned clients: {unassignedClients.length}</span></div>
+                </article>
+                <article className="admin-monitor-card native-operation-card">
+                  <div className="admin-monitor-card-header"><div><p>Report</p><h2>Recommended actions</h2></div><span>{attentionQueue.length} tasks</span></div>
+                  <div className="admin-power-list"><span>1. Assign unassigned clients to a manager using invite workflow.</span><span>2. Review disabled accounts before reactivation.</span><span>3. Keep manager access limited to trusted operators.</span><span>4. Use access control only for account-level changes.</span></div>
+                </article>
               </section>
             )}
           </>
