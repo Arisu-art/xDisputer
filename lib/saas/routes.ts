@@ -1,4 +1,4 @@
-import type { UserRole } from '../supabase/roles';
+import { normalizeRole, type UserRole } from '../supabase/roles';
 
 export const publicRoutes = ['/', '/login', '/signup'] as const;
 export const protectedRoutes = ['/app', '/master', '/admin', '/workspace', '/client', '/client/workspace'] as const;
@@ -12,26 +12,28 @@ export function normalizeNextPath(value: string | null | undefined) {
 }
 
 export function dashboardForRole(role: UserRole | null | undefined) {
-  if (role === 'master') return '/master';
-  if (role === 'admin') return '/admin';
+  const normalizedRole = normalizeRole(role);
+  if (normalizedRole === 'master') return '/master';
+  if (normalizedRole === 'manager') return '/admin';
   return '/workspace';
 }
 
 export function routeForSignedInUser(role: UserRole | null | undefined, requestedPath?: string | null) {
+  const normalizedRole = normalizeRole(role);
   const next = normalizeNextPath(requestedPath);
-  const dashboard = dashboardForRole(role);
+  const dashboard = dashboardForRole(normalizedRole);
 
   if (next === '/app' || next === '/dashboard' || next === '/client' || next === '/client/workspace') {
     return dashboard;
   }
 
-  if (role === 'master') return next;
+  if (normalizedRole === 'master') return next === '/admin' || next.startsWith('/admin/') ? '/master' : next;
 
-  if (role === 'admin' && (next === '/master' || next.startsWith('/master/') || next === '/workspace' || next.startsWith('/workspace/'))) {
+  if (normalizedRole === 'manager' && (next === '/master' || next.startsWith('/master/') || next === '/workspace' || next.startsWith('/workspace/'))) {
     return '/admin';
   }
 
-  if (role === 'client' && (next === '/master' || next.startsWith('/master/') || next === '/admin' || next.startsWith('/admin/'))) {
+  if (normalizedRole === 'client' && (next === '/master' || next.startsWith('/master/') || next === '/admin' || next.startsWith('/admin/'))) {
     return '/workspace';
   }
 
