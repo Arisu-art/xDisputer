@@ -2,7 +2,7 @@ import MasterAccountTable from './MasterAccountTable';
 import { listManagedAccounts } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
 
-type MasterPanel = 'overview' | 'admins' | 'clients' | 'system';
+type MasterPanel = 'overview' | 'managers' | 'clients' | 'system';
 
 type PageProps = {
   searchParams?: Promise<{
@@ -12,7 +12,8 @@ type PageProps = {
 
 function normalizePanel(value: string | string[] | undefined): MasterPanel {
   const panel = Array.isArray(value) ? value[0] : value;
-  if (panel === 'admins' || panel === 'clients' || panel === 'system') return panel;
+  if (panel === 'admins' || panel === 'managers') return 'managers';
+  if (panel === 'clients' || panel === 'system') return panel;
   return 'overview';
 }
 
@@ -27,9 +28,9 @@ export default async function MasterPage({ searchParams }: PageProps) {
   const { accounts: profiles, errorMessage: queryError } = await listManagedAccounts(supabase, 'master');
 
   const masterProfiles = profiles.filter((item) => item.role === 'master');
-  const adminProfiles = profiles.filter((item) => item.role === 'admin');
+  const managerProfiles = profiles.filter((item) => item.role === 'manager' || item.role === 'admin');
   const clientProfiles = profiles.filter((item) => item.role === 'client');
-  const pausedUsers = profiles.filter((item) => item.account_status === 'paused' || item.account_status === 'disabled').length;
+  const disabledUsers = profiles.filter((item) => item.account_status === 'disabled').length;
 
   return (
     <main className="admin-monitor-page">
@@ -44,7 +45,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
 
         <nav aria-label="Master navigation">
           <MasterSidebarLink panel="overview" activePanel={activePanel}>Overview</MasterSidebarLink>
-          <MasterSidebarLink panel="admins" activePanel={activePanel}>Manage admins</MasterSidebarLink>
+          <MasterSidebarLink panel="managers" activePanel={activePanel}>Manage managers</MasterSidebarLink>
           <MasterSidebarLink panel="clients" activePanel={activePanel}>Manage clients</MasterSidebarLink>
           <MasterSidebarLink panel="system" activePanel={activePanel}>System checks</MasterSidebarLink>
           <a href="/app">Role router</a>
@@ -64,8 +65,8 @@ export default async function MasterPage({ searchParams }: PageProps) {
         <header className="admin-monitor-header">
           <div>
             <p>Master administration</p>
-            <h1>Control accounts and roles.</h1>
-            <span>Promote, demote, pause, activate, or disable accounts from one owner console.</span>
+            <h1>Control managers and clients.</h1>
+            <span>Create manager access, disable accounts, and clear client-manager relationships from one owner console.</span>
           </div>
         </header>
 
@@ -79,15 +80,15 @@ export default async function MasterPage({ searchParams }: PageProps) {
               <>
                 <section className="admin-monitor-stats" aria-label="Role statistics">
                   <article><p>Masters</p><strong>{masterProfiles.length}</strong></article>
-                  <article><p>Admins</p><strong>{adminProfiles.length}</strong></article>
+                  <article><p>Managers</p><strong>{managerProfiles.length}</strong></article>
                   <article><p>Clients</p><strong>{clientProfiles.length}</strong></article>
-                  <article><p>Paused/Disabled</p><strong>{pausedUsers}</strong></article>
+                  <article><p>Disabled</p><strong>{disabledUsers}</strong></article>
                 </section>
 
                 <section className="admin-power-grid">
                   <article className="admin-monitor-card">
-                    <div className="admin-monitor-card-header"><div><p>Function 01</p><h2>Admin control</h2></div></div>
-                    <div className="admin-power-links"><a href="/master?panel=admins">Open admin management</a></div>
+                    <div className="admin-monitor-card-header"><div><p>Function 01</p><h2>Manager control</h2></div></div>
+                    <div className="admin-power-links"><a href="/master?panel=managers">Open manager management</a></div>
                   </article>
                   <article className="admin-monitor-card">
                     <div className="admin-monitor-card-header"><div><p>Function 02</p><h2>Client control</h2></div></div>
@@ -97,13 +98,13 @@ export default async function MasterPage({ searchParams }: PageProps) {
               </>
             )}
 
-            {activePanel === 'admins' && (
+            {activePanel === 'managers' && (
               <section className="admin-monitor-card">
                 <div className="admin-monitor-card-header">
-                  <div><p>Master controls</p><h2>Manage admin accounts</h2></div>
-                  <span>{adminProfiles.length} admins</span>
+                  <div><p>Master controls</p><h2>Manage manager accounts</h2></div>
+                  <span>{managerProfiles.length} managers</span>
                 </div>
-                <MasterAccountTable accounts={adminProfiles} currentUserId={user.id} emptyText="No admin accounts found yet. Promote a client to admin from the client panel." />
+                <MasterAccountTable accounts={managerProfiles} currentUserId={user.id} emptyText="No manager accounts found yet. Promote a client to manager from the client panel." />
               </section>
             )}
 
@@ -123,9 +124,10 @@ export default async function MasterPage({ searchParams }: PageProps) {
                   <div className="admin-monitor-card-header"><div><p>System check</p><h2>Access contract</h2></div></div>
                   <div className="admin-power-list">
                     <span>Master route: /master</span>
-                    <span>Admin route: /admin</span>
+                    <span>Manager route: /admin</span>
                     <span>Client route: /workspace</span>
-                    <span>Account state source: public.profiles.account_status</span>
+                    <span>Manager relationship source: public.profiles.manager_id</span>
+                    <span>Invite code source: public.profiles.manager_invite_code</span>
                   </div>
                 </article>
                 <article className="admin-monitor-card">
@@ -133,7 +135,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
                   <div className="admin-power-links">
                     <a href="/app">Open role router</a>
                     <a href="/api/account">Inspect current account JSON</a>
-                    <a href="/admin">Test admin route guard</a>
+                    <a href="/admin">Test manager route guard</a>
                   </div>
                 </article>
               </section>
