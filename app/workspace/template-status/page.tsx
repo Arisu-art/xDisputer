@@ -1,4 +1,5 @@
-import { requireAuth } from '../../../lib/saas/session';
+import { requireRole } from '../../../lib/saas/session';
+import { requireWorkspaceAccess } from '../../../lib/saas/access-entitlement';
 
 const rounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 
@@ -7,7 +8,8 @@ function statusLabel(value: boolean) {
 }
 
 export default async function WorkspaceTemplateStatusPage() {
-  const { user, profile, supabase } = await requireAuth();
+  await requireWorkspaceAccess();
+  const { user, profile, supabase } = await requireRole('client');
 
   const { data: assets, error: assetsError } = await supabase
     .from('template_assets')

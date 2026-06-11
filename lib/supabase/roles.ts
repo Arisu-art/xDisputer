@@ -3,7 +3,13 @@ import { createSupabaseServerClient } from './server';
 import { dashboardForRole } from '../saas/routes';
 
 export type UserRole = 'master' | 'manager' | 'admin' | 'client';
-export type AccountStatus = 'active' | 'paused' | 'disabled';
+
+export type AccountStatus =
+  | 'pending_manager_assignment'
+  | 'pending_manager_approval'
+  | 'active'
+  | 'suspended'
+  | 'disabled';
 
 export type UserProfile = {
   id: string;
@@ -32,8 +38,30 @@ export function roleForEmail(email: string | null | undefined): UserRole {
   return normalizedEmail && bootstrapMasterEmails.has(normalizedEmail) ? 'master' : 'client';
 }
 
+export function normalizeAccountStatus(status: string | null | undefined, role?: UserRole | null): AccountStatus {
+  const resolvedRole = normalizeRole(role);
+
+  if (resolvedRole === 'master' || resolvedRole === 'manager') {
+    return status === 'disabled' || status === 'suspended' ? status : 'active';
+  }
+
+  if (
+    status === 'pending_manager_assignment' ||
+    status === 'pending_manager_approval' ||
+    status === 'active' ||
+    status === 'suspended' ||
+    status === 'disabled'
+  ) {
+    return status;
+  }
+
+  if (status === 'paused') return 'suspended';
+
+  return 'pending_manager_assignment';
+}
+
 export function accountStatus(profile: UserProfile | null | undefined): AccountStatus {
-  return profile?.account_status || 'active';
+  return normalizeAccountStatus(profile?.account_status, profile?.role);
 }
 
 export function canAccessRole(currentRole: UserRole | null | undefined, requiredRole: UserRole) {
@@ -42,11 +70,30 @@ export function canAccessRole(currentRole: UserRole | null | undefined, required
   return current === required;
 }
 
+function metadataString(user: { user_metadata?: Record<string, unknown> }, key: string) {
+  const value = user.user_metadata?.[key];
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+async function resolveInviteManagerId(
+  supabase: SupabaseServerClient,
+  inviteCode: string
+) {
+  if (!inviteCode) return null;
+
+  const { data } = await supabase.rpc('access_resolve_manager_invite', {
+    invite_code_input: inviteCode
+  });
+
+  return typeof data === 'string' && data ? data : null;
+}
+
 export async function ensureUserProfile(
   supabase: SupabaseServerClient,
   user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }
 ) {
-  const fullName = typeof user.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : '';
+  const fullName = metadataString(user, 'full_name');
+  const inviteCode = metadataString(user, 'manager_invite_code');
   const expectedRole = roleForEmail(user.email);
 
   const { data: existing } = await supabase
@@ -57,11 +104,27 @@ export async function ensureUserProfile(
 
   if (existing) {
     const currentRole = normalizeRole(existing.role);
-    const patch: Partial<Pick<UserProfile, 'email' | 'role' | 'account_status'>> = {};
+    const currentStatus = normalizeAccountStatus(existing.account_status, currentRole);
+    const patch: Partial<Pick<UserProfile, 'email' | 'role' | 'account_status' | 'manager_id'>> = {};
 
     if (!existing.email && user.email) patch.email = user.email;
-    if (expectedRole === 'master' && currentRole !== 'master') patch.role = 'master';
-    if (!existing.account_status) patch.account_status = 'active';
+
+    if (expectedRole === 'master' && currentRole !== 'master') {
+      patch.role = 'master';
+      patch.account_status = 'active';
+    }
+
+    if (currentRole === 'client' && !existing.manager_id && inviteCode) {
+      const managerId = await resolveInviteManagerId(supabase, inviteCode);
+      if (managerId) {
+        patch.manager_id = managerId;
+        patch.account_status = 'pending_manager_approval';
+      }
+    }
+
+    if (!existing.account_status) {
+      patch.account_status = expectedRole === 'master' ? 'active' : 'pending_manager_assignment';
+    }
 
     if (Object.keys(patch).length) {
       const { data: updated } = await supabase
@@ -71,11 +134,30 @@ export async function ensureUserProfile(
         .select('id,email,full_name,role,account_status,manager_id,manager_invite_code,created_at,updated_at')
         .single();
 
-      return updated ? ({ ...updated, role: normalizeRole(updated.role) } as UserProfile) : null;
+      return updated
+        ? ({
+            ...updated,
+            role: normalizeRole(updated.role),
+            account_status: normalizeAccountStatus(updated.account_status, normalizeRole(updated.role))
+          } as UserProfile)
+        : null;
     }
 
-    return { ...existing, role: currentRole } as UserProfile;
+    return {
+      ...existing,
+      role: currentRole,
+      account_status: currentStatus
+    } as UserProfile;
   }
+
+  const managerId = expectedRole === 'client' ? await resolveInviteManagerId(supabase, inviteCode) : null;
+
+  const initialStatus: AccountStatus =
+    expectedRole === 'master'
+      ? 'active'
+      : managerId
+        ? 'pending_manager_approval'
+        : 'pending_manager_assignment';
 
   const { data: created } = await supabase
     .from('profiles')
@@ -84,12 +166,19 @@ export async function ensureUserProfile(
       email: user.email || null,
       full_name: fullName,
       role: expectedRole,
-      account_status: 'active'
+      manager_id: managerId,
+      account_status: initialStatus
     })
     .select('id,email,full_name,role,account_status,manager_id,manager_invite_code,created_at,updated_at')
     .single();
 
-  return created ? ({ ...created, role: normalizeRole(created.role) } as UserProfile) : null;
+  return created
+    ? ({
+        ...created,
+        role: normalizeRole(created.role),
+        account_status: normalizeAccountStatus(created.account_status, normalizeRole(created.role))
+      } as UserProfile)
+    : null;
 }
 
 export async function getCurrentUserProfile() {
@@ -116,8 +205,10 @@ export async function requireUser() {
     redirect('/login');
   }
 
-  if (accountStatus(value.profile) !== 'active') {
-    redirect('/login?error=Account access is disabled. Contact your manager.');
+  const status = accountStatus(value.profile);
+
+  if (status === 'disabled' || status === 'suspended') {
+    redirect('/account-pending');
   }
 
   return value;

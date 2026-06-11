@@ -14,9 +14,16 @@ export async function POST(request: NextRequest) {
   const fullName = String(formData.get('fullName') || '').trim();
   const email = String(formData.get('email') || '').trim();
   const password = String(formData.get('password') || '');
+  const invite = String(formData.get('invite') || '').trim();
 
   if (!fullName || !email || !password) {
-    return NextResponse.redirect(appRedirect(request, '/signup', { error: 'Full name, email, and password are required.' }), 303);
+    return NextResponse.redirect(
+      appRedirect(request, '/signup', {
+        error: 'Full name, email, and password are required.',
+        invite
+      }),
+      303
+    );
   }
 
   const supabase = await createSupabaseServerClient();
@@ -26,15 +33,28 @@ export async function POST(request: NextRequest) {
     password,
     options: {
       data: {
-        full_name: fullName
+        full_name: fullName,
+        manager_invite_code: invite
       },
       emailRedirectTo: `${getAppOrigin(request)}/auth/callback`
     }
   });
 
   if (error) {
-    return NextResponse.redirect(appRedirect(request, '/signup', { error: friendlySignupError(error.message) }), 303);
+    return NextResponse.redirect(
+      appRedirect(request, '/signup', {
+        error: friendlySignupError(error.message),
+        invite
+      }),
+      303
+    );
   }
 
-  return NextResponse.redirect(appRedirect(request, '/login', { message: 'Account created. Check your email if confirmation is enabled, then sign in.' }), 303);
+  return NextResponse.redirect(
+    appRedirect(request, '/login', {
+      message: 'Account created. Check your email if confirmation is enabled, then sign in. Your manager must approve access before the workspace unlocks.',
+      next: '/account-pending'
+    }),
+    303
+  );
 }

@@ -1,4 +1,5 @@
 import { requireRole } from '../../lib/saas/session';
+import { requireWorkspaceAccess } from '../../lib/saas/access-entitlement';
 import LetterGeneratorWorkspaceV2 from '../../components/LetterGeneratorWorkspaceV2';
 import ApplicationRecoveryBoundary from '../../components/ApplicationRecoveryBoundary';
 
@@ -17,6 +18,7 @@ export default async function WorkspacePage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : {};
   const controlStatus = stringParam(params.control);
   const controlMessage = stringParam(params.message);
+  await requireWorkspaceAccess();
   const { user, profile } = await requireRole('client');
   const managerConnected = Boolean(profile?.manager_id);
 
@@ -29,7 +31,7 @@ export default async function WorkspacePage({ searchParams }: PageProps) {
           <div>
             <p>Manager access</p>
             <h2>{managerConnected ? 'Connected' : 'Join a manager'}</h2>
-            {!managerConnected && <span>Enter your manager invite code to connect this client account.</span>}
+            {!managerConnected && <span>Your manager must send an invite link and approve this account.</span>}
           </div>
           <strong className="client-manager-status">{managerConnected ? 'On' : 'Off'}</strong>
         </div>
@@ -40,14 +42,9 @@ export default async function WorkspacePage({ searchParams }: PageProps) {
           </div>
         )}
 
-        {!managerConnected ? (
-          <form action="/api/control/join" method="post" className="client-manager-form">
-            <input name="inviteCode" placeholder="Manager invite code" required />
-            <button type="submit">Join</button>
-          </form>
-        ) : (
-          <div className="client-manager-collapsed-note">Manager monitoring is active.</div>
-        )}
+        <div className="client-manager-collapsed-note">
+          {managerConnected ? 'Manager approval is active.' : 'Waiting for manager invite approval.'}
+        </div>
       </aside>
     </ApplicationRecoveryBoundary>
   );

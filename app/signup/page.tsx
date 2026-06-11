@@ -3,11 +3,12 @@ import Link from 'next/link';
 export default async function SignupPage({
   searchParams
 }: {
-  searchParams?: Promise<{ error?: string; message?: string }>;
+  searchParams?: Promise<{ error?: string; message?: string; invite?: string }>;
 }) {
   const params = await searchParams;
   const error = params?.error;
   const message = params?.message;
+  const invite = params?.invite || '';
 
   return (
     <main className="saas-auth-page">
@@ -16,18 +17,22 @@ export default async function SignupPage({
           <span className="saas-auth-logo">xD</span>
           <div>
             <p className="saas-auth-eyebrow">Create client account</p>
-            <h1>Start your workspace</h1>
+            <h1>{invite ? 'Join your manager' : 'Create your account'}</h1>
           </div>
         </div>
 
         <p className="saas-auth-copy">
-          Client accounts are created with protected workspace access by default.
+          {invite
+            ? 'You are creating an account from a manager invite link. Your manager must approve access before the workspace unlocks.'
+            : 'Create your account first. A manager invite and approval are required before workspace access unlocks.'}
         </p>
 
         {error && <div className="saas-auth-alert error">{error}</div>}
         {message && <div className="saas-auth-alert success">{message}</div>}
 
         <form action="/auth/sign-up" method="post" className="saas-auth-form">
+          <input type="hidden" name="invite" value={invite} />
+
           <label>
             <span>Full name</span>
             <input name="fullName" type="text" required placeholder="Client full name" />
@@ -47,26 +52,26 @@ export default async function SignupPage({
         </form>
 
         <p className="saas-auth-switch">
-          Already have an account? <Link href="/login">Sign in</Link>
+          Already have an account? <Link href="/login?next=/account-pending">Sign in</Link>
         </p>
       </section>
 
       <aside className="saas-auth-hero">
-        <p className="saas-auth-eyebrow">Secure by design</p>
-        <h2>Every user gets an authenticated role, protected route, and profile record in Supabase.</h2>
+        <p className="saas-auth-eyebrow">Approval-gated access</p>
+        <h2>Account creation does not unlock workspace access until a manager approves the client.</h2>
 
         <div className="saas-auth-feature-grid">
           <div>
-            <strong>Client role</strong>
-            <span>Default role for new signups.</span>
+            <strong>Manager invite</strong>
+            <span>Clients join through a manager invite link.</span>
           </div>
           <div>
-            <strong>Admin role</strong>
-            <span>Promote trusted accounts through Supabase SQL.</span>
+            <strong>Pending approval</strong>
+            <span>New users wait until a manager approves access.</span>
           </div>
           <div>
-            <strong>Vercel-ready</strong>
-            <span>Uses environment variables, not hardcoded secrets.</span>
+            <strong>No generation quota</strong>
+            <span>Approved users can generate without output limits.</span>
           </div>
         </div>
       </aside>

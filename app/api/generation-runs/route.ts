@@ -1,10 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createSupabaseServerClient } from '../../../lib/supabase/server';
+import { workspaceAccessErrorResponse } from '../../../lib/saas/access-entitlement';
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedStatuses = ['generated', 'downloaded', 'failed'];
 
 export async function GET() {
+  const accessError = await workspaceAccessErrorResponse();
+  if (accessError) return accessError;
+
   const supabase = await createSupabaseServerClient();
   const { data: userResult, error: userError } = await supabase.auth.getUser();
 
@@ -24,6 +28,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const accessError = await workspaceAccessErrorResponse();
+  if (accessError) return accessError;
+
   const supabase = await createSupabaseServerClient();
   const { data: userResult, error: userError } = await supabase.auth.getUser();
 

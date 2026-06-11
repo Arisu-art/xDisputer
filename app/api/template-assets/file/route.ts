@@ -1,11 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSessionContext } from '../../../../lib/saas/session';
+import { workspaceAccessErrorResponse } from '../../../../lib/saas/access-entitlement';
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
 const allowedExhibitKinds = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
 
 export async function GET(request: NextRequest) {
+  const accessError = await workspaceAccessErrorResponse();
+  if (accessError) return accessError;
+
   const session = await getSessionContext();
 
   if (!session.user) {

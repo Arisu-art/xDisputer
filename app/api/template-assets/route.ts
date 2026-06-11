@@ -5,6 +5,7 @@ import type { ExhibitKind } from '../../../lib/template-exhibits';
 import type { LetterType } from '../../../lib/letter-engine';
 import type { Round } from '../../../lib/reference-store';
 import { templateStoragePath, type TemplateKind } from '../../../lib/supabase/template-registry';
+import { workspaceAccessErrorResponse } from '../../../lib/saas/access-entitlement';
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
@@ -136,6 +137,9 @@ async function deleteAssetRecordsAndFiles(session: Awaited<ReturnType<typeof get
 }
 
 export async function GET(request: NextRequest) {
+  const accessError = await workspaceAccessErrorResponse();
+  if (accessError) return accessError;
+
   const session = await getSessionContext();
 
   if (!session.user) {
@@ -166,6 +170,9 @@ export async function POST(request: NextRequest) {
   let uploadedPath: string | null = null;
 
   try {
+    const accessError = await workspaceAccessErrorResponse();
+    if (accessError) return accessError;
+
     const session = await getSessionContext();
 
     if (!session.user) {
@@ -302,6 +309,9 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const accessError = await workspaceAccessErrorResponse();
+    if (accessError) return accessError;
+
     const session = await getSessionContext();
 
     if (!session.user) {
