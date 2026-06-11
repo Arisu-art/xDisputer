@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /workspaces/xDisputer
+
+echo "== xDisputer safe ship =="
+
+# 1. Remove local/generated noise that commonly blocks rebase.
+git restore -- next-env.d.ts tsconfig.tsbuildinfo 2>/dev/null || true
+rm -rf .local-backups .next
+
+# 2. Keep generated build files ignored going forward.
+touch .gitignore
+grep -qxF "tsconfig.tsbuildinfo" .gitignore || echo "tsconfig.tsbuildinfo" >> .gitignore
+grep -qxF ".local-backups/" .gitignore || echo ".local-backups/" >> .gitignore
+grep -qxF ".next/" .gitignore || echo ".next/" >> .gitignore
+
+# 3. Stage only real source/config files.
+git add \
+  app \
+  components \
+  lib \
+  scripts \
+  middleware.ts \
+  next.config.mjs \
+  package.json \
+  package-lock.json \
+  .env.example \
+  .gitignore 2>/dev/null || true
+
+# 4. Show staged work.
+echo
+echo "== Staged changes =="
+git diff --cached --name-status || true
+
+# 5. Run quality guard.
+echo
+echo "== Quality check =="
+if npm run | grep -q "xdisputer:guard"; then
+  npm run xdisputer:guard
+else
+  npm run typecheck
+  npm run build
+fi
+
+# 6. Commit only when staged changes exist.
+echo
+echo "== Commit =="
+if git diff --cached --quiet; then
+  echo "No real source changes staged. Nothing to commit."
+else
+  git commit -m "${1:-chore: safe production update}"
+fi
+
+# 7. Pull/rebase after working tree is clean.
+echo
+echo "== Pull rebase =="
+git restore -- next-env.d.ts tsconfig.tsbuildinfo 2>/dev/null || true
+git pull --rebase origin main
+
+# 8. Push.
+echo
+echo "== Push =="
+git push origin main
+
+echo
+echo "✅ Safe ship complete."
