@@ -304,40 +304,87 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
     return payload?.message || 'Template saved to Supabase.';
   }
 
+  async function deleteTemplateAsset(input: {
+    templateKind: 'LETTER' | 'EXHIBIT';
+    letterType?: LetterType;
+    exhibitKind?: ExhibitKind;
+  }) {
+    const response = await fetch('/api/template-assets', {
+      method: 'DELETE',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'x-template-upload': 'workspace'
+      },
+      body: JSON.stringify({
+        round,
+        templateKind: input.templateKind,
+        letterType: input.letterType,
+        exhibitKind: input.exhibitKind
+      })
+    });
+
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || payload?.status === 'error') {
+      throw new Error(payload?.message || 'Template could not be removed from Supabase.');
+    }
+
+    return payload?.message || 'Template removed from Supabase.';
+  }
+
   async function uploadRef(slot: LetterReference, file: File) {
     if (!isDocx(file.name)) {
       report('Letter references accept DOCX files only.', 'error');
       return;
     }
 
-    const contract = await saveReferenceFile(slot, file);
-    const syncMessage = await syncTemplateAsset({
-      templateKind: 'LETTER',
-      letterType: slot.type,
-      file
-    });
+    try {
+      const syncMessage = await syncTemplateAsset({
+        templateKind: 'LETTER',
+        letterType: slot.type,
+        file
+      });
 
-    setReferences((items) =>
-      items.map((item) =>
-        item.id === slot.id
-          ? { ...item, file: file.name, size: file.size, contract }
-          : item
-      )
-    );
-    clearOutputs();
-    report(syncMessage, 'success');
+      const contract = await saveReferenceFile(slot, file);
+
+      setReferences((items) =>
+        items.map((item) =>
+          item.id === slot.id
+            ? { ...item, file: file.name, size: file.size, contract }
+            : item
+        )
+      );
+
+      clearOutputs();
+      report(syncMessage, 'success');
+    } catch (error) {
+      report(errorMessage(error), 'error');
+    }
   }
 
   async function removeRef(slot: LetterReference) {
-    await removeReferenceFile(slot.id);
-    setReferences((items) =>
-      items.map((item) =>
-        item.id === slot.id
-          ? { ...item, file: '', size: undefined, contract: undefined }
-          : item
-      )
-    );
-    clearOutputs();
+    try {
+      const syncMessage = await deleteTemplateAsset({
+        templateKind: 'LETTER',
+        letterType: slot.type
+      });
+
+      await removeReferenceFile(slot.id);
+
+      setReferences((items) =>
+        items.map((item) =>
+          item.id === slot.id
+            ? { ...item, file: '', size: undefined, contract: undefined }
+            : item
+        )
+      );
+
+      clearOutputs();
+      report(syncMessage, 'success');
+    } catch (error) {
+      report(errorMessage(error), 'error');
+    }
   }
 
   async function letter(route: LetterRoute, file: File, date: string) {
