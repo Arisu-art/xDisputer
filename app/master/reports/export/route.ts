@@ -15,9 +15,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: errorMessage }, { status: 400 });
   }
 
-  const csv = generationRowsToCsv(rows, 'master');
-
-  return new NextResponse(csv, {
+  return new NextResponse(generationRowsToCsv(rows, 'master'), {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': 'attachment; filename="master-generation-report.csv"'

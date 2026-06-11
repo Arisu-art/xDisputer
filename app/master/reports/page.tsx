@@ -26,72 +26,77 @@ function formatDate(value: string | null | undefined) {
   }).format(date);
 }
 
-function ReportFilters({
-  filters,
-  exportHref,
-  activeCount
-}: {
-  filters: GenerationReportFilters;
-  exportHref: string;
-  activeCount: number;
-}) {
+function ReportFilters({ filters, exportHref, activeCount }: { filters: GenerationReportFilters; exportHref: string; activeCount: number }) {
   return (
     <section className="admin-monitor-card native-operation-card report-filter-card">
       <div className="admin-monitor-card-header">
         <div>
           <p>Report filters</p>
-          <h2>Refine platform activity</h2>
+          <h2>Find platform activity</h2>
         </div>
         <span>{activeCount} active</span>
       </div>
 
-      <form action="/master/reports" method="get" className="report-filter-form master-report-filter-form">
-        <label>
-          <span>Start date</span>
-          <input name="startDate" type="date" defaultValue={filters.startDate || ''} />
+      <form action="/master/reports" method="get" className="report-filter-form minimal-report-filter-form">
+        <label className="report-filter-search">
+          <span>Search</span>
+          <input name="query" type="search" placeholder="Client, round, or status" defaultValue={filters.query || ''} />
         </label>
 
         <label>
-          <span>End date</span>
-          <input name="endDate" type="date" defaultValue={filters.endDate || ''} />
+          <span>Period</span>
+          <select name="period" defaultValue={filters.period || '30d'}>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="90d">Last 90 days</option>
+            <option value="all">All time</option>
+            <option value="custom">Custom range</option>
+          </select>
         </label>
 
         <label>
           <span>Status</span>
           <select name="status" defaultValue={filters.status || ''}>
-            <option value="">All statuses</option>
+            <option value="">All</option>
             <option value="generated">Generated</option>
             <option value="downloaded">Downloaded</option>
             <option value="failed">Failed</option>
           </select>
         </label>
 
-        <label>
-          <span>Round</span>
-          <select name="round" defaultValue={filters.round || ''}>
-            <option value="">All rounds</option>
-            <option value="1st Round">1st Round</option>
-            <option value="2nd Round">2nd Round</option>
-            <option value="3rd Round">3rd Round</option>
-            <option value="Final">Final</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Client search</span>
-          <input name="query" type="search" placeholder="Client email, name, round, or status" defaultValue={filters.query || ''} />
-        </label>
-
-        <label>
-          <span>Manager search</span>
-          <input name="managerQuery" type="search" placeholder="Manager email or manager id" defaultValue={filters.managerQuery || ''} />
-        </label>
-
         <div className="report-filter-actions">
-          <button type="submit" className="admin-action-button primary">Apply filters</button>
+          <button type="submit" className="admin-action-button primary">Apply</button>
           <a className="admin-action-button" href="/master/reports">Reset</a>
           <a className="admin-action-button" href={exportHref}>Export CSV</a>
         </div>
+
+        <details className="report-advanced-filters">
+          <summary>Advanced filters</summary>
+          <div>
+            <label>
+              <span>Start date</span>
+              <input name="startDate" type="date" defaultValue={filters.startDate || ''} />
+            </label>
+            <label>
+              <span>End date</span>
+              <input name="endDate" type="date" defaultValue={filters.endDate || ''} />
+            </label>
+            <label>
+              <span>Round</span>
+              <select name="round" defaultValue={filters.round || ''}>
+                <option value="">All rounds</option>
+                <option value="1st Round">1st Round</option>
+                <option value="2nd Round">2nd Round</option>
+                <option value="3rd Round">3rd Round</option>
+                <option value="Final">Final</option>
+              </select>
+            </label>
+            <label>
+              <span>Manager search</span>
+              <input name="managerQuery" type="search" placeholder="Manager email or id" defaultValue={filters.managerQuery || ''} />
+            </label>
+          </div>
+        </details>
       </form>
     </section>
   );
@@ -204,7 +209,7 @@ export default async function MasterReportsPage({ searchParams }: PageProps) {
           <div>
             <p>Master generation report</p>
             <h1>Platform usage visibility.</h1>
-            <span>Filter, search, and export read-only platform generation activity. This report does not enforce quotas or output limits.</span>
+            <span>Search, filter, and export read-only platform activity. No quota or output limit is enforced.</span>
           </div>
         </header>
 

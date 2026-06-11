@@ -16,6 +16,7 @@ export type GenerationReportRow = {
 };
 
 export type GenerationReportFilters = {
+  period?: string;
   startDate?: string;
   endDate?: string;
   status?: string;
@@ -36,6 +37,7 @@ export type GenerationReportSummary = {
 
 const allowedStatuses = new Set(['generated', 'downloaded', 'failed']);
 const allowedRounds = new Set(['1st Round', '2nd Round', '3rd Round', 'Final']);
+const allowedPeriods = new Set(['all', '7d', '30d', '90d', 'custom']);
 
 function cleanText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
@@ -48,15 +50,41 @@ function cleanDate(value: unknown) {
   return raw;
 }
 
+function dateDaysAgo(days: number) {
+  const date = new Date();
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
 export function normalizeGenerationReportFilters(input?: Record<string, string | string[] | undefined>): GenerationReportFilters {
   const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
+
+  const periodInput = cleanText(first(input?.period));
+  const period = allowedPeriods.has(periodInput) ? periodInput : '30d';
 
   const status = cleanText(first(input?.status));
   const round = cleanText(first(input?.round));
 
+  const customStart = cleanDate(first(input?.startDate));
+  const customEnd = cleanDate(first(input?.endDate));
+
+  let startDate = '';
+  let endDate = '';
+
+  if (period === '7d') startDate = dateDaysAgo(7);
+  if (period === '30d') startDate = dateDaysAgo(30);
+  if (period === '90d') startDate = dateDaysAgo(90);
+
+  if (period === 'custom') {
+    startDate = customStart;
+    endDate = customEnd;
+  }
+
   return {
-    startDate: cleanDate(first(input?.startDate)),
-    endDate: cleanDate(first(input?.endDate)),
+    period,
+    startDate,
+    endDate,
     status: allowedStatuses.has(status) ? status : '',
     round: allowedRounds.has(round) ? round : '',
     query: cleanText(first(input?.query)).slice(0, 120),
@@ -76,7 +104,13 @@ export function generationReportQueryString(filters: GenerationReportFilters) {
 }
 
 export function activeGenerationFilterCount(filters: GenerationReportFilters) {
-  return Object.values(filters).filter(Boolean).length;
+  return [
+    filters.period && filters.period !== 'all' ? filters.period : '',
+    filters.status,
+    filters.round,
+    filters.query,
+    filters.managerQuery
+  ].filter(Boolean).length;
 }
 
 function countBy(rows: GenerationReportRow[], key: (row: GenerationReportRow) => string | null | undefined) {
@@ -128,7 +162,6 @@ export async function listGenerationReport(
     : baseParams;
 
   const { data, error } = await supabase.rpc(rpcName, params);
-
   const rows = Array.isArray(data) ? (data as GenerationReportRow[]) : [];
 
   return {
@@ -144,7 +177,12 @@ export function generationRowsToCsv(rows: GenerationReportRow[], scope: 'manager
     : ['created_at', 'owner_email', 'owner_full_name', 'client_name', 'round_label', 'output_status', 'run_id'];
 
   const escapeCell = (value: unknown) => {
-    const text = value === null || typeof value === 'undefined' ? '' : String(value);
+    let text = value === null || typeof value === 'undefined' ? '' : String(value);
+
+    if (/^[=+\-@\t\r]/.test(text)) {
+      text = `'${text}`;
+    }
+
     return `"${text.replace(/"/g, '""')}"`;
   };
 
