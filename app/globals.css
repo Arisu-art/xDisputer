@@ -5461,3 +5461,37 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
     width: 100%;
   }
 }
+
+/* ------------------------------------------------------------------
+   Console performance loading states
+------------------------------------------------------------------- */
+
+.console-loading-line,
+.console-loading-card,
+.console-loading-panel {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 42%, #e2e8f0 82%);
+  background-size: 220% 100%;
+  animation: consoleLoadingShimmer 1.2s ease-in-out infinite;
+}
+
+.console-loading-line {
+  height: 42px;
+  margin-bottom: 0.55rem;
+}
+
+.console-loading-card {
+  min-height: 112px;
+}
+
+.console-loading-panel {
+  min-height: 360px;
+}
+
+@keyframes consoleLoadingShimmer {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}

@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { ensureManagerInviteCode, listManagedAccounts, type ManagedAccount } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
@@ -155,6 +156,14 @@ function SnapshotFooter({ count, total, href }: { count: number; total: number; 
 
 export default async function AdminPage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : {};
+  const rawPanel = Array.isArray(params.panel) ? params.panel[0] : params.panel;
+  const rawView = Array.isArray(params.view) ? params.view[0] : params.view;
+
+  if (rawPanel === 'access' || rawPanel === 'clients') {
+    const target = rawView ? `/admin/access?view=${encodeURIComponent(rawView)}` : '/admin/access';
+    redirect(target);
+  }
+
   const activePanel = normalizePanel(params.panel);
   const activeAccessView = normalizeAccessWorkflowView(params.view);
   const controlStatus = stringParam(params.control);

@@ -72,7 +72,7 @@ export default async function MasterAuditPage() {
           <a href="/master/accounts">All accounts</a>
           <a href="/master/accounts?view=managers">Managers</a>
           <a href="/master/accounts?view=clients">Clients</a>
-          <a href="/master?panel=reports">Reports</a>
+          <a href="/master/reports">Reports</a>
           <a className="active" href="/master/audit">Audit log</a>
         </nav>
 

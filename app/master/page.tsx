@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import MasterAccountTable from './MasterAccountTable';
 import { listManagedAccounts, type ManagedAccount } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
@@ -70,6 +71,15 @@ function SnapshotFooter({ count, total, href }: { count: number; total: number; 
 
 export default async function MasterPage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : {};
+  const rawPanel = Array.isArray(params.panel) ? params.panel[0] : params.panel;
+  const rawView = Array.isArray(params.view) ? params.view[0] : params.view;
+
+  if (rawPanel === 'access' || rawPanel === 'managers' || rawPanel === 'clients') {
+    const view = rawPanel === 'managers' ? 'managers' : rawPanel === 'clients' ? 'clients' : rawView;
+    const target = view ? `/master/accounts?view=${encodeURIComponent(view)}` : '/master/accounts';
+    redirect(target);
+  }
+
   const activePanel = normalizePanel(params.panel);
   const activeAccessView = normalizeMasterAccessWorkflowView(params.view);
   const controlStatus = stringParam(params.control);

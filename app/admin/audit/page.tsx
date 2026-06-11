@@ -71,7 +71,7 @@ export default async function ManagerAuditPage() {
           <a href="/admin">Monitoring</a>
           <a href="/admin/access">Access control</a>
           <a href="/admin?panel=intake">Client intake</a>
-          <a href="/admin?panel=reports">Reports</a>
+          <a href="/admin/reports">Reports</a>
           <a className="active" href="/admin/audit">Audit log</a>
         </nav>
 
