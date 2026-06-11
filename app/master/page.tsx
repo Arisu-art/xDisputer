@@ -1,8 +1,6 @@
 import { activateAccount, demoteToClient, disableAccount, pauseAccount, promoteToAdmin } from './actions';
+import { listManagedAccounts } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
-import type { UserProfile } from '../../lib/supabase/roles';
-
-type ProfileRow = Pick<UserProfile, 'id' | 'email' | 'full_name' | 'role' | 'account_status' | 'created_at' | 'updated_at'>;
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '—';
@@ -22,18 +20,12 @@ function AccountActionButton({ profileId, action, label }: { profileId: string; 
 
 export default async function MasterPage() {
   const { user, profile, supabase } = await requireRole('master');
+  const { accounts: profiles, errorMessage: queryError } = await listManagedAccounts(supabase, 'master');
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id,email,full_name,role,account_status,created_at,updated_at')
-    .order('created_at', { ascending: false });
-
-  const profiles: ProfileRow[] = Array.isArray(data) ? data : [];
   const masterUsers = profiles.filter((item) => item.role === 'master').length;
   const adminUsers = profiles.filter((item) => item.role === 'admin').length;
   const clientUsers = profiles.filter((item) => item.role === 'client').length;
   const pausedUsers = profiles.filter((item) => item.account_status === 'paused' || item.account_status === 'disabled').length;
-  const queryError = error?.message || null;
 
   return (
     <main className="admin-monitor-page">
@@ -50,8 +42,8 @@ export default async function MasterPage() {
           <a className="active" href="/master">Account control</a>
           <a href="#admins">Manage admins</a>
           <a href="#clients">Monitor clients</a>
-          <a href="/admin">Admin console</a>
           <a href="/app">Role router</a>
+          <a href="/api/account">Account JSON</a>
         </nav>
 
         <div className="admin-monitor-account">
@@ -115,7 +107,7 @@ export default async function MasterPage() {
                           ) : (
                             <AccountActionButton profileId={item.id} action={pauseAccount} label="Pause" />
                           )}
-                          {item.id !== user.id && <AccountActionButton profileId={item.id} action={disableAccount} label="Disable" />}
+                          {item.id !== user.id && item.role !== 'master' && <AccountActionButton profileId={item.id} action={disableAccount} label="Disable" />}
                         </div>
                       </td>
                     </tr>
