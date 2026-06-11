@@ -1,8 +1,6 @@
 import { activateClientAccount, disableClientAccount, pauseClientAccount } from './actions';
+import { listManagedAccounts } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
-import type { UserProfile } from '../../lib/supabase/roles';
-
-type AdminProfileRow = Pick<UserProfile, 'id' | 'email' | 'full_name' | 'role' | 'account_status' | 'created_at' | 'updated_at'>;
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '—';
@@ -24,19 +22,12 @@ function ClientActionButton({ profileId, action, label }: { profileId: string; a
 
 export default async function AdminPage() {
   const { user, profile, supabase } = await requireRole('admin');
+  const { accounts: profiles, errorMessage: queryError } = await listManagedAccounts(supabase, 'admin');
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id,email,full_name,role,account_status,created_at,updated_at')
-    .in('role', ['client'])
-    .order('created_at', { ascending: false });
-
-  const profiles: AdminProfileRow[] = Array.isArray(data) ? data : [];
   const totalClients = profiles.length;
   const activeClients = profiles.filter((item) => (item.account_status || 'active') === 'active').length;
   const pausedClients = profiles.filter((item) => item.account_status === 'paused').length;
   const disabledClients = profiles.filter((item) => item.account_status === 'disabled').length;
-  const queryError = error?.message || null;
 
   return (
     <main className="admin-monitor-page">
