@@ -1,10 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createSupabaseServerClient } from '../../../../lib/supabase/server';
+import { ensureUserProfile, normalizeRole } from '../../../../lib/supabase/roles';
 
 type ControlIntent =
+  | 'make_manager'
+  | 'demote_client'
   | 'approve'
   | 'reject'
   | 'disable'
+  | 'suspend'
   | 'activate'
   | 'reactivate'
   | 'clear_manager';
@@ -26,12 +30,38 @@ function cleanValue(formData: FormData, key: string) {
 
 function isControlIntent(value: string): value is ControlIntent {
   return (
+    value === 'make_manager' ||
+    value === 'demote_client' ||
     value === 'approve' ||
     value === 'reject' ||
     value === 'disable' ||
+    value === 'suspend' ||
     value === 'activate' ||
     value === 'reactivate' ||
     value === 'clear_manager'
+  );
+}
+
+function isMasterIntent(intent: ControlIntent) {
+  return (
+    intent === 'make_manager' ||
+    intent === 'demote_client' ||
+    intent === 'disable' ||
+    intent === 'suspend' ||
+    intent === 'activate' ||
+    intent === 'reactivate' ||
+    intent === 'clear_manager'
+  );
+}
+
+function isManagerIntent(intent: ControlIntent) {
+  return (
+    intent === 'approve' ||
+    intent === 'reject' ||
+    intent === 'disable' ||
+    intent === 'activate' ||
+    intent === 'reactivate' ||
+    intent === 'clear_manager'
   );
 }
 
@@ -54,14 +84,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.redirect(login, 303);
     }
 
-    const { error } = await supabase.rpc('access_control_profile', {
-      target_profile_id: targetProfileId,
-      control_intent: intent
-    });
+    const actorProfile = await ensureUserProfile(supabase, userResult.user);
+    const actorRole = normalizeRole(actorProfile?.role);
 
-    if (error) return redirectBack(request, 'error', error.message);
+    if (actorRole === 'master') {
+      if (!isMasterIntent(intent)) {
+        return redirectBack(request, 'error', 'This action is not available to master control.');
+      }
 
-    return redirectBack(request, 'ok');
+      const { error } = await supabase.rpc('access_master_control_profile', {
+        target_profile_id: targetProfileId,
+        control_intent: intent
+      });
+
+      if (error) return redirectBack(request, 'error', error.message);
+
+      return redirectBack(request, 'ok');
+    }
+
+    if (actorRole === 'manager') {
+      if (!isManagerIntent(intent)) {
+        return redirectBack(request, 'error', 'This action is not available to manager control.');
+      }
+
+      const managerIntent = intent === 'reactivate' ? 'activate' : intent;
+
+      const { error } = await supabase.rpc('access_control_profile', {
+        target_profile_id: targetProfileId,
+        control_intent: managerIntent
+      });
+
+      if (error) return redirectBack(request, 'error', error.message);
+
+      return redirectBack(request, 'ok');
+    }
+
+    return redirectBack(request, 'error', 'You do not have permission to control accounts.');
   } catch (error) {
     return redirectBack(request, 'error', error instanceof Error ? error.message : 'Control request failed.');
   }

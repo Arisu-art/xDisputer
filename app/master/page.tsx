@@ -2,7 +2,7 @@ import MasterAccountTable from './MasterAccountTable';
 import { listManagedAccounts, type ManagedAccount } from '../../lib/saas/account-management';
 import { requireRole } from '../../lib/saas/session';
 
-type MasterPanel = 'monitoring' | 'access' | 'reports';
+type MasterPanel = 'monitoring' | 'access' | 'managers' | 'clients' | 'reports';
 
 type PageProps = {
   searchParams?: Promise<{
@@ -14,8 +14,7 @@ type PageProps = {
 
 function normalizePanel(value: string | string[] | undefined): MasterPanel {
   const panel = Array.isArray(value) ? value[0] : value;
-  if (panel === 'access' || panel === 'reports') return panel;
-  if (panel === 'managers' || panel === 'clients' || panel === 'system' || panel === 'overview') return 'monitoring';
+  if (panel === 'access' || panel === 'managers' || panel === 'clients' || panel === 'reports') return panel;
   return 'monitoring';
 }
 
@@ -23,15 +22,15 @@ function stringParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function MasterSidebarLink({ panel, activePanel, children }: { panel: MasterPanel; activePanel: MasterPanel; children: string }) {
-  return <a className={activePanel === panel ? 'active' : ''} href={`/master?panel=${panel}`}>{children}</a>;
-}
-
 function formatDate(value: string | null | undefined) {
   if (!value) return '—';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+}
+
+function MasterSidebarLink({ panel, activePanel, children }: { panel: MasterPanel; activePanel: MasterPanel; children: string }) {
+  return <a className={activePanel === panel ? 'active' : ''} href={`/master?panel=${panel}`}>{children}</a>;
 }
 
 function StatusList({ accounts }: { accounts: ManagedAccount[] }) {
@@ -45,7 +44,7 @@ function StatusList({ accounts }: { accounts: ManagedAccount[] }) {
             <strong>{account.full_name || account.email || 'Unnamed account'}</strong>
             <span>{account.email || 'Account record'} • Updated {formatDate(account.updated_at)}</span>
           </div>
-          <span className={`admin-status-badge ${account.account_status || 'active'}`}>{account.account_status || 'active'}</span>
+          <span className={`admin-status-badge ${account.account_status || 'pending'}`}>{account.account_status || 'pending'}</span>
         </article>
       ))}
     </div>
@@ -66,16 +65,18 @@ export default async function MasterPage({ searchParams }: PageProps) {
   const activePanel = normalizePanel(params.panel);
   const controlStatus = stringParam(params.control);
   const controlMessage = stringParam(params.message);
+
   const { user, profile, supabase } = await requireRole('master');
   const { accounts: profiles, errorMessage: queryError } = await listManagedAccounts(supabase, 'master');
 
   const ownerProfiles = profiles.filter((item) => item.role === 'master');
   const managerProfiles = profiles.filter((item) => item.role === 'manager' || item.role === 'admin');
   const clientProfiles = profiles.filter((item) => item.role === 'client');
-  const disabledAccounts = profiles.filter((item) => item.account_status === 'disabled');
+  const pendingClients = clientProfiles.filter((item) => item.account_status === 'pending_manager_assignment' || item.account_status === 'pending_manager_approval');
+  const disabledAccounts = profiles.filter((item) => item.account_status === 'disabled' || item.account_status === 'suspended');
   const unassignedClients = clientProfiles.filter((item) => !item.manager_id);
   const linkedClients = clientProfiles.filter((item) => item.manager_id);
-  const attentionQueue = [...disabledAccounts, ...unassignedClients.filter((item) => item.account_status !== 'disabled')];
+  const attentionQueue = [...pendingClients, ...disabledAccounts];
   const coverageRate = clientProfiles.length ? Math.round((linkedClients.length / clientProfiles.length) * 100) : 0;
 
   return (
@@ -89,14 +90,18 @@ export default async function MasterPage({ searchParams }: PageProps) {
         <div className="admin-sidebar-section-title">Operations</div>
         <nav aria-label="Master navigation">
           <MasterSidebarLink panel="monitoring" activePanel={activePanel}>Monitoring</MasterSidebarLink>
-          <MasterSidebarLink panel="access" activePanel={activePanel}>Access control</MasterSidebarLink>
+          <MasterSidebarLink panel="access" activePanel={activePanel}>All accounts</MasterSidebarLink>
+          <MasterSidebarLink panel="managers" activePanel={activePanel}>Managers</MasterSidebarLink>
+          <MasterSidebarLink panel="clients" activePanel={activePanel}>Clients</MasterSidebarLink>
           <MasterSidebarLink panel="reports" activePanel={activePanel}>Reports</MasterSidebarLink>
         </nav>
 
         <div className="admin-monitor-account">
           <strong>{profile?.email || user.email || 'Master account'}</strong>
           <small>Owner account</small>
-          <form action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form>
+          <form action="/auth/sign-out" method="post">
+            <button type="submit">Sign out</button>
+          </form>
         </div>
       </aside>
 
@@ -104,8 +109,8 @@ export default async function MasterPage({ searchParams }: PageProps) {
         <header className="admin-monitor-header native-command-hero master-compact-hero">
           <div>
             <p>Master operations</p>
-            <h1>Account command center.</h1>
-            <span>Monitor platform accounts, control access, and review operational coverage.</span>
+            <h1>Manager command center.</h1>
+            <span>Promote managers, control account status, and monitor client-manager coverage. No quota system is active.</span>
           </div>
         </header>
 
@@ -117,7 +122,9 @@ export default async function MasterPage({ searchParams }: PageProps) {
         )}
 
         {queryError ? (
-          <section className="admin-monitor-card"><div className="admin-monitor-empty">Could not load account records: {queryError}</div></section>
+          <section className="admin-monitor-card">
+            <div className="admin-monitor-empty">Could not load account records: {queryError}</div>
+          </section>
         ) : (
           <>
             {activePanel === 'monitoring' && (
@@ -125,7 +132,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
                 <section className="admin-monitor-stats master-monitoring-stats" aria-label="Monitoring metrics">
                   <article><p>Total users</p><strong>{profiles.length}</strong></article>
                   <article><p>Managers</p><strong>{managerProfiles.length}</strong></article>
-                  <article><p>Coverage</p><strong>{coverageRate}%</strong></article>
+                  <article><p>Pending clients</p><strong>{pendingClients.length}</strong></article>
                   <article><p>Attention</p><strong>{attentionQueue.length}</strong></article>
                 </section>
 
@@ -133,15 +140,16 @@ export default async function MasterPage({ searchParams }: PageProps) {
                   <article className="admin-monitor-card native-operation-card dashboard-snapshot-card">
                     <div className="admin-monitor-card-header">
                       <div><p>Monitoring</p><h2>Attention queue</h2></div>
-                      <a className="dashboard-card-link" href="/master/accounts?filter=attention">View all</a>
+                      <a className="dashboard-card-link" href="/master?panel=clients">View clients</a>
                     </div>
                     <StatusList accounts={attentionQueue} />
-                    <SnapshotFooter count={5} total={attentionQueue.length} href="/master/accounts?filter=attention" />
+                    <SnapshotFooter count={5} total={attentionQueue.length} href="/master?panel=clients" />
                   </article>
+
                   <article className="admin-monitor-card native-operation-card dashboard-snapshot-card">
                     <div className="admin-monitor-card-header">
                       <div><p>Coverage</p><h2>Client-manager assignment</h2></div>
-                      <a className="dashboard-card-link" href="/master/accounts?filter=clients">View all</a>
+                      <a className="dashboard-card-link" href="/master?panel=clients">View clients</a>
                     </div>
                     <div className="dashboard-snapshot-list">
                       <div className="admin-power-list">
@@ -151,7 +159,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
                         <span>Coverage rate: {coverageRate}%</span>
                       </div>
                     </div>
-                    <SnapshotFooter count={4} total={4} href="/master/accounts?filter=clients" />
+                    <SnapshotFooter count={4} total={4} href="/master?panel=clients" />
                   </article>
                 </section>
               </>
@@ -160,11 +168,50 @@ export default async function MasterPage({ searchParams }: PageProps) {
             {activePanel === 'access' && (
               <section className="master-access-stack">
                 <article className="admin-monitor-card native-operation-card">
-                  <div className="admin-monitor-card-header"><div><p>Access control</p><h2>Manager accounts</h2></div><span>{managerProfiles.length} managers</span></div>
+                  <div className="admin-monitor-card-header">
+                    <div><p>Access control</p><h2>Manager accounts</h2></div>
+                    <span>{managerProfiles.length} managers</span>
+                  </div>
                   <MasterAccountTable accounts={managerProfiles} currentUserId={user.id} emptyText="No manager accounts found yet. Promote a client into manager access from the client section below." />
                 </article>
+
                 <article className="admin-monitor-card native-operation-card">
-                  <div className="admin-monitor-card-header"><div><p>Access control</p><h2>Client accounts</h2></div><span>{clientProfiles.length} clients</span></div>
+                  <div className="admin-monitor-card-header">
+                    <div><p>Access control</p><h2>Client accounts</h2></div>
+                    <span>{clientProfiles.length} clients</span>
+                  </div>
+                  <MasterAccountTable accounts={clientProfiles} currentUserId={user.id} emptyText="No client accounts found yet." />
+                </article>
+              </section>
+            )}
+
+            {activePanel === 'managers' && (
+              <section className="master-access-stack">
+                <article className="admin-monitor-card native-operation-card">
+                  <div className="admin-monitor-card-header">
+                    <div><p>Manager control</p><h2>Active manager accounts</h2></div>
+                    <span>{managerProfiles.length} managers</span>
+                  </div>
+                  <MasterAccountTable accounts={managerProfiles} currentUserId={user.id} emptyText="No manager accounts found yet." />
+                </article>
+              </section>
+            )}
+
+            {activePanel === 'clients' && (
+              <section className="master-access-stack">
+                <article className="admin-monitor-card native-operation-card">
+                  <div className="admin-monitor-card-header">
+                    <div><p>Client control</p><h2>Pending / unassigned clients</h2></div>
+                    <span>{pendingClients.length} pending</span>
+                  </div>
+                  <MasterAccountTable accounts={pendingClients} currentUserId={user.id} emptyText="No pending clients." />
+                </article>
+
+                <article className="admin-monitor-card native-operation-card">
+                  <div className="admin-monitor-card-header">
+                    <div><p>Client control</p><h2>All client accounts</h2></div>
+                    <span>{clientProfiles.length} clients</span>
+                  </div>
                   <MasterAccountTable accounts={clientProfiles} currentUserId={user.id} emptyText="No client accounts found yet." />
                 </article>
               </section>
@@ -173,12 +220,31 @@ export default async function MasterPage({ searchParams }: PageProps) {
             {activePanel === 'reports' && (
               <section className="admin-power-grid">
                 <article className="admin-monitor-card native-operation-card">
-                  <div className="admin-monitor-card-header"><div><p>Report</p><h2>Account coverage</h2></div><span>{coverageRate}%</span></div>
-                  <div className="admin-power-list"><span>Owners: {ownerProfiles.length}</span><span>Managers: {managerProfiles.length}</span><span>Clients: {clientProfiles.length}</span><span>Assigned clients: {linkedClients.length}</span><span>Unassigned clients: {unassignedClients.length}</span></div>
+                  <div className="admin-monitor-card-header">
+                    <div><p>Report</p><h2>Account coverage</h2></div>
+                    <span>{coverageRate}%</span>
+                  </div>
+                  <div className="admin-power-list">
+                    <span>Owners: {ownerProfiles.length}</span>
+                    <span>Managers: {managerProfiles.length}</span>
+                    <span>Clients: {clientProfiles.length}</span>
+                    <span>Assigned clients: {linkedClients.length}</span>
+                    <span>Unassigned clients: {unassignedClients.length}</span>
+                    <span>No quota system: active</span>
+                  </div>
                 </article>
+
                 <article className="admin-monitor-card native-operation-card">
-                  <div className="admin-monitor-card-header"><div><p>Report</p><h2>Recommended actions</h2></div><span>{attentionQueue.length} tasks</span></div>
-                  <div className="admin-power-list"><span>1. Assign unassigned clients to a manager using invite workflow.</span><span>2. Review disabled accounts before reactivation.</span><span>3. Keep manager access limited to trusted operators.</span><span>4. Use access control only for account-level changes.</span></div>
+                  <div className="admin-monitor-card-header">
+                    <div><p>Report</p><h2>Recommended actions</h2></div>
+                    <span>{attentionQueue.length} tasks</span>
+                  </div>
+                  <div className="admin-power-list">
+                    <span>Promote trusted operators to manager.</span>
+                    <span>Managers invite and approve their own clients.</span>
+                    <span>Disable accounts only when access should be blocked.</span>
+                    <span>Approved clients can generate without quota limits.</span>
+                  </div>
                 </article>
               </section>
             )}
