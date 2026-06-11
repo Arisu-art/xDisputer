@@ -11,8 +11,11 @@ export async function GET() {
       profile: null,
       role: null,
       isMaster: false,
+      isManager: false,
       isAdmin: false,
       isClient: false,
+      managerId: null,
+      managerInviteCode: null,
       dashboard: null
     });
   }
@@ -26,8 +29,11 @@ export async function GET() {
     profile: session.profile,
     role: session.role,
     isMaster: session.isMaster,
+    isManager: session.isManager,
     isAdmin: session.isAdmin,
     isClient: session.isClient,
+    managerId: session.profile?.manager_id || null,
+    managerInviteCode: session.profile?.manager_invite_code || null,
     dashboard: session.dashboardPath
   });
 }
