@@ -64,6 +64,7 @@ import './admin-monitor.css';
 import './control-dashboard-lists.css';
 import './production-ui-lock.css';
 import './professional-console-layout.css';
+import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 
 export const metadata = {
   title: 'xDisputer',
@@ -73,7 +74,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body><ControlNavGlobalTelemetry />{children}</body>
     </html>
   );
 }
