@@ -25,6 +25,7 @@ function agreementSummary(account: ManagedAccount, limit?: EntitlementLimitRow) 
   if (account.role === 'client') return `${dayUsed(limit)}/${numberText(limit?.effective_output_limit)} outputs today`;
   return 'Protected';
 }
+function canEditLimits(account: ManagedAccount) { return isManager(account) || account.role === 'client'; }
 
 function ControlForm({ profileId, intent, label, primary = false }: { profileId: string; intent: string; label: string; primary?: boolean }) {
   return <form action="/api/control/profile" method="post"><input type="hidden" name="profileId" value={profileId} /><input type="hidden" name="intent" value={intent} /><button type="submit" className={`admin-action-button ${primary ? 'primary' : ''}`}>{label}</button></form>;
@@ -41,9 +42,9 @@ function LinkBadge({ account }: { account: ManagedAccount }) {
   return <span className="admin-relation-badge owner">Owner</span>;
 }
 
-function LimitForm({ account, limit }: { account: ManagedAccount; limit?: EntitlementLimitRow }) {
-  if (isManager(account)) return <form action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><div className="flyout-section-toolbar"><div><strong>Daily agreement limits</strong><small>Master-controlled manager limits</small></div><button type="submit" className="admin-action-button primary flyout-save-button">Save limits</button></div><input type="hidden" name="mode" value="manager" /><input type="hidden" name="profileId" value={account.id} /><div className="limit-meter"><strong>{limit?.current_clients || 0}/{numberText(limit?.max_clients)}</strong><small>active clients</small></div><label><span>Client limit</span><input name="maxClients" type="number" min="0" defaultValue={limit?.max_clients ?? ''} placeholder="Default" /></label><label><span>Default outputs per client/day</span><input name="defaultClientOutputLimit" type="number" min="0" defaultValue={limit?.default_client_output_limit ?? ''} placeholder="Default" /></label></form>;
-  if (account.role === 'client') return <form action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><div className="flyout-section-toolbar"><div><strong>Daily agreement limits</strong><small>Master-controlled client output cap</small></div><button type="submit" className="admin-action-button primary flyout-save-button">Save limit</button></div><input type="hidden" name="mode" value="client" /><input type="hidden" name="profileId" value={account.id} /><div className="limit-meter"><strong>{dayUsed(limit)}/{numberText(limit?.effective_output_limit)}</strong><small>outputs today</small></div><label><span>Daily output limit</span><input name="outputLimit" type="number" min="0" defaultValue={limit?.client_output_limit ?? ''} placeholder="Manager default" /></label></form>;
+function LimitForm({ account, limit, formId }: { account: ManagedAccount; limit?: EntitlementLimitRow; formId: string }) {
+  if (isManager(account)) return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="manager" /><input type="hidden" name="profileId" value={account.id} /><div className="limit-meter"><strong>{limit?.current_clients || 0}/{numberText(limit?.max_clients)}</strong><small>active clients</small></div><label><span>Client limit</span><input name="maxClients" type="number" min="0" defaultValue={limit?.max_clients ?? ''} placeholder="Default" /></label><label><span>Default outputs per client/day</span><input name="defaultClientOutputLimit" type="number" min="0" defaultValue={limit?.default_client_output_limit ?? ''} placeholder="Default" /></label></form>;
+  if (account.role === 'client') return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="client" /><input type="hidden" name="profileId" value={account.id} /><div className="limit-meter"><strong>{dayUsed(limit)}/{numberText(limit?.effective_output_limit)}</strong><small>outputs today</small></div><label><span>Daily output limit</span><input name="outputLimit" type="number" min="0" defaultValue={limit?.client_output_limit ?? ''} placeholder="Manager default" /></label></form>;
   return <p className="flyout-muted">Master account limits are protected.</p>;
 }
 
@@ -55,7 +56,10 @@ function ActionForms({ account, currentUserId }: { account: ManagedAccount; curr
 }
 
 function Flyout({ account, currentUserId, limit }: { account: ManagedAccount; currentUserId: string; limit?: EntitlementLimitRow }) {
-  return <TableFlyout eyebrow="Account controls" title={account.full_name || account.email || 'Account'} summary={agreementSummary(account, limit)} actionLabel="Manage"><section className="table-flyout-section"><LimitForm account={account} limit={limit} /></section><section className="table-flyout-section"><strong>Actions</strong><ActionForms account={account} currentUserId={currentUserId} /></section></TableFlyout>;
+  const formId = `limit-form-${account.id}`;
+  const saveAction = canEditLimits(account) ? <button type="submit" form={formId} className="admin-action-button primary flyout-save-button">Save limits</button> : null;
+
+  return <TableFlyout eyebrow="Account controls" title={account.full_name || account.email || 'Account'} summary={agreementSummary(account, limit)} actionLabel="Manage" headerAction={saveAction}><section className="table-flyout-section"><strong>Daily agreement limits</strong><LimitForm account={account} limit={limit} formId={formId} /></section><section className="table-flyout-section"><strong>Actions</strong><ActionForms account={account} currentUserId={currentUserId} /></section></TableFlyout>;
 }
 
 export default function MasterAccountTableV2({ accounts, currentUserId, emptyText, entitlements = {} }: { accounts: ManagedAccount[]; currentUserId: string; emptyText: string; entitlements?: EntitlementLimitMap }) {
