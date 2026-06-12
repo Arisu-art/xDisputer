@@ -23,6 +23,10 @@ function assertContains(path, text) {
 
 console.log('\n=== xDisputer deploy guard ===');
 
+if (existsSync('scripts/repair-letter-workspace-syntax.mjs')) {
+  run('node scripts/repair-letter-workspace-syntax.mjs');
+}
+
 assertFile('lib/round-template-policy.ts');
 assertFile('lib/generation-manifest.ts');
 assertFile('lib/supabase/template-registry.ts');
