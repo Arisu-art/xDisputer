@@ -13,12 +13,12 @@ type EntitlementPayload = {
 };
 
 function formatDuration(seconds: number | null) {
-  if (seconds === null) return 'US ET day reset';
+  if (seconds === null) return 'Calculating';
   const safe = Math.max(0, seconds);
   const hours = Math.floor(safe / 3600);
   const minutes = Math.floor((safe % 3600) / 60);
   const secondsPart = safe % 60;
-  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m ${secondsPart}s`;
   if (minutes > 0) return `${minutes}m ${secondsPart}s`;
   return `${secondsPart}s`;
 }
@@ -95,13 +95,13 @@ export default function OutputLimitResetChip() {
 
   const remainingLabel = useMemo(() => {
     if (!entitlement) return 'Checking entitlement';
-    if (entitlement.outputLimit === null) return 'Unlimited daily package generation';
+    if (entitlement.outputLimit === null) return 'No daily output limit configured';
     const remaining = Math.max(0, entitlement.outputRemainingToday ?? 0);
     return `${remaining} output${remaining === 1 ? '' : 's'} remaining today`;
   }, [entitlement]);
 
   const remaining = entitlement?.outputRemainingToday;
-  const blocked = entitlement?.allowed === false || remaining === 0;
+  const blocked = entitlement?.outputLimit !== null && (entitlement?.allowed === false || remaining === 0);
   const resetAt = formatResetAt(entitlement?.resetAt || null);
 
   return <aside className={`output-limit-reset-chip ${blocked ? 'blocked' : ''}`} aria-label="Daily output limit reset">
