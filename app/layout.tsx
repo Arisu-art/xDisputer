@@ -58,6 +58,7 @@ import './workspace-account-controls.css';
 import './admin-monitor.css';
 import './control-dashboard-lists.css';
 import './production-ui-lock.css';
+import './professional-console-layout.css';
 
 export const metadata = {
   title: 'xDisputer',
