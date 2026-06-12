@@ -17,10 +17,13 @@ export type TemplateAssetRecord = {
   original_filename: string;
   mime_type: string;
   file_size: number | null;
+  content_hash?: string | null;
   contract_json: Record<string, unknown>;
+  validation_json?: Record<string, unknown>;
   rule_json: Record<string, unknown>;
   version_number: number;
   is_active: boolean;
+  archived_at?: string | null;
   created_at: string;
   updated_at: string;
 };
