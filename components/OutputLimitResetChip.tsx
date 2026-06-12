@@ -13,12 +13,21 @@ type EntitlementPayload = {
 };
 
 function formatDuration(seconds: number | null) {
-  if (seconds === null) return 'US day reset';
+  if (seconds === null) return 'US ET day reset';
   const safe = Math.max(0, seconds);
   const hours = Math.floor(safe / 3600);
   const minutes = Math.floor((safe % 3600) / 60);
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
+}
+
+function formatResetAt(value: string | null) {
+  if (!value) return '12:00 AM US ET';
+  try {
+    return `${new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }).format(new Date(value))} US ET`;
+  } catch {
+    return '12:00 AM US ET';
+  }
 }
 
 function isEntitlementPayload(value: unknown): value is EntitlementPayload {
@@ -76,17 +85,20 @@ export default function OutputLimitResetChip() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const label = useMemo(() => {
-    if (!entitlement) return 'Loading limits';
-    if (entitlement.outputLimit === null) return 'No daily cap';
+  const usageLabel = useMemo(() => {
+    if (!entitlement) return 'Loading';
+    if (entitlement.outputLimit === null) return `${entitlement.outputUsedToday} used · No cap`;
     return `${entitlement.outputUsedToday}/${entitlement.outputLimit} used`;
   }, [entitlement]);
 
   const remaining = entitlement?.outputRemainingToday;
   const blocked = entitlement?.allowed === false || remaining === 0;
+  const resetAt = formatResetAt(entitlement?.resetAt || null);
 
   return <aside className={`output-limit-reset-chip ${blocked ? 'blocked' : ''}`} aria-label="Daily output limit reset">
-    <div><span>Daily outputs</span><strong>{label}</strong></div>
-    <em>{blocked ? 'Resets in' : 'Reset'} {formatDuration(secondsLeft)}</em>
+    <span>Daily outputs</span>
+    <strong>{usageLabel}</strong>
+    <em>{blocked ? 'Resets in' : 'Reset in'} {formatDuration(secondsLeft)}</em>
+    <small>{resetAt}</small>
   </aside>;
 }
