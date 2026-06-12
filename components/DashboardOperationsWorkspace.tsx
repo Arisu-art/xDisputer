@@ -1,6 +1,5 @@
 'use client';
 
-import OutputLimitResetChip from './OutputLimitResetChip';
 import type { ClientCaseRecord, ClientCaseStatus, FilingRecord } from '../lib/client-operations-store';
 
 type Props = {
@@ -52,7 +51,7 @@ export default function DashboardOperationsWorkspace({ cases, filings, activeCas
   }
 
   return <section className="saas-dashboard-workspace unified-client-dashboard minimal-workflow-dashboard">
-    <section className="panel dashboard-command-card dashboard-command-single compact-dashboard-command dashboard-command-with-limit">
+    <section className="panel dashboard-command-card dashboard-command-single compact-dashboard-command">
       <div className="dashboard-command-copy">
         <p className="eyebrow">Command Center</p>
         <h2>{primary.title}</h2>
@@ -62,7 +61,6 @@ export default function DashboardOperationsWorkspace({ cases, filings, activeCas
           <button type="button" className="secondary-button" onClick={onOpenTemplates}>Templates</button>
         </div>
       </div>
-      <OutputLimitResetChip />
     </section>
 
     <div className="dashboard-operational-metrics compact-dashboard-metrics" aria-label="Workflow summary">
