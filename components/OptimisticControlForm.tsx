@@ -2,6 +2,21 @@
 
 import { useState } from 'react';
 
+function messageFromRedirect(url: string) {
+  try {
+    const target = new URL(url);
+    const control = target.searchParams.get('control');
+    const message = target.searchParams.get('message');
+
+    return {
+      ok: control !== 'error',
+      message: message || null
+    };
+  } catch {
+    return { ok: true, message: null };
+  }
+}
+
 export default function OptimisticControlForm({
   profileId,
   intent,
@@ -30,21 +45,17 @@ export default function OptimisticControlForm({
     try {
       const response = await fetch('/api/control/profile', {
         method: 'POST',
-        headers: {
-          accept: 'application/json',
-          'x-optimistic-control': '1'
-        },
         body: formData
       });
 
-      const payload = await response.json().catch(() => null);
+      const redirected = messageFromRedirect(response.url);
 
-      if (!response.ok || payload?.status === 'error') {
-        throw new Error(payload?.message || 'Action failed.');
+      if (!response.ok || !redirected.ok) {
+        throw new Error(redirected.message || 'Action failed.');
       }
 
       setState('success');
-      setMessage(payload?.message || successLabel);
+      setMessage(redirected.message || successLabel);
     } catch (error) {
       setState('error');
       setMessage(error instanceof Error ? error.message : 'Action failed.');
