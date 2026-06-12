@@ -20,12 +20,17 @@ function statusText(value?: string | null) {
 function numberText(value?: number | null) { return typeof value === 'number' ? String(value) : 'Default'; }
 function isManager(account: ManagedAccount) { return account.role === 'manager' || account.role === 'admin'; }
 function dayUsed(limit?: EntitlementLimitRow) { return limit?.output_used_today ?? 0; }
+function canEditLimits(account: ManagedAccount) { return isManager(account) || account.role === 'client'; }
+
 function agreementSummary(account: ManagedAccount, limit?: EntitlementLimitRow) {
   if (isManager(account)) return `${limit?.current_clients || 0}/${numberText(limit?.max_clients)} clients`;
   if (account.role === 'client') return `${dayUsed(limit)}/${numberText(limit?.effective_output_limit)} outputs today`;
   return 'Protected';
 }
-function canEditLimits(account: ManagedAccount) { return isManager(account) || account.role === 'client'; }
+
+function roleLabel(account: ManagedAccount) {
+  return account.role === 'admin' ? 'manager' : account.role;
+}
 
 function ControlForm({ profileId, intent, label, primary = false }: { profileId: string; intent: string; label: string; primary?: boolean }) {
   return <form action="/api/control/profile" method="post"><input type="hidden" name="profileId" value={profileId} /><input type="hidden" name="intent" value={intent} /><button type="submit" className={`admin-action-button ${primary ? 'primary' : ''}`}>{label}</button></form>;
@@ -55,13 +60,18 @@ function ActionForms({ account, currentUserId }: { account: ManagedAccount; curr
   return <div className="admin-actions-row flyout-actions">{account.role === 'client' && <ControlForm profileId={account.id} intent="make_manager" label="Promote" primary />}{isManager(account) && <><ControlForm profileId={account.id} intent="demote_client" label="Demote" /><RotateInvite managerId={account.id} /></>}{blocked ? <ControlForm profileId={account.id} intent="reactivate" label="Reactivate" primary /> : <><ControlForm profileId={account.id} intent="suspend" label="Suspend" /><ControlForm profileId={account.id} intent="disable" label="Disable" /></>}{account.role === 'client' && account.manager_id && <ControlForm profileId={account.id} intent="clear_manager" label="Unlink" />}</div>;
 }
 
-function Flyout({ account, currentUserId, limit }: { account: ManagedAccount; currentUserId: string; limit?: EntitlementLimitRow }) {
+function AccountTrigger({ account, limit }: { account: ManagedAccount; limit?: EntitlementLimitRow }) {
+  return <span className="account-control-trigger-grid"><span className="account-control-identity"><strong>{account.full_name || account.email || 'Unnamed user'}</strong><small>{account.email || 'Protected account'}</small></span><span className={`admin-role-badge ${account.role}`}>{roleLabel(account)}</span><span className={`admin-status-badge ${account.account_status || 'pending'}`}>{statusText(account.account_status)}</span><span className="account-control-link"><LinkBadge account={account} /></span><span className="account-control-agreement"><strong>{agreementSummary(account, limit)}</strong><small>Open controls</small></span><span className="account-control-meta"><small>Invite</small><strong>{isManager(account) ? account.manager_invite_code || 'Not created' : '—'}</strong></span><span className="account-control-meta"><small>Updated</small><strong>{dateText(account.updated_at)}</strong></span></span>;
+}
+
+function AccountControlCard({ account, currentUserId, limit }: { account: ManagedAccount; currentUserId: string; limit?: EntitlementLimitRow }) {
   const formId = `limit-form-${account.id}`;
   const saveAction = canEditLimits(account) ? <button type="submit" form={formId} className="admin-action-button primary flyout-save-button">Save limits</button> : null;
 
-  return <TableFlyout eyebrow="Account controls" title={account.full_name || account.email || 'Account'} summary={agreementSummary(account, limit)} actionLabel="Manage" headerAction={saveAction}><section className="table-flyout-section"><strong>Daily agreement limits</strong><LimitForm account={account} limit={limit} formId={formId} /></section><section className="table-flyout-section"><strong>Actions</strong><ActionForms account={account} currentUserId={currentUserId} /></section></TableFlyout>;
+  return <TableFlyout eyebrow="Account controls" title={account.full_name || account.email || 'Account'} summary={agreementSummary(account, limit)} actionLabel="Open" triggerClassName="account-control-row-trigger" trigger={<AccountTrigger account={account} limit={limit} />} headerAction={saveAction}><section className="table-flyout-section"><strong>Daily agreement limits</strong><LimitForm account={account} limit={limit} formId={formId} /></section><section className="table-flyout-section"><strong>Actions</strong><ActionForms account={account} currentUserId={currentUserId} /></section></TableFlyout>;
 }
 
 export default function MasterAccountTableV2({ accounts, currentUserId, emptyText, entitlements = {} }: { accounts: ManagedAccount[]; currentUserId: string; emptyText: string; entitlements?: EntitlementLimitMap }) {
-  return <div className="admin-monitor-table-wrap"><table className="admin-monitor-table professional-data-table entitlement-table flyout-data-table"><thead><tr><th>Account</th><th>Role</th><th>Status</th><th>Link</th><th>Agreement</th><th>Invite</th><th>Updated</th></tr></thead><tbody>{accounts.length ? accounts.map((item) => <tr key={item.id}><td data-label="Account"><strong>{item.full_name || item.email || 'Unnamed user'}</strong><small>{item.email || 'Protected account'}</small></td><td data-label="Role"><span className={`admin-role-badge ${item.role}`}>{item.role === 'admin' ? 'manager' : item.role}</span></td><td data-label="Status"><span className={`admin-status-badge ${item.account_status || 'pending'}`}>{statusText(item.account_status)}</span></td><td data-label="Link"><LinkBadge account={item} /></td><td data-label="Agreement"><Flyout account={item} currentUserId={currentUserId} limit={entitlements[item.id]} /></td><td data-label="Invite">{isManager(item) ? item.manager_invite_code || 'Not created' : '—'}</td><td data-label="Updated">{dateText(item.updated_at)}</td></tr>) : <tr><td colSpan={7} className="admin-monitor-empty">{emptyText}</td></tr>}</tbody></table></div>;
+  if (!accounts.length) return <div className="admin-monitor-empty">{emptyText}</div>;
+  return <div className="account-control-list">{accounts.map((item) => <AccountControlCard key={item.id} account={item} currentUserId={currentUserId} limit={entitlements[item.id]} />)}</div>;
 }
