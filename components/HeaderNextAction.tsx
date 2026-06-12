@@ -14,25 +14,11 @@ export default function HeaderNextAction({ action, status, statusTone = 'info' }
   return (
     <div
       className={`header-next-action ${action.state} ${hasStatus ? `with-status ${statusTone}` : ''}`}
-      aria-label="Next workflow action"
+      aria-label={`Next workflow action: ${action.progressLabel}, ${action.title}. ${action.detail}`}
     >
       <span className="runtime-chip-dot" aria-hidden="true" />
       <span className="runtime-chip-label">{action.progressLabel}</span>
-      <span className="runtime-chip-separator" aria-hidden="true">·</span>
-      {hasStatus && (
-        <>
-          <span
-            className="runtime-chip-status"
-            role={statusTone === 'error' ? 'alert' : 'status'}
-            aria-live="polite"
-          >
-            {status}
-          </span>
-          <span className="runtime-chip-separator" aria-hidden="true">·</span>
-        </>
-      )}
       <span className="runtime-chip-title">{action.title}</span>
-      <span className="runtime-chip-separator" aria-hidden="true">·</span>
       <span className="runtime-chip-detail">{action.detail}</span>
     </div>
   );
