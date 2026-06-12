@@ -13,7 +13,7 @@ export default function ConsoleNavLink({
   children: ReactNode;
 }) {
   return (
-    <Link href={href} prefetch={false} className={className}>
+    <Link href={href} className={className}>
       {children}
     </Link>
   );
