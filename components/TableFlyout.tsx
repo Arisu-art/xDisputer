@@ -44,8 +44,8 @@ function TableFlyout({
       {trigger || <><span>{summary}</span><small>{actionLabel}</small></>}
     </button>
 
-    {open && <div className="table-flyout-overlay" role="presentation" onMouseDown={() => setOpen(false)}>
-      <section className="table-flyout-card table-flyout-card-live" role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => event.stopPropagation()}>
+    {open && <div className="table-flyout-overlay table-flyout-overlay-clear" role="presentation" onMouseDown={() => setOpen(false)}>
+      <section className="table-flyout-card table-flyout-card-live table-flyout-card-active" role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => event.stopPropagation()}>
         <header className="table-flyout-main-header">
           <div>
             <p>{eyebrow}</p>
