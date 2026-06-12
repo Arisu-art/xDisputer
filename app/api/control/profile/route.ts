@@ -28,6 +28,37 @@ function cleanValue(formData: FormData, key: string) {
   return String(formData.get(key) || '').trim();
 }
 
+function isMissingRpcError(message: string) {
+  return message.includes('Could not find the function')
+    || message.includes('does not exist')
+    || message.includes('schema cache');
+}
+
+async function callWorkspaceFirstControl(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  primaryRpc: string,
+  fallbackRpc: string,
+  targetProfileId: string,
+  intent: string
+) {
+  const primary = await supabase.rpc(primaryRpc, {
+    target_profile_id: targetProfileId,
+    control_intent: intent
+  });
+
+  if (!primary.error) return null;
+
+  // Keep the route deploy-safe while the Phase 11D/E SQL is being rolled out.
+  if (!isMissingRpcError(primary.error.message)) return primary.error.message;
+
+  const fallback = await supabase.rpc(fallbackRpc, {
+    target_profile_id: targetProfileId,
+    control_intent: intent
+  });
+
+  return fallback.error?.message || null;
+}
+
 function isControlIntent(value: string): value is ControlIntent {
   return (
     value === 'make_manager' ||
@@ -92,12 +123,15 @@ export async function POST(request: NextRequest) {
         return redirectBack(request, 'error', 'This action is not available to master control.');
       }
 
-      const { error } = await supabase.rpc('access_master_control_profile', {
-        target_profile_id: targetProfileId,
-        control_intent: intent
-      });
+      const errorMessage = await callWorkspaceFirstControl(
+        supabase,
+        'access_workspace_master_control_v1',
+        'access_master_control_profile',
+        targetProfileId,
+        intent
+      );
 
-      if (error) return redirectBack(request, 'error', error.message);
+      if (errorMessage) return redirectBack(request, 'error', errorMessage);
 
       return redirectBack(request, 'ok');
     }
@@ -109,12 +143,15 @@ export async function POST(request: NextRequest) {
 
       const managerIntent = intent === 'reactivate' ? 'activate' : intent;
 
-      const { error } = await supabase.rpc('access_control_profile', {
-        target_profile_id: targetProfileId,
-        control_intent: managerIntent
-      });
+      const errorMessage = await callWorkspaceFirstControl(
+        supabase,
+        'access_workspace_manager_control_v1',
+        'access_control_profile',
+        targetProfileId,
+        managerIntent
+      );
 
-      if (error) return redirectBack(request, 'error', error.message);
+      if (errorMessage) return redirectBack(request, 'error', errorMessage);
 
       return redirectBack(request, 'ok');
     }
