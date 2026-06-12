@@ -7,6 +7,8 @@ type Props = {
   title: string;
   summary: string;
   actionLabel?: string;
+  trigger?: ReactNode;
+  triggerClassName?: string;
   headerAction?: ReactNode;
   closeLabel?: string;
   children: ReactNode;
@@ -17,6 +19,8 @@ export default function TableFlyout({
   title,
   summary,
   actionLabel = 'Manage',
+  trigger,
+  triggerClassName,
   headerAction,
   closeLabel = 'Close',
   children
@@ -36,9 +40,8 @@ export default function TableFlyout({
   }, [open]);
 
   return <>
-    <button type="button" className="table-flyout-summary-card" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
-      <span>{summary}</span>
-      <small>{actionLabel}</small>
+    <button type="button" className={`table-flyout-summary-card ${triggerClassName || ''}`} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
+      {trigger || <><span>{summary}</span><small>{actionLabel}</small></>}
     </button>
 
     {open && <div className="table-flyout-overlay" role="presentation" onMouseDown={() => setOpen(false)}>
