@@ -20,24 +20,39 @@ function isMissingRpc(message: string) {
   return message.includes('Could not find the function') || message.includes('does not exist') || message.includes('schema cache');
 }
 
+async function readLimitRows(session: SessionContext) {
+  const daily = await session.supabase.rpc('access_list_daily_entitlement_limits_v1', {
+    profile_ids: [session.user!.id]
+  });
+
+  if (!daily.error || !isMissingRpc(daily.error.message)) return daily;
+
+  return session.supabase.rpc('access_list_entitlement_limits_v1', {
+    profile_ids: [session.user!.id]
+  });
+}
+
 async function outputLimitError(session: SessionContext) {
   if (!session.user || !session.isClient) return null;
 
-  const { data, error } = await session.supabase.rpc('access_list_entitlement_limits_v1', {
-    profile_ids: [session.user.id]
-  });
+  const { data, error } = await readLimitRows(session);
 
   if (error) {
     if (isMissingRpc(error.message)) return null;
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const row = Array.isArray(data) ? data[0] as { output_remaining_this_month?: number | null; effective_output_limit?: number | null } | undefined : undefined;
+  const row = Array.isArray(data) ? data[0] as {
+    output_remaining_today?: number | null;
+    output_remaining_this_month?: number | null;
+    effective_output_limit?: number | null;
+  } | undefined : undefined;
+  const remaining = row?.output_remaining_today ?? row?.output_remaining_this_month;
 
-  if (row && typeof row.output_remaining_this_month === 'number' && row.output_remaining_this_month <= 0) {
+  if (row && typeof remaining === 'number' && remaining <= 0) {
     return NextResponse.json({
       error: 'Output limit reached',
-      message: `This client has reached the current output limit of ${row.effective_output_limit ?? 'the assigned'} successful outputs.`
+      message: `This client has reached the current daily output limit of ${row.effective_output_limit ?? 'the assigned'} successful outputs.`
     }, { status: 403 });
   }
 
@@ -49,10 +64,7 @@ export async function GET(request: NextRequest) {
   if (accessError) return accessError;
 
   const session = await getSessionContext();
-
-  if (!session.user) {
-    return NextResponse.json({ error: 'No authenticated user.' }, { status: 401 });
-  }
+  if (!session.user) return NextResponse.json({ error: 'No authenticated user.' }, { status: 401 });
 
   const limitError = await outputLimitError(session);
   if (limitError) return limitError;
@@ -64,15 +76,7 @@ export async function GET(request: NextRequest) {
 
   if (!allowedRounds.includes(round)) return NextResponse.json({ error: 'Invalid round.' }, { status: 400 });
 
-  let query = session.supabase
-    .from('template_assets')
-    .select('*')
-    .eq('owner_id', session.user.id)
-    .eq('round_label', round)
-    .eq('template_kind', templateKind)
-    .eq('is_active', true)
-    .order('version_number', { ascending: false })
-    .limit(1);
+  let query = session.supabase.from('template_assets').select('*').eq('owner_id', session.user.id).eq('round_label', round).eq('template_kind', templateKind).eq('is_active', true).order('version_number', { ascending: false }).limit(1);
 
   if (templateKind === 'LETTER') {
     if (!allowedLetterTypes.includes(letterType)) return NextResponse.json({ error: 'Invalid letter type.' }, { status: 400 });
