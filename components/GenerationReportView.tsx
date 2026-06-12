@@ -61,12 +61,12 @@ function ReportNavigation({ scope }: { scope: Scope }) {
 }
 
 function ReportFilters({ action, exportHref, filters, activeCount }: Pick<Props, 'action' | 'exportHref' | 'filters' | 'activeCount'>) {
-  return <section className="admin-monitor-card native-operation-card minimal-report-filter-card">
+  return <section className="admin-monitor-card native-operation-card minimal-report-filter-card compact-report-filter-card">
     <div className="admin-monitor-card-header compact-card-header">
       <div><p>Filters</p><h2>Refine activity</h2></div>
       <span>{activeCount} active</span>
     </div>
-    <form action={action} method="get" className="minimal-report-toolbar">
+    <form action={action} method="get" className="minimal-report-toolbar compact-report-toolbar">
       <label className="report-filter-search">
         <span>Search</span>
         <input name="query" type="search" placeholder="Client, round, or status" defaultValue={filters.query || ''} />
@@ -98,12 +98,23 @@ function ReportFilters({ action, exportHref, filters, activeCount }: Pick<Props,
   </section>;
 }
 
-function ReportSummary({ summary }: { summary: GenerationReportSummary }) {
-  return <section className="minimal-report-summary" aria-label="Generation report summary">
-    <article><span>Total runs</span><strong>{summary.total}</strong><small>{summary.downloaded} downloaded</small></article>
-    <article><span>Completion</span><strong>{percent(summary.generated + summary.downloaded, summary.total)}</strong><small>{summary.generated + summary.downloaded} successful</small></article>
-    <article className={summary.failed ? 'attention' : 'complete'}><span>Failures</span><strong>{summary.failed}</strong><small>{summary.failed ? 'Needs review' : 'No failures'}</small></article>
-    <article><span>Top round</span><strong>{topLabel(summary.byRound, 'No activity')}</strong><small>Most used workflow</small></article>
+function ReportHeroMetrics({ summary }: { summary: GenerationReportSummary }) {
+  const successful = summary.generated + summary.downloaded;
+  const metrics = [
+    { label: 'Runs', value: String(summary.total), note: `${summary.downloaded} downloaded` },
+    { label: 'Done', value: percent(successful, summary.total), note: `${successful} successful` },
+    { label: 'Failures', value: String(summary.failed), note: summary.failed ? 'Needs review' : 'No failures', tone: summary.failed ? 'attention' : 'complete' },
+    { label: 'Top round', value: topLabel(summary.byRound, 'No activity'), note: 'Most used' },
+    { label: 'Top client', value: topLabel(summary.byClient, 'No client activity'), note: 'Focus' },
+    { label: 'State', value: topLabel(summary.byStatus, 'No status yet'), note: 'Dominant' }
+  ];
+
+  return <section className="report-hero-metrics" aria-label="Generation report summary">
+    {metrics.map((metric) => <article key={metric.label} className={metric.tone || ''}>
+      <span>{metric.label}</span>
+      <strong>{metric.value}</strong>
+      <small>{metric.note}</small>
+    </article>)}
   </section>;
 }
 
@@ -135,20 +146,14 @@ export default function GenerationReportView({ scope, action, exportHref, filter
     </aside>
 
     <section className="admin-monitor-main native-console-main">
-      <header className="admin-monitor-header native-command-hero master-compact-hero minimal-report-hero">
-        <div><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div>
+      <header className="admin-monitor-header native-command-hero master-compact-hero minimal-report-hero compact-report-hero">
+        <div className="compact-report-hero-copy"><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div>
+        {!errorMessage && <ReportHeroMetrics summary={summary} />}
       </header>
 
       <ReportFilters action={action} exportHref={exportHref} filters={filters} activeCount={activeCount} />
 
-      {errorMessage ? <section className="admin-monitor-card"><div className="admin-monitor-empty">Could not load generation report: {errorMessage}</div></section> : <>
-        <ReportSummary summary={summary} />
-        <section className="admin-power-grid minimal-insight-grid">
-          <article className="admin-monitor-card native-operation-card"><div className="admin-monitor-card-header compact-card-header"><div><p>Focus</p><h2>Top client</h2></div></div><div className="minimal-insight-value">{topLabel(summary.byClient, 'No client activity')}</div></article>
-          <article className="admin-monitor-card native-operation-card"><div className="admin-monitor-card-header compact-card-header"><div><p>Status</p><h2>Dominant state</h2></div></div><div className="minimal-insight-value">{topLabel(summary.byStatus, 'No status yet')}</div></article>
-        </section>
-        <ActivityStream rows={rows} scope={scope} />
-      </>}
+      {errorMessage ? <section className="admin-monitor-card"><div className="admin-monitor-empty">Could not load generation report: {errorMessage}</div></section> : <ActivityStream rows={rows} scope={scope} />}
     </section>
   </main>;
 }
