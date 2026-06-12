@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const mode = cleanValue(formData, 'mode');
     const profileId = cleanValue(formData, 'profileId');
-    const notes = cleanValue(formData, 'notes');
 
     if (!profileId || (mode !== 'manager' && mode !== 'client')) {
       return redirectBack(request, 'error', 'Invalid entitlement request.');
@@ -58,22 +57,22 @@ export async function POST(request: NextRequest) {
         manager_id_input: profileId,
         max_clients_input: maxClients,
         default_client_output_limit_input: defaultOutputLimit,
-        notes_input: notes || null
+        notes_input: null
       });
 
       if (error) return redirectBack(request, 'error', error.message);
-      return redirectBack(request, 'ok', 'Manager agreement limits updated.');
+      return redirectBack(request, 'ok', 'Manager limits updated.');
     }
 
     const outputLimit = cleanLimit(cleanValue(formData, 'outputLimit'));
     const { error } = await supabase.rpc('access_set_client_entitlement_v1', {
       client_id_input: profileId,
       output_limit_input: outputLimit,
-      notes_input: notes || null
+      notes_input: null
     });
 
     if (error) return redirectBack(request, 'error', error.message);
-    return redirectBack(request, 'ok', 'Client output limit updated.');
+    return redirectBack(request, 'ok', 'Client daily output limit updated.');
   } catch (error) {
     return redirectBack(request, 'error', error instanceof Error ? error.message : 'Entitlement update failed.');
   }
