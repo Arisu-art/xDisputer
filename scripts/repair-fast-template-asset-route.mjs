@@ -5,13 +5,26 @@ const file = 'app/api/template-assets/route.ts';
 let source = readFileSync(file, 'utf8');
 let changed = false;
 
-if (!source.includes('buildTemplateGovernance')) {
-  source = source.replace(
-    "import { inspectTemplateContract, type TemplateDocumentKind } from '../../../lib/template-contracts';",
-    "import { inspectTemplateContract, type TemplateDocumentKind } from '../../../lib/template-contracts';\nimport { buildTemplateGovernance } from '../../../lib/template-governance';"
-  );
-  changed = true;
+function addGovernanceImport() {
+  if (source.includes("../../../lib/template-governance")) return;
+
+  const importWithGate = "import { inspectTemplateContract, templateContractGateMessage, type TemplateDocumentKind } from '../../../lib/template-contracts';";
+  const importPlain = "import { inspectTemplateContract, type TemplateDocumentKind } from '../../../lib/template-contracts';";
+  const governanceImport = "import { buildTemplateGovernance } from '../../../lib/template-governance';";
+
+  if (source.includes(importWithGate)) {
+    source = source.replace(importWithGate, `${importWithGate}\n${governanceImport}`);
+    changed = true;
+    return;
+  }
+
+  if (source.includes(importPlain)) {
+    source = source.replace(importPlain, `${importPlain}\n${governanceImport}`);
+    changed = true;
+  }
 }
+
+addGovernanceImport();
 
 if (!source.includes('const governance = buildTemplateGovernance(contract);')) {
   source = source.replace(
