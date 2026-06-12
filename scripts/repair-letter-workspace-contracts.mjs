@@ -22,6 +22,18 @@ function replaceAllText(before, after, label) {
   console.log(`Repaired ${label}.`);
 }
 
+function ensureWorkspaceImport(importLine) {
+  if (source.includes(importLine)) return;
+  const anchor = "import JSZip from 'jszip';\n";
+  if (!source.includes(anchor)) return;
+  source = source.replace(anchor, `${anchor}${importLine}\n`);
+  changed = true;
+  console.log(`Added import: ${importLine}`);
+}
+
+ensureWorkspaceImport("import { extractDocxVisibleText } from '../lib/docx-text-audit';");
+ensureWorkspaceImport("import { auditRenderedText, evaluateSourceCompleteness } from '../lib/template-governance';");
+
 spliceBetween(
   '  function uploadRef(type: LetterType, file: File) {',
   '  function restoreOriginal() {',
@@ -67,6 +79,35 @@ spliceBetween(
   function appendixContext(kind: 'AFFIDAVIT' | 'FTC', bureau: Bureau, date: string) {
     return { kind, bureau, documentDate: date, recipientName: bureauInfo[bureau].name, recipientAddressLines: bureauInfo[bureau].address.split('\\n'), source: affidavitSource };
   }
+  function accountNameOf(displayText: string) {
+    return displayText.match(/^Account Name:\\s*(.+)$/im)?.[1]?.trim() || '';
+  }
+  function accountNumberOf(displayText: string) {
+    return displayText.match(/^Account Number:\\s*(.+)$/im)?.[1]?.trim() || '';
+  }
+  function sourceAccountItems() {
+    const accountItems = routes.flatMap((route) => route.items
+      .filter((item) => item.type !== 'HARD_INQUIRY')
+      .map((item) => ({ accountName: accountNameOf(item.displayText), accountNumber: accountNumberOf(item.displayText) })));
+    if (accountItems.length) return accountItems;
+    return routes.flatMap((route) => route.items.map((item) => ({ accountName: item.displayText, accountNumber: 'INQUIRY' })));
+  }
+  function auditValues(route: LetterRoute) {
+    const items = route.items.filter((item) => item.type !== 'HARD_INQUIRY');
+    return {
+      accountNames: items.map((item) => accountNameOf(item.displayText)).filter(Boolean),
+      accountNumbers: items.map((item) => accountNumberOf(item.displayText)).filter(Boolean)
+    };
+  }
+  async function auditLetterOutput(route: LetterRoute, blob: Blob) {
+    const expected = auditValues(route);
+    return auditRenderedText({
+      text: await extractDocxVisibleText(blob),
+      clientName: parsed.name,
+      accountNames: expected.accountNames,
+      accountNumbers: expected.accountNumbers
+    });
+  }
  `,
   'render value adapters'
 );
@@ -76,6 +117,22 @@ replaceAllText("    return file ? renderMappedAppendix(file, affidavitSource, bu
 replaceAllText("    addOrderedPacketFolders(zip, files.map((item) => ({ path: item.path, blob: item.blob })), { date, clientName: parsed.name || 'Client', round, manifest, notes, sourceData: source });\n    zip.file('generation-manifest.json', manifestJson);", "    await addOrderedPacketFolders(zip, files, round, evidenceKey, parsed.name || 'Client', routes.map((route) => ({ type: route.type, bureau: route.bureau })));\n    zip.file('generation-manifest.json', manifestJson);", 'ordered packet archive call');
 replaceAllText('      const date = parsed.letterDate || dateNow();', '      const date = dateNow();', 'document date source');
 replaceAllText("          const blob = route.type === 'DISPUTE' ? await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderReferenceDisputeDocx(template, parsed, route.bureau, date)) : await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderLatePaymentReference(template, parsed, route.bureau, date));", "          const blob = route.type === 'DISPUTE' ? await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderReferenceDisputeDocx(template, disputeValues(route, date))) : await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderLatePaymentReference(template, lateValues(route, date)));", 'letter renderer calls');
+
+if (!source.includes('const sourceCompleteness = evaluateSourceCompleteness')) {
+  replaceAllText(
+    "    if (!preflight.ready) { report(preflightFailureMessage(preflight), 'error'); return; }\n    setBusy(true); setWarnings([]); setOrderedZip(null); setDocDate(dateNow());\n    const output: ReviewOutput[] = []; const notes: string[] = [];",
+    "    if (!preflight.ready) { report(preflightFailureMessage(preflight), 'error'); return; }\n    const sourceCompleteness = evaluateSourceCompleteness({\n      clientName: parsed.name,\n      addressLines: parsed.address,\n      accountItems: sourceAccountItems(),\n      customFields: parsed.templateFields,\n      requiredCustomFields: customFields.filter((item) => item.required).map((item) => item.key)\n    });\n    if (sourceCompleteness.status === 'BLOCKED') {\n      const message = `Source Data blocked generation: ${sourceCompleteness.missing.join(', ')}`;\n      setWarnings(sourceCompleteness.missing.map((item) => `Missing required source value: ${item}`));\n      report(message, 'error');\n      return;\n    }\n    setBusy(true); setWarnings([]); setOrderedZip(null); setDocDate(dateNow());\n    const output: ReviewOutput[] = []; const notes: string[] = sourceCompleteness.warnings.map((warning) => `Source Data warning: ${warning}`);",
+    'source completeness gate'
+  );
+}
+
+if (!source.includes('const audit = await auditLetterOutput(route, blob);')) {
+  replaceAllText(
+    "          const blob = route.type === 'DISPUTE' ? await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderReferenceDisputeDocx(toTemplateFile(template, labels[route.type] + '.docx'), disputeValues(route, date))) : await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderLatePaymentReference(toTemplateFile(template, labels[route.type] + '.docx'), lateValues(route, date)));\n          output.push({ id: `${route.type}-${route.bureau}-LETTER`, path: `Editable Documents/${clean(parsed.name)} ${route.bureau} ${labels[route.type]}.docx`, type: route.type, role: 'LETTER', sequence: 1, bureau: route.bureau, count: route.items.length, detail: route.reason, blob, packetSteps: order(route.type) });",
+    "          const blob = route.type === 'DISPUTE' ? await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderReferenceDisputeDocx(toTemplateFile(template, labels[route.type] + '.docx'), disputeValues(route, date))) : await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderLatePaymentReference(toTemplateFile(template, labels[route.type] + '.docx'), lateValues(route, date)));\n          const audit = await auditLetterOutput(route, blob);\n          if (audit.status === 'BLOCKED') {\n            notes.push(`${labels[route.type]} / ${route.bureau}: Render audit blocked output: ${audit.blockers.join('; ')}`);\n            continue;\n          }\n          output.push({ id: `${route.type}-${route.bureau}-LETTER`, path: `Editable Documents/${clean(parsed.name)} ${route.bureau} ${labels[route.type]}.docx`, type: route.type, role: 'LETTER', sequence: 1, bureau: route.bureau, count: route.items.length, detail: route.reason, blob, packetSteps: order(route.type) });",
+    'post-render letter audit'
+  );
+}
 
 if (changed) writeFileSync(workspaceFile, source);
 else console.log('LetterGeneratorWorkspaceV2 contract repair not needed.');
