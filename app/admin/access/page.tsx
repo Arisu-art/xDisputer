@@ -1,3 +1,4 @@
+import TableFlyout from '../../../components/TableFlyout';
 import ConsoleNavLink from '../../../components/ConsoleNavLink';
 import {
   directoryQueryString,
@@ -47,7 +48,7 @@ function ClientControls({ account }: { account: ManagedAccount }) {
 }
 
 function ClientFlyout({ account, entitlement }: { account: ManagedAccount; entitlement?: EntitlementLimitRow }) {
-  return <details className="table-flyout manager-client-flyout"><summary><span>{usageLabel(entitlement)}</span><small>Details</small></summary><div className="table-flyout-card"><header><div><p>Client account</p><h3>{account.full_name || account.email || 'Client'}</h3></div></header><section><strong>Daily output usage</strong><div className="manager-limit-usage"><strong>{usageLabel(entitlement)}</strong><small>Master-set entitlement</small></div></section><section><strong>Account actions</strong><ClientControls account={account} /></section></div></details>;
+  return <TableFlyout eyebrow="Client account" title={account.full_name || account.email || 'Client'} summary={usageLabel(entitlement)} actionLabel="Details"><section className="table-flyout-section"><strong>Daily output usage</strong><div className="manager-limit-usage"><strong>{usageLabel(entitlement)}</strong><small>Master-set entitlement</small></div></section><section className="table-flyout-section"><strong>Account actions</strong><ClientControls account={account} /></section></TableFlyout>;
 }
 
 function DirectoryFilter({ view, query }: { view: string; query: string }) {
