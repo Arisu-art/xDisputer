@@ -45,9 +45,9 @@ function TableFlyout({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [open]);
 
-  const flyout = open ? <div className="table-flyout-overlay table-flyout-overlay-clear" role="presentation" onMouseDown={() => setOpen(false)}>
-    <section className="table-flyout-card table-flyout-card-live table-flyout-card-active" role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => event.stopPropagation()}>
-      <header className="table-flyout-main-header">
+  const flyout = open ? <div className="table-flyout-overlay table-flyout-overlay-clear" style={{ position: 'fixed', inset: 0, zIndex: 90, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px', background: 'transparent', backdropFilter: 'none' }} role="presentation" onMouseDown={() => setOpen(false)}>
+    <section className="table-flyout-card table-flyout-card-live table-flyout-card-active" style={{ width: 'min(760px, calc(100vw - 48px))', maxHeight: 'calc(100vh - 48px)', overflow: 'hidden', border: '1px solid rgba(37, 99, 235, .32)', borderRadius: 24, background: '#fff', boxShadow: '0 28px 80px rgba(15, 23, 42, .24), 0 0 0 4px rgba(37, 99, 235, .08)' }} role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => event.stopPropagation()}>
+      <header className="table-flyout-main-header" style={{ position: 'sticky', top: 0, zIndex: 2, background: '#fff', borderBottom: '1px solid #e3e9f2' }}>
         <div>
           <p>{eyebrow}</p>
           <h3 id={titleId}>{title}</h3>
@@ -57,7 +57,7 @@ function TableFlyout({
           <button type="button" className="table-flyout-close danger" onClick={() => setOpen(false)} aria-label={closeLabel}>×</button>
         </div>
       </header>
-      <div className="table-flyout-body">
+      <div className="table-flyout-body" style={{ maxHeight: 'calc(100vh - 160px)', overflow: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {children}
       </div>
     </section>
