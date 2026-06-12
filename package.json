@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "quality:check": "npm run typecheck && npm run build",
     "xdisputer:guard": "node scripts/xdisputer-deploy-guard.mjs",
-    "safe:sync": "bash scripts/safe-sync-guard.sh"
+    "safe:sync": "bash scripts/safe-sync-guard.sh",
+    "verify:production": "node scripts/verify-production-build.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
