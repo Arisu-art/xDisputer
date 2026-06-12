@@ -34,6 +34,7 @@ import './source-progressive-studio.css';
 import './workflow-geometry-normalization.css';
 import './client-operations.css';
 import './client-saas-refresh.css';
+import './minimal-report-ui.css';
 import './client-navigation-routes.css';
 import './word-style-image-crop.css';
 import './dashboard-settings-operations.css';
