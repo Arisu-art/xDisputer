@@ -19,6 +19,7 @@
     "safe:sync": "bash scripts/safe-sync-guard.sh",
     "verify:production": "node scripts/verify-production-build.mjs",
     "verify:production:wait": "node scripts/wait-for-production-build.mjs",
+    "production:match": "node scripts/match-production-deploy.mjs",
     "vercel:status": "node scripts/vercel-status.mjs",
     "vercel:direct": "node scripts/vercel-direct-production-sync.mjs"
   },
