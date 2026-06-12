@@ -1,4 +1,4 @@
-export type UxPanel = 'Dashboard' | 'Templates' | 'Source Data' | 'Outputs' | 'Filing Tracker' | 'Settings';
+export type UxPanel = 'Dashboard' | 'Templates' | 'Source Data' | 'Outputs' | 'Client Center' | 'Settings';
 export type UxTone = 'info' | 'success' | 'error';
 
 export type UxVisibilityInput = {
