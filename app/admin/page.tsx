@@ -5,6 +5,7 @@ import { ensureManagerInviteCode } from '../../lib/saas/account-management';
 import {
   getManagerClientSummary,
   listManagerClientDirectory,
+  type AccountDirectoryListResult,
   type AccountDirectoryRow
 } from '../../lib/saas/account-directory';
 import { requireRole } from '../../lib/saas/session';
@@ -18,6 +19,14 @@ type PageProps = {
     message?: string | string[];
     view?: string | string[];
   }>;
+};
+
+const emptyDirectoryResult: AccountDirectoryListResult = {
+  accounts: [],
+  total: 0,
+  page: 1,
+  pageSize: 5,
+  errorMessage: null
 };
 
 function normalizePanel(value: string | string[] | undefined): ManagerPanel {
@@ -94,23 +103,33 @@ export default async function AdminPage({ searchParams }: PageProps) {
   const activePanel = normalizePanel(params.panel);
   const controlStatus = stringParam(params.control);
   const controlMessage = stringParam(params.message);
-
-  const requestHeaders = await headers();
-  const host = requestHeaders.get('x-forwarded-host') || requestHeaders.get('host') || 'x-disputer.vercel.app';
-  const protocol = requestHeaders.get('x-forwarded-proto') || 'https';
-  const origin = `${protocol}://${host}`;
-
   const { user, profile, supabase } = await requireRole('manager');
 
-  const [inviteCode, summaryResult, pendingResult, activeResult, blockedResult] = await Promise.all([
-    ensureManagerInviteCode(supabase, user.id),
+  const [summaryResult, pendingResult, activeResult, blockedResult, inviteCode] = await Promise.all([
     getManagerClientSummary(supabase),
-    listManagerClientDirectory(supabase, { view: 'pending', page: 1, pageSize: 5 }),
-    listManagerClientDirectory(supabase, { view: 'active', page: 1, pageSize: 5 }),
-    listManagerClientDirectory(supabase, { view: 'blocked', page: 1, pageSize: 5 })
+    activePanel === 'monitoring'
+      ? listManagerClientDirectory(supabase, { view: 'pending', page: 1, pageSize: 5 })
+      : Promise.resolve(emptyDirectoryResult),
+    activePanel === 'monitoring'
+      ? listManagerClientDirectory(supabase, { view: 'active', page: 1, pageSize: 5 })
+      : Promise.resolve(emptyDirectoryResult),
+    activePanel === 'review'
+      ? listManagerClientDirectory(supabase, { view: 'blocked', page: 1, pageSize: 5 })
+      : Promise.resolve(emptyDirectoryResult),
+    activePanel === 'intake'
+      ? ensureManagerInviteCode(supabase, user.id)
+      : Promise.resolve('')
   ]);
 
-  const inviteLink = `${origin}/signup?invite=${encodeURIComponent(inviteCode)}`;
+  let inviteLink = '';
+
+  if (activePanel === 'intake') {
+    const requestHeaders = await headers();
+    const host = requestHeaders.get('x-forwarded-host') || requestHeaders.get('host') || 'x-disputer.vercel.app';
+    const protocol = requestHeaders.get('x-forwarded-proto') || 'https';
+    inviteLink = `${protocol}://${host}/signup?invite=${encodeURIComponent(inviteCode)}`;
+  }
+
   const summary = summaryResult.summary;
   const queryError = summaryResult.errorMessage || pendingResult.errorMessage || activeResult.errorMessage || blockedResult.errorMessage;
   const activeRate = summary.clients ? Math.round((summary.active / summary.clients) * 100) : 0;
@@ -204,9 +223,6 @@ export default async function AdminPage({ searchParams }: PageProps) {
                   </div>
                   <p>Share this link with clients who should connect to your workspace. They remain pending until you approve them.</p>
                   <code>{inviteLink}</code>
-                  <form action="/admin/actions" method="post">
-                    <button type="submit" className="admin-action-button primary">Copy link manually</button>
-                  </form>
                 </article>
               </section>
             )}
