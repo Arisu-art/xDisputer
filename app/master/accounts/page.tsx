@@ -6,6 +6,7 @@ import {
   normalizeDirectoryParams,
   type DirectoryView
 } from '../../../lib/saas/account-directory';
+import { listEntitlementLimits } from '../../../lib/saas/entitlement-limits';
 import MasterAccountTable from '../MasterAccountTable';
 import { requireRole } from '../../../lib/saas/session';
 
@@ -72,6 +73,10 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
         })
   ]);
 
+  const entitlementResult = selectedView === 'overview'
+    ? { entitlements: {}, errorMessage: null }
+    : await listEntitlementLimits(supabase, directory.accounts.map((account) => account.id));
+
   const coverageRate = summary.clients ? Math.round((summary.linked / summary.clients) * 100) : 0;
 
   return (
@@ -104,29 +109,29 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
           <div>
             <p>Master account directory</p>
             <h1>Workspace-scoped account workflow.</h1>
-            <span>Reads from the Phase 11 workspace policy RPC and assignment ledger while keeping existing controls compatible.</span>
+            <span>Edit manager client-seat limits and client output limits from the master account. Enforcement happens in Supabase and the generation API.</span>
           </div>
         </header>
 
-        {(summaryError || directory.errorMessage) && (
+        {(summaryError || directory.errorMessage || entitlementResult.errorMessage) && (
           <section className="admin-monitor-card">
-            <div className="admin-monitor-empty">{summaryError || directory.errorMessage}</div>
+            <div className="admin-monitor-empty">{summaryError || directory.errorMessage || entitlementResult.errorMessage}</div>
           </section>
         )}
 
         {selectedView === 'overview' ? (
           <section className="progressive-dataset-grid access-workflow-grid">
             <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=managers">
-              <p>Manager control</p>
+              <p>Manager limits</p>
               <h2>Workspace managers</h2>
               <span>{summary.managers} manager(s)</span>
-              <strong>Promote, demote, disable, reactivate, and rotate invite codes.</strong>
+              <strong>Set client-seat limits and default monthly output limits.</strong>
             </ConsoleNavLink>
             <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=clients">
-              <p>Client control</p>
+              <p>Client limits</p>
               <h2>Workspace clients</h2>
               <span>{summary.clients} client(s)</span>
-              <strong>Review client account state and manager assignment ledger.</strong>
+              <strong>Set per-client output caps and review usage.</strong>
             </ConsoleNavLink>
             <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=pending">
               <p>Pending</p>
@@ -161,7 +166,7 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
               </div>
 
               <DirectoryFilter view={selectedView} query={directoryParams.query} />
-              <MasterAccountTable accounts={directory.accounts} currentUserId={user.id} emptyText="No accounts match this workspace dataset." />
+              <MasterAccountTable accounts={directory.accounts} currentUserId={user.id} emptyText="No accounts match this workspace dataset." entitlements={entitlementResult.entitlements} />
               <Pager view={selectedView} query={directoryParams.query} page={directory.page} pageSize={directory.pageSize} total={directory.total} />
             </article>
           </section>
