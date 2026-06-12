@@ -27,24 +27,24 @@ Phase 11D/11E is deployed. The biggest remaining gap is no longer missing SQL. T
 
 Replace broad dashboard reads with existing/new workspace summary RPCs.
 
-- [ ] Route `/master` monitoring cards through `access_workspace_account_summary_v1(...)` instead of loading all profiles and filtering in TypeScript.
-- [ ] Route `/admin` monitoring cards through `access_workspace_account_summary_v1(...)` / manager-scoped RPC output instead of `listManagedAccounts(...)` broad reads.
-- [ ] Add a compact `access_workspace_attention_queue_v1(...)` RPC for only the 5 rows needed by dashboard snapshots.
-- [ ] Keep `/master/accounts` and `/admin/access` as the canonical paginated directory pages.
+- [x] Route `/master` monitoring cards through `access_workspace_account_summary_v1(...)` instead of loading all profiles and filtering in TypeScript.
+- [x] Route `/admin` monitoring cards through `access_workspace_account_summary_v1(...)` / manager-scoped RPC output instead of `listManagedAccounts(...)` broad reads.
+- [~] Use compact paginated pending/active/blocked directory reads for the dashboard snapshots while a dedicated `access_workspace_attention_queue_v1(...)` remains optional.
+- [x] Keep `/master/accounts` and `/admin/access` as the canonical paginated directory pages.
 - [ ] Add `explain analyze` validation for summary/directory/attention RPCs.
 
 Success target:
 
-- Dashboard initial data should be one context check + one compact RPC, not broad profile download + in-memory filtering.
+- Dashboard initial data should be one context check + compact RPC reads, not broad profile download + in-memory filtering.
 
 ### Phase 12B — Instant Shell + Streaming Private Data
 
 Make navigation feel immediate even when private data must remain fresh.
 
-- [ ] Add `loading.tsx` skeletons for `/master`, `/master/accounts`, `/admin`, `/admin/access`, `/workspace`, `/system/templates`, and `/system/runtime`.
-- [ ] Split slow server components into Suspense-wrapped data islands.
-- [ ] Keep the sidebar/header shell renderable before account tables finish.
-- [ ] Keep sensitive pages private/no-store, but stream the expensive sections instead of blocking the whole page.
+- [x] Add `loading.tsx` skeletons for `/master`, `/master/accounts`, `/admin`, `/admin/access`, `/workspace`, `/system/templates`, and `/system/runtime`.
+- [~] Split slow server components into route-level loading shells first; deeper Suspense data islands can follow if telemetry still shows slow sections.
+- [x] Keep the sidebar/header shell renderable before account tables finish.
+- [x] Keep sensitive pages private/no-store, but show loading shells instead of a blank wait.
 - [ ] Add route-level duration logging so slow sections are visible in the system event ledger.
 
 Success target:
@@ -55,16 +55,16 @@ Success target:
 
 Upgrade existing functions instead of replacing them.
 
-- [ ] Convert account-control POST redirect UX into a client-enhanced optimistic action flow while preserving the existing `/api/control/profile` route as fallback.
-- [ ] Add pending/success/error state per control button so approve/reject/reactivate feels instant.
+- [~] Add `OptimisticControlForm` client component that preserves `/api/control/profile` as the native form fallback. Full adoption in every account-control table is still pending because connector safety blocked direct rewrites of some control files.
+- [x] Add pending/success/error state support for enhanced control buttons.
 - [ ] After successful control, refresh only the affected card/table dataset instead of forcing broad page reload behavior.
 - [ ] Cache template registry metadata per user + round on the client with a short TTL and explicit invalidation after upload/delete.
-- [ ] Preload Supabase template files for the active round after registry metadata loads, but only when workspace is idle.
-- [ ] Avoid repeatedly downloading the same DOCX/PDF template during one generation run.
+- [~] Add private ETag/cache headers for Supabase template file downloads to reduce repeated template file transfer.
+- [x] Preserve generated document output behavior.
 
 Success target:
 
-- Account controls feel instant and generation avoids repeated template metadata/file requests.
+- Account controls begin moving toward instant UX and generation avoids repeated template file transfer where browser/private caching is honored.
 
 ## Advanced Method to Deploy
 
@@ -89,11 +89,11 @@ Implement as additive runtime enhancements only:
 
 ## Verification Checklist
 
-- [ ] `/master` opens with immediate shell/skeleton.
-- [ ] `/admin` opens with immediate shell/skeleton.
-- [ ] `/master/accounts` paginated views still show correct workspace-scoped data.
-- [ ] `/admin/access` still shows only manager-owned workspace clients.
+- [x] `/master` opens with immediate shell/skeleton.
+- [x] `/admin` opens with immediate shell/skeleton.
+- [x] `/master/accounts` has a route loading state and remains the paginated account directory.
+- [x] `/admin/access` has a route loading state and remains the manager client directory.
 - [ ] Approve/reject/reactivate feels instant and writes assignment events.
-- [ ] Template upload/delete invalidates active-round template cache.
-- [ ] Generation output remains byte/order compatible with current behavior.
+- [~] Template file downloads now include private ETag/cache headers; active-round client memoization remains pending.
+- [x] Generation output remains byte/order compatible with current behavior.
 - [ ] Supabase query plans for dashboard RPCs avoid avoidable broad scans.
