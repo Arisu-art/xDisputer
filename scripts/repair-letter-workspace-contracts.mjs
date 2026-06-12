@@ -41,13 +41,13 @@ spliceBetween(
   function standardizeDraft(value = source) { const next = createNormalizedSourceCopy(value); setSource(next.text); setNormalized(true); setRecoveryDraft(null); saveCase('SOURCE_LOCKED'); report('Source data standardized and locked for generation.', 'success'); }
   function startManualDraft(value: string) { setCaseId(crypto.randomUUID()); setSource(value); setOriginalSource(value); setNormalized(false); clearOutputs(); report('Manual draft started. Complete the source fields, then standardize.', 'success'); }
   function setLine(field: string, value: string) {
-    const lines = source.split(/\r?\n/);
+    const lines = source.split(/\\r?\\n/);
     const fixed: Record<string, string> = { name: 'Name', dob: 'DOB', ssn: 'SSN', address: 'Address', letterDate: 'Letter Date', affidavitState: 'Affidavit State', affidavitCounty: 'Affidavit County' };
     const label = field.startsWith('TEMPLATE FIELD ') ? field : fixed[field] || field;
     const next = label + ': ' + value;
     const index = lines.findIndex((line) => line.toLowerCase().startsWith(label.toLowerCase() + ':'));
     if (index >= 0) lines[index] = next; else lines.unshift(next);
-    setSource(lines.join('\n')); setNormalized(false);
+    setSource(lines.join('\\n')); setNormalized(false);
   }
  `,
   'source and reference handlers'
@@ -59,13 +59,13 @@ spliceBetween(
   `  function refBlob(type: LetterType) { const slot = refs.find((item) => item.type === type); return slot ? readReferenceFile(slot.id) : Promise.resolve(null); }
   function exhibitBlob(kind: ExhibitKind) { return readTemplateExhibit(round, kind); }
   function disputeValues(route: LetterRoute, date: string) {
-    return { consumerName: parsed.name, addressLines: parsed.address.length ? parsed.address : ['N/A'], dob: parsed.dob, ssn: parsed.ssn, letterDate: date, bureauName: bureauInfo[route.bureau].name, bureauAddressLines: bureauInfo[route.bureau].address.split('\n'), disputeItems: parsed.dispute[route.bureau].map((item) => item.displayText), hardInquiryItems: parsed.inquiry[route.bureau].map((item) => item.displayText), fraudItems: route.items.map((item) => item.displayText) };
+    return { consumerName: parsed.name, addressLines: parsed.address.length ? parsed.address : ['N/A'], dob: parsed.dob, ssn: parsed.ssn, letterDate: date, bureauName: bureauInfo[route.bureau].name, bureauAddressLines: bureauInfo[route.bureau].address.split('\\n'), disputeItems: parsed.dispute[route.bureau].map((item) => item.displayText), hardInquiryItems: parsed.inquiry[route.bureau].map((item) => item.displayText), fraudItems: route.items.map((item) => item.displayText) };
   }
   function lateValues(route: LetterRoute, date: string) {
-    return { consumerName: parsed.name, addressLines: parsed.address.length ? parsed.address : ['N/A'], dob: parsed.dob, ssn: parsed.ssn, letterDate: date, bureauName: bureauInfo[route.bureau].name, bureauAddressLines: bureauInfo[route.bureau].address.split('\n'), latePaymentItems: parsed.late[route.bureau].map((item) => item.displayText) };
+    return { consumerName: parsed.name, addressLines: parsed.address.length ? parsed.address : ['N/A'], dob: parsed.dob, ssn: parsed.ssn, letterDate: date, bureauName: bureauInfo[route.bureau].name, bureauAddressLines: bureauInfo[route.bureau].address.split('\\n'), latePaymentItems: parsed.late[route.bureau].map((item) => item.displayText) };
   }
   function appendixContext(kind: 'AFFIDAVIT' | 'FTC', bureau: Bureau, date: string) {
-    return { kind, bureau, documentDate: date, recipientName: bureauInfo[bureau].name, recipientAddressLines: recipient.address.split('\n'), source: affidavitSource };
+    return { kind, bureau, documentDate: date, recipientName: bureauInfo[bureau].name, recipientAddressLines: recipient.address.split('\\n'), source: affidavitSource };
   }
  `,
   'render value adapters'
@@ -89,7 +89,12 @@ if (routeSource.includes(originalImport)) {
   routeChanged = true;
 }
 const marker = '    const contract = await inspectTemplateContract(file, kind);\n';
-const gate = `    const contract = await inspectTemplateContract(file, kind);\n    const gateMessage = templateContractGateMessage(contract);\n    if (gateMessage) {\n      return respond(request, 'error', gateMessage, 422, { contract });\n    }\n`;
+const gate = `    const contract = await inspectTemplateContract(file, kind);
+    const gateMessage = templateContractGateMessage(contract);
+    if (gateMessage) {
+      return respond(request, 'error', gateMessage, 422, { contract });
+    }
+`;
 if (routeSource.includes(marker) && !routeSource.includes('templateContractGateMessage(contract)')) {
   routeSource = routeSource.replace(marker, gate);
   routeChanged = true;
