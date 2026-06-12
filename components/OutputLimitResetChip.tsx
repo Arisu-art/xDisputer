@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type EntitlementPayload = {
   outputLimit: number | null;
@@ -12,7 +12,8 @@ type EntitlementPayload = {
   message: string | null;
 };
 
-function formatDuration(seconds: number | null) {
+function formatDuration(seconds: number | null, refreshing = false) {
+  if (refreshing) return 'Refreshing';
   if (seconds === null) return 'Calculating';
   const safe = Math.max(0, seconds);
   const hours = Math.floor(safe / 3600);
@@ -39,30 +40,35 @@ function isEntitlementPayload(value: unknown): value is EntitlementPayload {
 export default function OutputLimitResetChip() {
   const [entitlement, setEntitlement] = useState<EntitlementPayload | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const resetRefreshStartedRef = useRef(false);
+
+  const load = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetch('/api/client/output-entitlement', { cache: 'no-store' });
+      if (!response.ok) return;
+      const payload = await response.json();
+      const next = payload.entitlement as EntitlementPayload | undefined;
+      if (next) {
+        setEntitlement(next);
+        setSecondsLeft(typeof next.resetSeconds === 'number' ? next.resetSeconds : null);
+        resetRefreshStartedRef.current = false;
+      }
+    } catch {
+      setEntitlement(null);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const response = await fetch('/api/client/output-entitlement', { cache: 'no-store' });
-        if (!response.ok) return;
-        const payload = await response.json();
-        const next = payload.entitlement as EntitlementPayload | undefined;
-        if (!cancelled && next) {
-          setEntitlement(next);
-          setSecondsLeft(typeof next.resetSeconds === 'number' ? next.resetSeconds : null);
-        }
-      } catch {
-        if (!cancelled) setEntitlement(null);
-      }
-    }
-
     function handleUpdate(event: Event) {
       const detail = (event as CustomEvent).detail;
       if (isEntitlementPayload(detail)) {
         setEntitlement(detail);
         setSecondsLeft(typeof detail.resetSeconds === 'number' ? detail.resetSeconds : null);
+        resetRefreshStartedRef.current = false;
       } else {
         void load();
       }
@@ -71,14 +77,13 @@ export default function OutputLimitResetChip() {
     void load();
     window.addEventListener('xdisputer:output-entitlement-updated', handleUpdate);
     window.addEventListener('xdisputer:output-entitlement-refresh', handleUpdate);
-    const refresh = window.setInterval(load, 60_000);
+    const refresh = window.setInterval(load, 30_000);
     return () => {
-      cancelled = true;
       window.clearInterval(refresh);
       window.removeEventListener('xdisputer:output-entitlement-updated', handleUpdate);
       window.removeEventListener('xdisputer:output-entitlement-refresh', handleUpdate);
     };
-  }, []);
+  }, [load]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -86,6 +91,13 @@ export default function OutputLimitResetChip() {
     }, 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (secondsLeft !== 0 || resetRefreshStartedRef.current) return;
+    resetRefreshStartedRef.current = true;
+    window.dispatchEvent(new CustomEvent('xdisputer:output-entitlement-refresh'));
+    void load();
+  }, [secondsLeft, load]);
 
   const limitLabel = useMemo(() => {
     if (!entitlement) return 'Loading';
@@ -112,7 +124,7 @@ export default function OutputLimitResetChip() {
     </div>
     <div className="output-limit-chip-timer">
       <span>{blocked ? 'Resets in' : 'Next reset'}</span>
-      <strong>{formatDuration(secondsLeft)}</strong>
+      <strong>{formatDuration(secondsLeft, refreshing && secondsLeft === 0)}</strong>
       <small>{resetAt}</small>
     </div>
   </aside>;
