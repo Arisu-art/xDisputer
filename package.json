@@ -13,7 +13,8 @@
     "ai:apply": "node scripts/apply-changes.js",
     "typecheck": "tsc --noEmit",
     "quality:check": "npm run typecheck && npm run build",
-    "xdisputer:guard": "node scripts/xdisputer-deploy-guard.mjs"
+    "xdisputer:guard": "node scripts/xdisputer-deploy-guard.mjs",
+    "safe:sync": "bash scripts/safe-sync-guard.sh"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
