@@ -7,10 +7,20 @@ type Props = {
   title: string;
   summary: string;
   actionLabel?: string;
+  headerAction?: ReactNode;
+  closeLabel?: string;
   children: ReactNode;
 };
 
-export default function TableFlyout({ eyebrow, title, summary, actionLabel = 'Manage', children }: Props) {
+export default function TableFlyout({
+  eyebrow,
+  title,
+  summary,
+  actionLabel = 'Manage',
+  headerAction,
+  closeLabel = 'Close',
+  children
+}: Props) {
   const [open, setOpen] = useState(false);
   const titleId = useId();
 
@@ -38,9 +48,14 @@ export default function TableFlyout({ eyebrow, title, summary, actionLabel = 'Ma
             <p>{eyebrow}</p>
             <h3 id={titleId}>{title}</h3>
           </div>
-          <button type="button" className="table-flyout-close" onClick={() => setOpen(false)} aria-label="Close account controls">×</button>
+          <div className="table-flyout-header-actions">
+            {headerAction}
+            <button type="button" className="table-flyout-close danger" onClick={() => setOpen(false)} aria-label={closeLabel}>×</button>
+          </div>
         </header>
-        {children}
+        <div className="table-flyout-body">
+          {children}
+        </div>
       </section>
     </div>}
   </>;
