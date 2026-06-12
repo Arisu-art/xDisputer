@@ -50,10 +50,28 @@ export type AccountDirectoryOptions = {
   pageSize?: number;
 };
 
+export type AccountDirectoryListResult = {
+  accounts: AccountDirectoryRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  errorMessage: string | null;
+};
+
 function safeNumber(value: unknown, fallback: number) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.max(1, Math.floor(parsed));
+}
+
+function isMissingRpcError(message: string | null | undefined) {
+  return Boolean(
+    message && (
+      message.includes('Could not find the function') ||
+      message.includes('does not exist') ||
+      message.includes('schema cache')
+    )
+  );
 }
 
 export function normalizeDirectoryParams(params?: Record<string, string | string[] | undefined>) {
@@ -137,7 +155,7 @@ async function getWorkspaceAccountSummary(supabase: SupabaseServerClient) {
 async function listWorkspaceAccountDirectory(
   supabase: SupabaseServerClient,
   options: AccountDirectoryOptions
-) {
+): Promise<AccountDirectoryListResult> {
   const { data, error } = await supabase.rpc('access_workspace_account_directory_v1', {
     workspace_id_input: null,
     view_input: options.view,
@@ -155,6 +173,51 @@ async function listWorkspaceAccountDirectory(
     page: options.page || 1,
     pageSize: options.pageSize || 25,
     errorMessage: error?.message || null
+  };
+}
+
+async function listWorkspaceAttentionQueue(
+  supabase: SupabaseServerClient,
+  limit = 5
+): Promise<AccountDirectoryListResult> {
+  const { data, error } = await supabase.rpc('access_workspace_attention_queue_v1', {
+    workspace_id_input: null,
+    limit_input: limit
+  });
+
+  if (!error) {
+    const accounts = Array.isArray(data) ? (data as WorkspaceDirectoryRpcRow[]).map(mapWorkspaceRow) : [];
+
+    return {
+      accounts,
+      total: Number(accounts[0]?.total_count || 0),
+      page: 1,
+      pageSize: limit,
+      errorMessage: null
+    };
+  }
+
+  if (!isMissingRpcError(error.message)) {
+    return {
+      accounts: [],
+      total: 0,
+      page: 1,
+      pageSize: limit,
+      errorMessage: error.message
+    };
+  }
+
+  const [pending, blocked] = await Promise.all([
+    listWorkspaceAccountDirectory(supabase, { view: 'pending', page: 1, pageSize: limit }),
+    listWorkspaceAccountDirectory(supabase, { view: 'blocked', page: 1, pageSize: limit })
+  ]);
+
+  return {
+    accounts: [...blocked.accounts, ...pending.accounts].slice(0, limit),
+    total: pending.total + blocked.total,
+    page: 1,
+    pageSize: limit,
+    errorMessage: pending.errorMessage || blocked.errorMessage
   };
 }
 
@@ -184,6 +247,10 @@ export async function listManagerClientDirectory(
   });
 }
 
+export async function listManagerAttentionQueue(supabase: SupabaseServerClient, limit = 5) {
+  return listWorkspaceAttentionQueue(supabase, limit);
+}
+
 export async function getMasterAccountSummary(supabase: SupabaseServerClient): Promise<{
   summary: AccountDirectorySummary;
   errorMessage: string | null;
@@ -196,4 +263,8 @@ export async function listMasterAccountDirectory(
   options: AccountDirectoryOptions
 ) {
   return listWorkspaceAccountDirectory(supabase, options);
+}
+
+export async function listMasterAttentionQueue(supabase: SupabaseServerClient, limit = 5) {
+  return listWorkspaceAttentionQueue(supabase, limit);
 }
