@@ -1,6 +1,7 @@
 -- Phase 11 schema repair
 -- Fixes partially-created Phase 11 tables where CREATE TABLE IF NOT EXISTS skipped missing columns.
--- Run before re-running the main Phase 11 migration if Supabase reports a missing column such as workspace_status.
+-- Also repairs older/legacy Phase 11 column names such as workspace_role/status so new inserts do not fail.
+-- Run before re-running the main Phase 11 migration if Supabase reports missing columns or not-null legacy columns.
 
 create extension if not exists pgcrypto;
 
@@ -40,6 +41,43 @@ alter table public.workspace_members add column if not exists joined_at timestam
 alter table public.workspace_members add column if not exists created_at timestamptz not null default now();
 alter table public.workspace_members add column if not exists updated_at timestamptz not null default now();
 
+-- Legacy compatibility repair for older partial schemas.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'workspace_members' and column_name = 'workspace_role'
+  ) then
+    update public.workspace_members
+    set workspace_role = coalesce(workspace_role, member_role, 'client');
+
+    alter table public.workspace_members alter column workspace_role set default 'client';
+    alter table public.workspace_members alter column workspace_role drop not null;
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'workspace_members' and column_name = 'status'
+  ) then
+    update public.workspace_members
+    set status = coalesce(status, membership_status, 'active');
+
+    alter table public.workspace_members alter column status set default 'active';
+    alter table public.workspace_members alter column status drop not null;
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'workspace_members' and column_name = 'permissions'
+  ) then
+    update public.workspace_members
+    set permissions = coalesce(permissions, '{}'::jsonb);
+
+    alter table public.workspace_members alter column permissions set default '{}'::jsonb;
+    alter table public.workspace_members alter column permissions drop not null;
+  end if;
+end $$;
+
 create unique index if not exists workspace_members_workspace_profile_uidx on public.workspace_members(workspace_id, profile_id);
 
 create table if not exists public.workspace_invites (
@@ -57,6 +95,32 @@ alter table public.workspace_invites add column if not exists used_at timestampt
 alter table public.workspace_invites add column if not exists metadata_json jsonb not null default '{}'::jsonb;
 alter table public.workspace_invites add column if not exists created_at timestamptz not null default now();
 alter table public.workspace_invites add column if not exists updated_at timestamptz not null default now();
+
+-- Legacy compatibility for older invite schemas.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'workspace_invites' and column_name = 'status'
+  ) then
+    update public.workspace_invites
+    set status = coalesce(status, invite_status, 'active');
+
+    alter table public.workspace_invites alter column status set default 'active';
+    alter table public.workspace_invites alter column status drop not null;
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'workspace_invites' and column_name = 'role'
+  ) then
+    update public.workspace_invites
+    set role = coalesce(role, invite_role, 'client');
+
+    alter table public.workspace_invites alter column role set default 'client';
+    alter table public.workspace_invites alter column role drop not null;
+  end if;
+end $$;
 
 create unique index if not exists workspace_invites_invite_code_uidx on public.workspace_invites(invite_code) where invite_code is not null;
 
@@ -77,6 +141,32 @@ alter table public.client_manager_assignments add column if not exists created_a
 alter table public.client_manager_assignments add column if not exists approved_at timestamptz null;
 alter table public.client_manager_assignments add column if not exists revoked_at timestamptz null;
 alter table public.client_manager_assignments add column if not exists metadata_json jsonb not null default '{}'::jsonb;
+
+-- Legacy compatibility for older assignment schemas.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'client_manager_assignments' and column_name = 'status'
+  ) then
+    update public.client_manager_assignments
+    set status = coalesce(status, assignment_status, 'pending');
+
+    alter table public.client_manager_assignments alter column status set default 'pending';
+    alter table public.client_manager_assignments alter column status drop not null;
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'client_manager_assignments' and column_name = 'role'
+  ) then
+    update public.client_manager_assignments
+    set role = coalesce(role, assignment_role, 'primary');
+
+    alter table public.client_manager_assignments alter column role set default 'primary';
+    alter table public.client_manager_assignments alter column role drop not null;
+  end if;
+end $$;
 
 create table if not exists public.client_assignment_events (
   id uuid primary key default gen_random_uuid()
