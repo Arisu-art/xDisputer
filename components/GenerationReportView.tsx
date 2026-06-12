@@ -100,22 +100,19 @@ function ReportFilters({ action, exportHref, filters, activeCount }: Pick<Props,
 
 function ReportHeroMetrics({ summary }: { summary: GenerationReportSummary }) {
   const successful = summary.generated + summary.downloaded;
-  const metrics = [
-    { label: 'Runs', value: String(summary.total), note: `${summary.downloaded} downloaded` },
-    { label: 'Done', value: percent(successful, summary.total), note: `${successful} successful` },
-    { label: 'Failures', value: String(summary.failed), note: summary.failed ? 'Needs review' : 'No failures', tone: summary.failed ? 'attention' : 'complete' },
-    { label: 'Top round', value: topLabel(summary.byRound, 'No activity'), note: 'Most used' },
-    { label: 'Top client', value: topLabel(summary.byClient, 'No client activity'), note: 'Focus' },
-    { label: 'State', value: topLabel(summary.byStatus, 'No status yet'), note: 'Dominant' }
-  ];
 
-  return <section className="report-hero-metrics" aria-label="Generation report summary">
-    {metrics.map((metric) => <article key={metric.label} className={metric.tone || ''}>
-      <span>{metric.label}</span>
-      <strong>{metric.value}</strong>
-      <small>{metric.note}</small>
-    </article>)}
-  </section>;
+  return <aside className="report-side-summary" aria-label="Generation report summary">
+    <div className="report-side-summary-top">
+      <article><span>Runs</span><strong>{summary.total}</strong><small>{summary.downloaded} downloaded</small></article>
+      <article><span>Done</span><strong>{percent(successful, summary.total)}</strong><small>{successful} successful</small></article>
+      <article className={summary.failed ? 'attention' : 'complete'}><span>Failures</span><strong>{summary.failed}</strong><small>{summary.failed ? 'Needs review' : 'No failures'}</small></article>
+    </div>
+    <dl className="report-side-summary-list">
+      <div><dt>Top round</dt><dd>{topLabel(summary.byRound, 'No activity')}</dd></div>
+      <div><dt>Top client</dt><dd>{topLabel(summary.byClient, 'No client activity')}</dd></div>
+      <div><dt>State</dt><dd>{topLabel(summary.byStatus, 'No status yet')}</dd></div>
+    </dl>
+  </aside>;
 }
 
 function ActivityStream({ rows, scope }: { rows: GenerationReportRow[]; scope: Scope }) {
@@ -146,7 +143,7 @@ export default function GenerationReportView({ scope, action, exportHref, filter
     </aside>
 
     <section className="admin-monitor-main native-console-main">
-      <header className="admin-monitor-header native-command-hero master-compact-hero minimal-report-hero compact-report-hero">
+      <header className="admin-monitor-header native-command-hero master-compact-hero minimal-report-hero compact-report-hero compact-report-hero-slim">
         <div className="compact-report-hero-copy"><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div>
         {!errorMessage && <ReportHeroMetrics summary={summary} />}
       </header>
