@@ -1,6 +1,7 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import ConsoleNavLink from '../ConsoleNavLink';
 import ControlNavigationTelemetry, { type ControlNavItem } from './ControlNavigationTelemetry';
 
@@ -16,6 +17,29 @@ type Props = {
   children: ReactNode;
 };
 
+function routeKey(pathname: string, searchParams: { toString(): string } | null) {
+  const query = searchParams?.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
+
+function navKey(href: string) {
+  if (typeof window === 'undefined') return href;
+  try {
+    const url = new URL(href, window.location.origin);
+    return url.search ? `${url.pathname}${url.search}` : url.pathname;
+  } catch {
+    return href;
+  }
+}
+
+function isActiveNav(href: string, currentRoute: string, allHrefs: string[]) {
+  const key = navKey(href);
+  if (currentRoute === key) return true;
+  const hasExactQueryMatch = allHrefs.some((item) => navKey(item) === currentRoute && navKey(item).includes('?'));
+  if (hasExactQueryMatch) return false;
+  return !key.includes('?') && currentRoute.startsWith(`${key}/`);
+}
+
 export default function ControlConsoleShell({
   scope,
   brandLabel,
@@ -27,6 +51,10 @@ export default function ControlConsoleShell({
   mainClassName = '',
   children
 }: Props) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentRoute = useMemo(() => routeKey(pathname, searchParams), [pathname, searchParams]);
+  const hrefs = useMemo(() => navItems.map((item) => item.href), [navItems]);
   const consoleClass = scope === 'master' ? 'master-ops-console' : 'manager-ops-console';
 
   return <main className={`admin-monitor-page native-console ${consoleClass} ${mainClassName}`} data-control-console={scope}>
@@ -39,7 +67,7 @@ export default function ControlConsoleShell({
 
       <div className="admin-sidebar-section-title">{sectionLabel}</div>
       <nav aria-label={`${scope} navigation`}>
-        {navItems.map((item) => <ConsoleNavLink key={item.href} href={item.href} className={item.active ? 'active' : undefined}>{item.label}</ConsoleNavLink>)}
+        {navItems.map((item) => <ConsoleNavLink key={item.href} href={item.href} className={isActiveNav(item.href, currentRoute, hrefs) ? 'active' : undefined}>{item.label}</ConsoleNavLink>)}
       </nav>
 
       <div className="admin-monitor-account">
