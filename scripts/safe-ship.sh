@@ -72,5 +72,14 @@ echo
 echo "== Push =="
 git push origin main
 
+# 10. Wait until Vercel production reports the same commit as local HEAD.
 echo
-echo "✅ Safe ship complete."
+echo "== Production verification =="
+if npm run | grep -q "verify:production:wait"; then
+  npm run verify:production:wait
+else
+  npm run verify:production
+fi
+
+echo
+echo "✅ Safe ship complete and production commit verified."
