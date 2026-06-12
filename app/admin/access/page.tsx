@@ -33,7 +33,7 @@ function viewTitle(view: string) {
   if (view === 'pending') return 'Pending approval';
   if (view === 'active') return 'Active clients';
   if (view === 'blocked') return 'Disabled / suspended';
-  return 'Client directory';
+  return 'Workspace client directory';
 }
 
 function ControlForm({ profileId, intent, label, primary = false }: { profileId: string; intent: string; label: string; primary?: boolean }) {
@@ -73,10 +73,10 @@ function DirectoryFilter({ view, query }: { view: string; query: string }) {
       <input type="hidden" name="view" value={view} />
       <label>
         <span>Search</span>
-        <input name="q" type="search" placeholder="Client email, name, or status" defaultValue={query} />
+        <input name="q" type="search" placeholder="Client email, name, status, or manager" defaultValue={query} />
       </label>
       <button className="admin-action-button primary" type="submit">Search</button>
-      <a className="admin-action-button" href={`/admin/access${directoryQueryString({ view })}`}>Reset</a>
+      <ConsoleNavLink className="admin-action-button" href={`/admin/access${directoryQueryString({ view })}`}>Reset</ConsoleNavLink>
     </form>
   );
 }
@@ -90,8 +90,8 @@ function Pager({ view, query, page, pageSize, total }: { view: string; query: st
     <div className="directory-pager">
       <span>Page {page} of {totalPages} • {total} result(s)</span>
       <div>
-        <a className={`admin-action-button ${page <= 1 ? 'disabled' : ''}`} href={`/admin/access${directoryQueryString({ view, q: query, page: previous, pageSize })}`}>Previous</a>
-        <a className={`admin-action-button ${page >= totalPages ? 'disabled' : ''}`} href={`/admin/access${directoryQueryString({ view, q: query, page: next, pageSize })}`}>Next</a>
+        <ConsoleNavLink className={`admin-action-button ${page <= 1 ? 'disabled' : ''}`} href={`/admin/access${directoryQueryString({ view, q: query, page: previous, pageSize })}`}>Previous</ConsoleNavLink>
+        <ConsoleNavLink className={`admin-action-button ${page >= totalPages ? 'disabled' : ''}`} href={`/admin/access${directoryQueryString({ view, q: query, page: next, pageSize })}`}>Next</ConsoleNavLink>
       </div>
     </div>
   );
@@ -126,7 +126,7 @@ function ClientTable({ accounts }: { accounts: ManagedAccount[] }) {
             </tr>
           )) : (
             <tr>
-              <td colSpan={5} className="admin-monitor-empty">No clients match this dataset.</td>
+              <td colSpan={5} className="admin-monitor-empty">No workspace clients match this dataset.</td>
             </tr>
           )}
         </tbody>
@@ -185,8 +185,8 @@ export default async function AdminAccessPage({ searchParams }: PageProps) {
         <header className="admin-monitor-header native-command-hero manager-compact-hero">
           <div>
             <p>Access control</p>
-            <h1>Client access workflow.</h1>
-            <span>Choose one dataset, search server-side, and manage clients without loading every account at once.</span>
+            <h1>Workspace-scoped client workflow.</h1>
+            <span>Reads from the Phase 11 workspace policy RPC and assignment ledger without loading every account.</span>
           </div>
         </header>
 
@@ -198,41 +198,41 @@ export default async function AdminAccessPage({ searchParams }: PageProps) {
 
         {selectedView === 'overview' ? (
           <section className="progressive-dataset-grid access-workflow-grid">
-            <a className="progressive-dataset-card access-workflow-card" href="/admin/access?view=pending">
+            <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/admin/access?view=pending">
               <p>Access control</p>
               <h2>Pending approval</h2>
               <span>{summary.pending} pending</span>
               <strong>Review users waiting for manager approval.</strong>
-            </a>
-            <a className="progressive-dataset-card access-workflow-card" href="/admin/access?view=active">
+            </ConsoleNavLink>
+            <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/admin/access?view=active">
               <p>Access control</p>
               <h2>Active clients</h2>
               <span>{summary.active} active</span>
               <strong>Manage approved clients with workspace access.</strong>
-            </a>
-            <a className="progressive-dataset-card access-workflow-card" href="/admin/access?view=blocked">
+            </ConsoleNavLink>
+            <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/admin/access?view=blocked">
               <p>Access control</p>
               <h2>Disabled / suspended</h2>
               <span>{summary.blocked} blocked</span>
               <strong>Review blocked client accounts.</strong>
-            </a>
-            <a className="progressive-dataset-card access-workflow-card" href="/admin/audit">
+            </ConsoleNavLink>
+            <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/admin/audit">
               <p>Audit</p>
               <h2>Access history</h2>
               <span>Events</span>
               <strong>Review approval and account-control history.</strong>
-            </a>
+            </ConsoleNavLink>
           </section>
         ) : (
           <section className="admin-dataset-stack">
             <div className="access-workflow-toolbar">
-              <a className="access-workflow-back" href="/admin/access">← Access control</a>
+              <ConsoleNavLink className="access-workflow-back" href="/admin/access">← Access control</ConsoleNavLink>
               <span>{directory.total} result(s)</span>
             </div>
 
             <section className="admin-monitor-card native-operation-card">
               <div className="admin-monitor-card-header">
-                <div><p>Access dataset</p><h2>{viewTitle(selectedView)}</h2></div>
+                <div><p>Workspace dataset</p><h2>{viewTitle(selectedView)}</h2></div>
                 <span>{directory.total} total</span>
               </div>
 
