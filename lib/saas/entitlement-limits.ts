@@ -9,13 +9,50 @@ export type EntitlementLimitRow = {
   default_client_output_limit: number | null;
   client_output_limit: number | null;
   effective_output_limit: number | null;
-  output_used_this_month: number;
-  output_remaining_this_month: number | null;
-  entitlement_notes: string | null;
+  output_used_today: number;
+  output_remaining_today: number | null;
   updated_at: string | null;
 };
 
 export type EntitlementLimitMap = Record<string, EntitlementLimitRow>;
+
+type RawEntitlementRow = Partial<EntitlementLimitRow> & {
+  output_used_this_month?: number;
+  output_remaining_this_month?: number | null;
+  entitlement_notes?: string | null;
+};
+
+function isMissingRpc(message: string) {
+  return message.includes('Could not find the function')
+    || message.includes('does not exist')
+    || message.includes('schema cache');
+}
+
+function normalizeRow(row: RawEntitlementRow): EntitlementLimitRow {
+  return {
+    profile_id: String(row.profile_id || ''),
+    max_clients: typeof row.max_clients === 'number' ? row.max_clients : null,
+    current_clients: Number(row.current_clients || 0),
+    default_client_output_limit: typeof row.default_client_output_limit === 'number' ? row.default_client_output_limit : null,
+    client_output_limit: typeof row.client_output_limit === 'number' ? row.client_output_limit : null,
+    effective_output_limit: typeof row.effective_output_limit === 'number' ? row.effective_output_limit : null,
+    output_used_today: Number(row.output_used_today ?? row.output_used_this_month ?? 0),
+    output_remaining_today: typeof row.output_remaining_today === 'number'
+      ? row.output_remaining_today
+      : typeof row.output_remaining_this_month === 'number'
+        ? row.output_remaining_this_month
+        : null,
+    updated_at: row.updated_at || null
+  };
+}
+
+async function callEntitlementRpc(
+  supabase: SupabaseServerClient,
+  rpcName: string,
+  ids: string[]
+) {
+  return supabase.rpc(rpcName, { profile_ids: ids });
+}
 
 export async function listEntitlementLimits(
   supabase: SupabaseServerClient,
@@ -24,21 +61,21 @@ export async function listEntitlementLimits(
   const ids = Array.from(new Set(profileIds.filter(Boolean)));
   if (!ids.length) return { entitlements: {}, errorMessage: null };
 
-  const { data, error } = await supabase.rpc('access_list_entitlement_limits_v1', {
-    profile_ids: ids
-  });
+  let { data, error } = await callEntitlementRpc(supabase, 'access_list_daily_entitlement_limits_v1', ids);
 
-  if (error) {
-    const missing = error.message.includes('Could not find the function')
-      || error.message.includes('does not exist')
-      || error.message.includes('schema cache');
-
-    return { entitlements: {}, errorMessage: missing ? null : error.message };
+  if (error && isMissingRpc(error.message)) {
+    const fallback = await callEntitlementRpc(supabase, 'access_list_entitlement_limits_v1', ids);
+    data = fallback.data;
+    error = fallback.error;
   }
 
-  const rows = Array.isArray(data) ? data as EntitlementLimitRow[] : [];
+  if (error) return { entitlements: {}, errorMessage: isMissingRpc(error.message) ? null : error.message };
+
+  const rows = Array.isArray(data) ? data as RawEntitlementRow[] : [];
+  const normalized = rows.map(normalizeRow).filter((row) => row.profile_id);
+
   return {
-    entitlements: Object.fromEntries(rows.map((row) => [row.profile_id, row])),
+    entitlements: Object.fromEntries(normalized.map((row) => [row.profile_id, row])),
     errorMessage: null
   };
 }
