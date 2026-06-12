@@ -17,8 +17,10 @@ function formatDuration(seconds: number | null) {
   const safe = Math.max(0, seconds);
   const hours = Math.floor(safe / 3600);
   const minutes = Math.floor((safe % 3600) / 60);
+  const secondsPart = safe % 60;
   if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${secondsPart}s`;
+  return `${secondsPart}s`;
 }
 
 function formatResetAt(value: string | null) {
@@ -85,10 +87,17 @@ export default function OutputLimitResetChip() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const usageLabel = useMemo(() => {
+  const limitLabel = useMemo(() => {
     if (!entitlement) return 'Loading';
-    if (entitlement.outputLimit === null) return `${entitlement.outputUsedToday} used · No cap`;
-    return `${entitlement.outputUsedToday}/${entitlement.outputLimit} used`;
+    if (entitlement.outputLimit === null) return `${entitlement.outputUsedToday} Daily Outputs`;
+    return `${entitlement.outputUsedToday}/${entitlement.outputLimit} Daily Output${entitlement.outputLimit === 1 ? '' : 's'}`;
+  }, [entitlement]);
+
+  const remainingLabel = useMemo(() => {
+    if (!entitlement) return 'Checking entitlement';
+    if (entitlement.outputLimit === null) return 'Unlimited daily package generation';
+    const remaining = Math.max(0, entitlement.outputRemainingToday ?? 0);
+    return `${remaining} output${remaining === 1 ? '' : 's'} remaining today`;
   }, [entitlement]);
 
   const remaining = entitlement?.outputRemainingToday;
@@ -96,9 +105,15 @@ export default function OutputLimitResetChip() {
   const resetAt = formatResetAt(entitlement?.resetAt || null);
 
   return <aside className={`output-limit-reset-chip ${blocked ? 'blocked' : ''}`} aria-label="Daily output limit reset">
-    <span>Daily outputs</span>
-    <strong>{usageLabel}</strong>
-    <em>{blocked ? 'Resets in' : 'Reset in'} {formatDuration(secondsLeft)}</em>
-    <small>{resetAt}</small>
+    <div className="output-limit-chip-main">
+      <span>Daily Output Limit</span>
+      <strong>{limitLabel}</strong>
+      <small>{remainingLabel}</small>
+    </div>
+    <div className="output-limit-chip-timer">
+      <span>{blocked ? 'Resets in' : 'Next reset'}</span>
+      <strong>{formatDuration(secondsLeft)}</strong>
+      <small>{resetAt}</small>
+    </div>
   </aside>;
 }
