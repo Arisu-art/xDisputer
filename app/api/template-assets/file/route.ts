@@ -1,16 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getSessionContext } from '../../../../lib/saas/session';
+import { getSessionContext, type SessionContext } from '../../../../lib/saas/session';
 import { workspaceAccessErrorResponse } from '../../../../lib/saas/access-entitlement';
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
 const allowedExhibitKinds = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
 
-function privateTemplateCacheHeaders(input: {
-  etag: string;
-  filename: string;
-  mimeType: string | null;
-}) {
+function privateTemplateCacheHeaders(input: { etag: string; filename: string; mimeType: string | null }) {
   return {
     'Content-Type': input.mimeType || 'application/octet-stream',
     'Content-Disposition': `attachment; filename="${input.filename.replace(/"/g, '')}"`,
@@ -18,6 +14,34 @@ function privateTemplateCacheHeaders(input: {
     'ETag': input.etag,
     'Cache-Control': 'private, max-age=60, stale-while-revalidate=300'
   };
+}
+
+function isMissingRpc(message: string) {
+  return message.includes('Could not find the function') || message.includes('does not exist') || message.includes('schema cache');
+}
+
+async function outputLimitError(session: SessionContext) {
+  if (!session.user || !session.isClient) return null;
+
+  const { data, error } = await session.supabase.rpc('access_list_entitlement_limits_v1', {
+    profile_ids: [session.user.id]
+  });
+
+  if (error) {
+    if (isMissingRpc(error.message)) return null;
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const row = Array.isArray(data) ? data[0] as { output_remaining_this_month?: number | null; effective_output_limit?: number | null } | undefined : undefined;
+
+  if (row && typeof row.output_remaining_this_month === 'number' && row.output_remaining_this_month <= 0) {
+    return NextResponse.json({
+      error: 'Output limit reached',
+      message: `This client has reached the current output limit of ${row.effective_output_limit ?? 'the assigned'} successful outputs.`
+    }, { status: 403 });
+  }
+
+  return null;
 }
 
 export async function GET(request: NextRequest) {
@@ -30,14 +54,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'No authenticated user.' }, { status: 401 });
   }
 
+  const limitError = await outputLimitError(session);
+  if (limitError) return limitError;
+
   const round = request.nextUrl.searchParams.get('round') || '';
   const templateKind = request.nextUrl.searchParams.get('templateKind') || '';
   const letterType = request.nextUrl.searchParams.get('letterType') || '';
   const exhibitKind = request.nextUrl.searchParams.get('exhibitKind') || '';
 
-  if (!allowedRounds.includes(round)) {
-    return NextResponse.json({ error: 'Invalid round.' }, { status: 400 });
-  }
+  if (!allowedRounds.includes(round)) return NextResponse.json({ error: 'Invalid round.' }, { status: 400 });
 
   let query = session.supabase
     .from('template_assets')
@@ -60,28 +85,16 @@ export async function GET(request: NextRequest) {
   }
 
   const { data: asset, error } = await query.maybeSingle();
-
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!asset) return NextResponse.json({ error: 'No active template found.' }, { status: 404 });
 
   const etag = `"template-${asset.id}-${asset.version_number}-${asset.updated_at}"`;
-  const headers = privateTemplateCacheHeaders({
-    etag,
-    filename: asset.original_filename,
-    mimeType: asset.mime_type
-  });
+  const headers = privateTemplateCacheHeaders({ etag, filename: asset.original_filename, mimeType: asset.mime_type });
 
-  if (request.headers.get('if-none-match') === etag) {
-    return new Response(null, { status: 304, headers });
-  }
+  if (request.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers });
 
-  const download = await session.supabase.storage
-    .from(asset.storage_bucket)
-    .download(asset.storage_path);
-
-  if (download.error) {
-    return NextResponse.json({ error: download.error.message }, { status: 500 });
-  }
+  const download = await session.supabase.storage.from(asset.storage_bucket).download(asset.storage_path);
+  if (download.error) return NextResponse.json({ error: download.error.message }, { status: 500 });
 
   return new Response(download.data, { headers });
 }
