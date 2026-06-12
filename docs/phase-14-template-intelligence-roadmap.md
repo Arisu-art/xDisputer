@@ -11,9 +11,11 @@ A template is a custom envelope design. The design can change, but the delivery 
 ## Implemented foundation
 
 - `lib/template-governance.ts`
+- `lib/docx-text-audit.ts`
 - `buildTemplateGovernance(contract)`
 - `evaluateSourceCompleteness(input)`
 - `auditRenderedText(input)`
+- generation repair integration in `scripts/repair-letter-workspace-contracts.mjs`
 
 ## Phase 14A — Contract hardening
 
@@ -44,6 +46,8 @@ Old versions should be archived and not used unless explicitly restored.
 
 ## Phase 14C — Source Data completeness
 
+Status: integrated into generation preflight repair.
+
 Before generation, verify:
 
 - client name exists
@@ -53,15 +57,20 @@ Before generation, verify:
 - account numbers exist
 - required custom fields exist
 
+If required values are missing, generation is blocked before rendering.
+
 ## Phase 14D — Post-render audit
 
-After generation, verify:
+Status: integrated into letter rendering repair.
+
+After each letter render, verify:
 
 - no unresolved placeholders remain
 - client name appears
 - account names appear
 - account numbers appear
-- output is marked ready only after audit passes
+
+A letter with audit blockers is not added to the output set, and route coverage keeps the run from being marked review-ready.
 
 ## Phase 14E — Reports and explainability
 
