@@ -6,6 +6,20 @@ const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
 const allowedExhibitKinds = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
 
+function privateTemplateCacheHeaders(input: {
+  etag: string;
+  filename: string;
+  mimeType: string | null;
+}) {
+  return {
+    'Content-Type': input.mimeType || 'application/octet-stream',
+    'Content-Disposition': `attachment; filename="${input.filename.replace(/"/g, '')}"`,
+    'x-template-file-name': input.filename,
+    'ETag': input.etag,
+    'Cache-Control': 'private, max-age=60, stale-while-revalidate=300'
+  };
+}
+
 export async function GET(request: NextRequest) {
   const accessError = await workspaceAccessErrorResponse();
   if (accessError) return accessError;
@@ -50,6 +64,17 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!asset) return NextResponse.json({ error: 'No active template found.' }, { status: 404 });
 
+  const etag = `"template-${asset.id}-${asset.version_number}-${asset.updated_at}"`;
+  const headers = privateTemplateCacheHeaders({
+    etag,
+    filename: asset.original_filename,
+    mimeType: asset.mime_type
+  });
+
+  if (request.headers.get('if-none-match') === etag) {
+    return new Response(null, { status: 304, headers });
+  }
+
   const download = await session.supabase.storage
     .from(asset.storage_bucket)
     .download(asset.storage_path);
@@ -58,11 +83,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: download.error.message }, { status: 500 });
   }
 
-  return new Response(download.data, {
-    headers: {
-      'Content-Type': asset.mime_type || 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${asset.original_filename.replace(/"/g, '')}"`,
-      'x-template-file-name': asset.original_filename
-    }
-  });
+  return new Response(download.data, { headers });
 }
