@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 type PendingNav = {
   href: string;
@@ -10,9 +10,9 @@ type PendingNav = {
   startedAt: number;
 };
 
-function routeKey(pathname: string, searchParams: { toString(): string } | null) {
-  const query = searchParams?.toString();
-  return query ? `${pathname}?${query}` : pathname;
+function routeKey(pathname: string) {
+  if (typeof window === 'undefined') return pathname;
+  return `${pathname}${window.location.search || ''}`;
 }
 
 function hrefKey(href: string) {
@@ -31,9 +31,8 @@ function isControlHref(href: string) {
 
 export default function ControlNavGlobalTelemetry() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const pendingRef = useRef<PendingNav | null>(null);
-  const currentRoute = useMemo(() => routeKey(pathname, searchParams), [pathname, searchParams]);
+  const currentRoute = useMemo(() => routeKey(pathname), [pathname]);
 
   useEffect(() => {
     function handleStart(event: Event) {
