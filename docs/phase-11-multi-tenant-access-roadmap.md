@@ -18,9 +18,9 @@ Move xDisputer from a flat role-based account model to a workspace-scoped permis
 - [x] Add default workspace bootstrap RPC.
 - [x] Add default membership backfill helper.
 - [x] Keep current `profiles.manager_id` compatibility pointer.
-- [ ] Run Supabase SQL in production.
-- [ ] Verify default workspace created.
-- [ ] Verify all existing profiles backfilled into workspace members.
+- [x] Run Supabase SQL in production.
+- [x] Verify default workspace created.
+- [x] Verify all existing profiles backfilled into workspace members.
 
 ## Phase 11B — Central Access Policy RPCs
 
@@ -29,9 +29,9 @@ Move xDisputer from a flat role-based account model to a workspace-scoped permis
 - [x] Add `access_workspace_account_directory(...)`.
 - [x] Add actor workspace role helper.
 - [x] Add TypeScript helper `lib/saas/workspace-access.ts`.
-- [ ] Verify master context resolves as platform master.
-- [ ] Verify manager context resolves only within assigned workspace.
-- [ ] Verify client cannot load workspace directory.
+- [x] Verify master context resolves as platform master.
+- [x] Verify manager context resolves only within assigned workspace.
+- [x] Verify client cannot load workspace directory.
 
 ## Phase 11C — Client Assignment Ledger
 
@@ -43,47 +43,47 @@ Move xDisputer from a flat role-based account model to a workspace-scoped permis
 - [x] Add `access_workspace_transfer_client(...)`.
 - [x] Add `access_workspace_revoke_client_assignment(...)`.
 - [x] Backfill existing `profiles.manager_id` relationships into assignment ledger.
+- [x] Verify assignment events are written.
 - [ ] Verify transferred clients create old transferred assignment and new active assignment.
-- [ ] Verify assignment events are written.
 
-## Phase 11D — Migrate Current Manager Pointer Into Assignment Records
+## Phase 11D — Control Adoption
 
 - [x] Add idempotent RPC `access_11d_migrate_profile_manager_assignments()`.
-- [x] Ensure every profile is represented in the default workspace.
-- [x] Convert existing `profiles.manager_id` client links into `client_manager_assignments`.
-- [x] Write `client_assignment_events` for migrated links.
 - [x] Preserve `profiles.manager_id` as compatibility pointer.
-- [ ] Run Phase 11D/11E SQL in production.
-- [ ] Verify assignment ledger count matches linked client count.
+- [x] Add manager control RPC `access_workspace_manager_control_v1(...)`.
+- [x] Add master control RPC `access_workspace_master_control_v1(...)`.
+- [x] Route `/api/control/profile` through workspace-ledger controls first, with legacy RPC fallback during rollout.
+- [ ] Run Phase 11D control-adoption SQL in production.
+- [ ] Verify approve/reject/disable/reactivate write assignment events.
 
-## Phase 11E — Update Manager/Master Reads To Workspace-Scoped RPCs
+## Phase 11E — Workspace-Scoped Reads
 
 - [x] Add `access_workspace_account_summary_v1(...)`.
 - [x] Add `access_workspace_account_directory_v1(...)`.
 - [x] Update `lib/saas/account-directory.ts` to use workspace-scoped RPCs.
 - [x] Update `/master/accounts` copy and navigation for workspace-scoped directory.
 - [x] Update `/admin/access` copy and navigation for workspace-scoped manager client directory.
-- [x] Keep existing manager/master controls compatible through `profiles.manager_id` while reads move to workspace ledger.
-- [ ] Verify `/master/accounts` shows workspace-scoped users.
-- [ ] Verify `/admin/access` shows only manager-owned workspace clients.
+- [x] Add workspace-ledger-first account controls for Phase 11D adoption.
+- [ ] Verify `/master/accounts` shows workspace-scoped users after deploy.
+- [ ] Verify `/admin/access` shows only manager-owned workspace clients after deploy.
 
-## Phase 11F — Future Control Adoption
+## Phase 11F — Next UI Enhancements
 
-- [ ] Move approve client action to `access_workspace_approve_client(...)`.
 - [ ] Add master transfer-client UI using `access_workspace_transfer_client(...)`.
 - [ ] Add revoke assignment UI using `access_workspace_revoke_client_assignment(...)`.
 - [ ] Add manager workspace-scoped assignment history view.
+- [ ] Add confirmation screen for sensitive master actions.
 
 ## Deployment Checklist
 
-- [ ] Run SQL in Supabase SQL Editor.
+- [ ] Run Phase 11D control-adoption SQL in Supabase SQL Editor.
 - [ ] Run `git pull` in Codespaces.
 - [ ] Run `npm run xdisputer:guard`.
-- [ ] Deploy with `./scripts/safe-ship.sh "feat: adopt workspace scoped account directories"`.
+- [ ] Deploy with `./scripts/safe-ship.sh "feat: route controls through workspace ledger"`.
 - [ ] Open `/master/workspaces`.
 - [ ] Open `/master/accounts`.
 - [ ] Open `/admin/access`.
-- [ ] Confirm default workspace member count matches profiles count.
+- [ ] Approve/reject/reactivate one test client and verify assignment event.
 - [ ] Confirm generated output remains unaffected.
 
 ## Non-Negotiable Rules
