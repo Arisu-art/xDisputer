@@ -29,9 +29,12 @@ Replace broad dashboard reads with existing/new workspace summary RPCs.
 
 - [x] Route `/master` monitoring cards through `access_workspace_account_summary_v1(...)` instead of loading all profiles and filtering in TypeScript.
 - [x] Route `/admin` monitoring cards through `access_workspace_account_summary_v1(...)` / manager-scoped RPC output instead of `listManagedAccounts(...)` broad reads.
-- [~] Use compact paginated pending/active/blocked directory reads for the dashboard snapshots while a dedicated `access_workspace_attention_queue_v1(...)` remains optional.
+- [x] Add compact `access_workspace_attention_queue_v1(...)` RPC for only the rows needed by dashboard snapshots.
+- [x] Add safe Phase 12 indexes for workspace members, assignment ledger, profiles, template assets, and generation runs.
 - [x] Keep `/master/accounts` and `/admin/access` as the canonical paginated directory pages.
-- [ ] Add `explain analyze` validation for summary/directory/attention RPCs.
+- [x] Add `docs/phase-12-supabase-performance-validation.sql` for `explain analyze` validation.
+- [ ] Run Phase 12 Supabase SQL in production.
+- [ ] Paste and review `explain (analyze, buffers)` output after production SQL is applied.
 
 Success target:
 
@@ -78,6 +81,11 @@ Implement as additive runtime enhancements only:
 6. Run `npm run xdisputer:guard`.
 7. Deploy through `./scripts/safe-ship.sh "feat: improve instant reload runtime"`.
 
+## Supabase SQL Files
+
+- `supabase/migrations/20260612021000_phase_12_instant_reload_performance.sql` — apply in Supabase SQL Editor.
+- `docs/phase-12-supabase-performance-validation.sql` — run after applying the migration to verify RPCs, indexes, and query plans.
+
 ## Non-Negotiable Rules
 
 - Do not remove Phase 11D/11E fallback safety unless production has been verified over time.
@@ -93,6 +101,8 @@ Implement as additive runtime enhancements only:
 - [x] `/admin` opens with immediate shell/skeleton.
 - [x] `/master/accounts` has a route loading state and remains the paginated account directory.
 - [x] `/admin/access` has a route loading state and remains the manager client directory.
+- [ ] Apply Phase 12 Supabase performance SQL in production.
+- [ ] Run validation SQL and review `explain analyze` output.
 - [ ] Approve/reject/reactivate feels instant and writes assignment events.
 - [~] Template file downloads now include private ETag/cache headers; active-round client memoization remains pending.
 - [x] Generation output remains byte/order compatible with current behavior.
