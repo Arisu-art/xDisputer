@@ -1,16 +1,25 @@
 import type { Round } from './reference-store';
 
+export type GuidanceMode = 'guided' | 'focused';
+
 export type WorkspacePreferences = {
   defaultRound: Round;
   strictValidation: boolean;
   openTrackerAfterFinalization: boolean;
+  guidanceMode: GuidanceMode;
 };
 
 const KEY = 'lettergenerator-workspace-preferences-v1';
+
+function normalizeGuidanceMode(value: unknown): GuidanceMode {
+  return value === 'focused' ? 'focused' : 'guided';
+}
+
 export const defaultWorkspacePreferences: WorkspacePreferences = {
   defaultRound: '1st Round',
   strictValidation: false,
-  openTrackerAfterFinalization: false
+  openTrackerAfterFinalization: false,
+  guidanceMode: 'guided'
 };
 
 export function loadWorkspacePreferences(): WorkspacePreferences {
@@ -20,7 +29,8 @@ export function loadWorkspacePreferences(): WorkspacePreferences {
     return {
       defaultRound: saved.defaultRound || defaultWorkspacePreferences.defaultRound,
       strictValidation: Boolean(saved.strictValidation),
-      openTrackerAfterFinalization: Boolean(saved.openTrackerAfterFinalization)
+      openTrackerAfterFinalization: Boolean(saved.openTrackerAfterFinalization),
+      guidanceMode: normalizeGuidanceMode(saved.guidanceMode)
     };
   } catch {
     return defaultWorkspacePreferences;
@@ -28,6 +38,12 @@ export function loadWorkspacePreferences(): WorkspacePreferences {
 }
 
 export function saveWorkspacePreferences(preferences: WorkspacePreferences) {
-  if (typeof window !== 'undefined') localStorage.setItem(KEY, JSON.stringify(preferences));
-  return preferences;
+  const normalized: WorkspacePreferences = {
+    ...defaultWorkspacePreferences,
+    ...preferences,
+    guidanceMode: normalizeGuidanceMode(preferences.guidanceMode)
+  };
+
+  if (typeof window !== 'undefined') localStorage.setItem(KEY, JSON.stringify(normalized));
+  return normalized;
 }
