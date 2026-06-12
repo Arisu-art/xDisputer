@@ -53,7 +53,7 @@ Move xDisputer from a flat role-based account model to a workspace-scoped permis
 - [x] Add manager control RPC `access_workspace_manager_control_v1(...)`.
 - [x] Add master control RPC `access_workspace_master_control_v1(...)`.
 - [x] Route `/api/control/profile` through workspace-ledger controls first, with legacy RPC fallback during rollout.
-- [ ] Run Phase 11D control-adoption SQL in production.
+- [x] Run Phase 11D control-adoption SQL in production.
 - [ ] Verify approve/reject/disable/reactivate write assignment events.
 
 ## Phase 11E — Workspace-Scoped Reads
@@ -76,7 +76,7 @@ Move xDisputer from a flat role-based account model to a workspace-scoped permis
 
 ## Deployment Checklist
 
-- [ ] Run Phase 11D control-adoption SQL in Supabase SQL Editor.
+- [x] Run Phase 11D control-adoption SQL in Supabase SQL Editor.
 - [ ] Run `git pull` in Codespaces.
 - [ ] Run `npm run xdisputer:guard`.
 - [ ] Deploy with `./scripts/safe-ship.sh "feat: route controls through workspace ledger"`.
