@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { rounds, type Round } from '../lib/reference-store';
-import type { WorkspacePreferences } from '../lib/workspace-preferences';
+import type { GuidanceMode, WorkspacePreferences } from '../lib/workspace-preferences';
+
+type SettingsStep = 'account' | 'workflow' | 'records';
 
 type Props = {
   preferences: WorkspacePreferences;
@@ -15,6 +17,12 @@ type Props = {
   onClearRecords: () => void;
 };
 
+const steps: Array<{ id: SettingsStep; label: string; detail: string }> = [
+  { id: 'account', label: 'Account', detail: 'Identity and access context' },
+  { id: 'workflow', label: 'Workflow', detail: 'Round, guidance, and validation' },
+  { id: 'records', label: 'Records', detail: 'Local history controls' }
+];
+
 function Toggle({ checked, onChange, title, description }: { checked: boolean; onChange: (checked: boolean) => void; title: string; description: string }) {
   return <label className="settings-toggle">
     <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
@@ -23,17 +31,45 @@ function Toggle({ checked, onChange, title, description }: { checked: boolean; o
   </label>;
 }
 
+function SettingStepButton({ step, active, onClick }: { step: typeof steps[number]; active: boolean; onClick: () => void }) {
+  return <button type="button" className={`settings-step-card ${active ? 'active' : ''}`} onClick={onClick}>
+    <strong>{step.label}</strong>
+    <small>{step.detail}</small>
+  </button>;
+}
+
+function GuidanceChoice({ value, active, title, detail, onSelect }: { value: GuidanceMode; active: boolean; title: string; detail: string; onSelect: (value: GuidanceMode) => void }) {
+  return <button type="button" className={`settings-choice-card ${active ? 'active' : ''}`} onClick={() => onSelect(value)}>
+    <strong>{title}</strong>
+    <small>{detail}</small>
+  </button>;
+}
+
 export default function WorkspaceSettingsPanel({ preferences, caseCount, filingCount, accountEmail, accountRole = 'client', onChange, onExportRecords, onClearRecords }: Props) {
+  const [activeStep, setActiveStep] = useState<SettingsStep>('workflow');
   const [confirmClear, setConfirmClear] = useState(false);
   function update(values: Partial<WorkspacePreferences>) { onChange({ ...preferences, ...values }); }
 
-  return <section className="settings-workspace operations-workspace client-preferences-workspace">
-    <section className="panel settings-group client-account-settings">
+  return <section className="settings-workspace operations-workspace client-preferences-workspace progressive-settings-workspace">
+    <section className="panel settings-group settings-progressive-shell">
+      <header>
+        <div>
+          <p className="eyebrow">Account Settings</p>
+          <h2>Choose what to adjust</h2>
+          <p>Client-safe settings only. These controls do not change backend roles, managers, billing, or permissions.</p>
+        </div>
+      </header>
+      <div className="settings-step-grid" role="tablist" aria-label="Settings sections">
+        {steps.map((step) => <SettingStepButton key={step.id} step={step} active={activeStep === step.id} onClick={() => setActiveStep(step.id)} />)}
+      </div>
+    </section>
+
+    {activeStep === 'account' && <section className="panel settings-group client-account-settings">
       <header>
         <div>
           <p className="eyebrow">Account</p>
-          <h2>Client account settings</h2>
-          <p>View account context and adjust local workspace preferences. These controls do not change backend roles, managers, billing, or permissions.</p>
+          <h2>Client account context</h2>
+          <p>Simple identity and workspace context for the signed-in client user.</p>
         </div>
       </header>
       <div className="client-account-summary-grid">
@@ -41,14 +77,14 @@ export default function WorkspaceSettingsPanel({ preferences, caseCount, filingC
         <article><span>Workspace access</span><strong>{accountRole === 'admin' ? 'Manager view' : 'Client view'}</strong></article>
         <article><span>Local records</span><strong>{caseCount} cases · {filingCount} handoff items</strong></article>
       </div>
-    </section>
+    </section>}
 
-    <section className="panel settings-group client-workflow-settings">
+    {activeStep === 'workflow' && <section className="panel settings-group client-workflow-settings">
       <header>
         <div>
-          <p className="eyebrow">Client Workflow</p>
+          <p className="eyebrow">Workflow</p>
           <h2>Package preparation preferences</h2>
-          <p>Choose the default round and how strictly the app should guide each client package.</p>
+          <p>Pick the default round and how much guidance the client workspace should show.</p>
         </div>
       </header>
 
@@ -67,14 +103,19 @@ export default function WorkspaceSettingsPanel({ preferences, caseCount, filingC
         </div>
       </div>
 
+      <div className="settings-choice-grid" aria-label="Guidance mode">
+        <GuidanceChoice value="guided" active={preferences.guidanceMode !== 'focused'} title="Guided mode" detail="Best for client users who need more context while preparing a packet." onSelect={(value) => update({ guidanceMode: value })} />
+        <GuidanceChoice value="focused" active={preferences.guidanceMode === 'focused'} title="Focused mode" detail="Cleaner view for returning users who want fewer helper messages." onSelect={(value) => update({ guidanceMode: value })} />
+      </div>
+
       <div className="settings-grid compact-settings-grid">
         <Toggle checked={preferences.strictValidation} onChange={(checked) => update({ strictValidation: checked })} title="Require complete checklist before generation" description="Blocks package generation until the client profile, templates, evidence, and required fields are ready." />
         <Toggle checked={preferences.openTrackerAfterFinalization} onChange={(checked) => update({ openTrackerAfterFinalization: checked })} title="Open Client Center after package completion" description="Move to the client handoff center after the final package is prepared." />
       </div>
-    </section>
+    </section>}
 
-    <section className="panel settings-group client-records-settings">
-      <header><div><p className="eyebrow">Local Records</p><h3>Workspace history</h3><p>Export or clear local case and handoff history. Uploaded templates stay untouched.</p></div></header>
+    {activeStep === 'records' && <section className="panel settings-group client-records-settings">
+      <header><div><p className="eyebrow">Records</p><h3>Workspace history</h3><p>Export or clear local case and handoff history. Uploaded templates stay untouched.</p></div></header>
       <div className="settings-summary slim-settings-summary">
         <span><strong>{caseCount}</strong><small>Cases</small></span>
         <span><strong>{filingCount}</strong><small>Handoff items</small></span>
@@ -91,6 +132,6 @@ export default function WorkspaceSettingsPanel({ preferences, caseCount, filingC
           <div><button type="button" className="secondary-button" onClick={() => setConfirmClear(false)}>Cancel</button><button type="button" className="danger-button" onClick={() => { onClearRecords(); setConfirmClear(false); }}>Clear Records</button></div>
         </div>}
       </div>
-    </section>
+    </section>}
   </section>;
 }
