@@ -7,6 +7,7 @@ import {
   type DirectoryView
 } from '../../../lib/saas/account-directory';
 import type { ManagedAccount } from '../../../lib/saas/account-management';
+import { listEntitlementLimits, type EntitlementLimitMap, type EntitlementLimitRow } from '../../../lib/saas/entitlement-limits';
 import { requireRole } from '../../../lib/saas/session';
 
 type PageProps = {
@@ -34,6 +35,10 @@ function viewTitle(view: string) {
   if (view === 'active') return 'Active clients';
   if (view === 'blocked') return 'Disabled / suspended';
   return 'Workspace client directory';
+}
+
+function formatLimit(value: number | null | undefined) {
+  return typeof value === 'number' ? String(value) : 'Unlimited';
 }
 
 function ControlForm({ profileId, intent, label, primary = false }: { profileId: string; intent: string; label: string; primary?: boolean }) {
@@ -67,6 +72,13 @@ function ClientControls({ account }: { account: ManagedAccount }) {
   );
 }
 
+function EntitlementUsage({ entitlement }: { entitlement?: EntitlementLimitRow }) {
+  return <div className="manager-limit-usage">
+    <strong>{entitlement?.output_used_this_month || 0}/{formatLimit(entitlement?.effective_output_limit)}</strong>
+    <small>outputs this month</small>
+  </div>;
+}
+
 function DirectoryFilter({ view, query }: { view: string; query: string }) {
   return (
     <form action="/admin/access" method="get" className="directory-filter-form">
@@ -97,14 +109,15 @@ function Pager({ view, query, page, pageSize, total }: { view: string; query: st
   );
 }
 
-function ClientTable({ accounts }: { accounts: ManagedAccount[] }) {
+function ClientTable({ accounts, entitlements }: { accounts: ManagedAccount[]; entitlements: EntitlementLimitMap }) {
   return (
     <div className="admin-monitor-table-wrap">
-      <table className="admin-monitor-table professional-data-table">
+      <table className="admin-monitor-table professional-data-table entitlement-table">
         <thead>
           <tr>
             <th>Client</th>
             <th>Status</th>
+            <th>Usage</th>
             <th>Joined</th>
             <th>Updated</th>
             <th>Controls</th>
@@ -120,13 +133,14 @@ function ClientTable({ accounts }: { accounts: ManagedAccount[] }) {
               <td data-label="Status">
                 <span className={`admin-status-badge ${item.account_status || 'pending'}`}>{statusText(item.account_status)}</span>
               </td>
+              <td data-label="Usage"><EntitlementUsage entitlement={entitlements[item.id]} /></td>
               <td data-label="Joined">{formatDate(item.created_at)}</td>
               <td data-label="Updated">{formatDate(item.updated_at)}</td>
               <td data-label="Controls"><ClientControls account={item} /></td>
             </tr>
           )) : (
             <tr>
-              <td colSpan={5} className="admin-monitor-empty">No workspace clients match this dataset.</td>
+              <td colSpan={6} className="admin-monitor-empty">No workspace clients match this dataset.</td>
             </tr>
           )}
         </tbody>
@@ -155,6 +169,11 @@ export default async function AdminAccessPage({ searchParams }: PageProps) {
           pageSize: directoryParams.pageSize
         })
   ]);
+
+  const entitlementResult = selectedView === 'overview'
+    ? await listEntitlementLimits(supabase, [user.id])
+    : await listEntitlementLimits(supabase, [user.id, ...directory.accounts.map((account) => account.id)]);
+  const managerEntitlement = entitlementResult.entitlements[user.id];
 
   return (
     <main className="admin-monitor-page native-console manager-ops-console">
@@ -186,15 +205,22 @@ export default async function AdminAccessPage({ searchParams }: PageProps) {
           <div>
             <p>Access control</p>
             <h1>Workspace-scoped client workflow.</h1>
-            <span>Reads from the Phase 11 workspace policy RPC and assignment ledger without loading every account.</span>
+            <span>Client limits are controlled by the master account. Managers can see capacity and output usage but cannot edit agreement limits.</span>
           </div>
         </header>
 
-        {(summaryError || directory.errorMessage) && (
+        {(summaryError || directory.errorMessage || entitlementResult.errorMessage) && (
           <section className="admin-monitor-card">
-            <div className="admin-monitor-empty">{summaryError || directory.errorMessage}</div>
+            <div className="admin-monitor-empty">{summaryError || directory.errorMessage || entitlementResult.errorMessage}</div>
           </section>
         )}
+
+        <section className="minimal-report-summary manager-entitlement-summary" aria-label="Manager entitlement summary">
+          <article><span>Client seats</span><strong>{managerEntitlement?.current_clients || summary.active}/{formatLimit(managerEntitlement?.max_clients)}</strong><small>Master agreement</small></article>
+          <article><span>Default outputs</span><strong>{formatLimit(managerEntitlement?.default_client_output_limit)}</strong><small>Per client monthly</small></article>
+          <article><span>Active clients</span><strong>{summary.active}</strong><small>Approved accounts</small></article>
+          <article><span>Pending</span><strong>{summary.pending}</strong><small>Waiting approval</small></article>
+        </section>
 
         {selectedView === 'overview' ? (
           <section className="progressive-dataset-grid access-workflow-grid">
@@ -205,10 +231,10 @@ export default async function AdminAccessPage({ searchParams }: PageProps) {
               <strong>Review users waiting for manager approval.</strong>
             </ConsoleNavLink>
             <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/admin/access?view=active">
-              <p>Access control</p>
+              <p>Client usage</p>
               <h2>Active clients</h2>
               <span>{summary.active} active</span>
-              <strong>Manage approved clients with workspace access.</strong>
+              <strong>Review output usage under the master-set limit.</strong>
             </ConsoleNavLink>
             <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/admin/access?view=blocked">
               <p>Access control</p>
@@ -237,7 +263,7 @@ export default async function AdminAccessPage({ searchParams }: PageProps) {
               </div>
 
               <DirectoryFilter view={selectedView} query={directoryParams.query} />
-              <ClientTable accounts={directory.accounts} />
+              <ClientTable accounts={directory.accounts} entitlements={entitlementResult.entitlements} />
               <Pager view={selectedView} query={directoryParams.query} page={directory.page} pageSize={directory.pageSize} total={directory.total} />
             </section>
           </section>
