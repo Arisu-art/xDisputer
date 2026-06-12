@@ -18,7 +18,9 @@
     "xdisputer:guard": "node scripts/xdisputer-deploy-guard.mjs",
     "safe:sync": "bash scripts/safe-sync-guard.sh",
     "verify:production": "node scripts/verify-production-build.mjs",
-    "verify:production:wait": "node scripts/wait-for-production-build.mjs"
+    "verify:production:wait": "node scripts/wait-for-production-build.mjs",
+    "vercel:status": "node scripts/vercel-status.mjs",
+    "vercel:direct": "node scripts/vercel-direct-production-sync.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
