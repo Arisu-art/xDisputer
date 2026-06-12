@@ -82,6 +82,14 @@ function errorMessage(error: unknown) {
   return error instanceof Error && error.message ? error.message : 'An unknown error occurred.';
 }
 
+function toTemplateFile(value: Blob, name: string): File {
+  if (value instanceof File) return value;
+  return new File([value], name, {
+    type: value.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    lastModified: Date.now()
+  });
+}
+
 export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole = 'client' }: { accountEmail?: string | null; accountRole?: 'admin' | 'client' }) {
   const [panel, setPanel] = useState<Panel>('Dashboard');
   const [round, setRound] = useState<Round>('1st Round');
@@ -195,7 +203,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   const missingNodes = dispute ? requirements.filter((kind) => !effectiveTemplates[kind]) : [];
   const canGenerate = verified && routes.length > 0;
   const preflight = useMemo(() => evaluateGenerationPreflight({ round, source, normalized, parsed: affidavitRequired ? affidavitSource : parsed, routes, references: effectiveRefs, templates: effectiveTemplates, evidence, affidavitReady, customReady, strictValidation: preferences.strictValidation, preferences }), [source, normalized, parsed, affidavitRequired, affidavitSource, routes, effectiveRefs, effectiveTemplates, evidence, affidavitReady, customReady, preferences]);
-  const pipelineStages = useMemo(() => buildCasePipeline({ round, hasCase: Boolean(caseId || parsed.name), clientName: parsed.name, routes, references: effectiveRefs, templates: effectiveTemplates, evidence, preflight, outputCount: docs.length, orderedZipReady: Boolean(orderedZip), reviewedCount: docs.length ? docs.length : 0, downloaded: false, filedCount: filings.length }), [round, caseId, parsed.name, routes, effectiveRefs, templates: effectiveTemplates, evidence, preflight, docs.length, orderedZip, filings.length]);
+  const pipelineStages = useMemo(() => buildCasePipeline({ round, hasCase: Boolean(caseId || parsed.name), clientName: parsed.name, routes, references: effectiveRefs, templates: effectiveTemplates, evidence, preflight, outputCount: docs.length, orderedZipReady: Boolean(orderedZip), reviewedCount: docs.length ? docs.length : 0, downloaded: false, filedCount: filings.length }), [round, caseId, parsed.name, routes, effectiveRefs, effectiveTemplates, evidence, preflight, docs.length, orderedZip, filings.length]);
   const pipelineNextAction = useMemo(() => nextCaseAction(pipelineStages), [pipelineStages]);
   const uxRules = useMemo(() => resolveUxVisibility({ panel, statusTone, hasSource: Boolean(source.trim()), hasPreflightBlockers: preflight.blockers.length > 0, hasPreflightWarnings: preflight.warnings.length > 0, generateAttempted, busy, hasGeneratedOutput: docs.length > 0 }), [panel, statusTone, source, preflight.blockers.length, preflight.warnings.length, generateAttempted, busy, docs.length]);
 
@@ -223,29 +231,43 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
     return record;
   }
   function begin() { const id = crypto.randomUUID(); setCaseId(id); setSource(''); setOriginalSource(''); setNormalized(false); clearOutputs(); setPanel('Templates'); report('New case started. Choose or verify templates first.', 'success'); }
-  function uploadRef(type: LetterType, file: File) {
-    saveReferenceFile(round, type, file);
-    setReferences(loadReferenceMeta());
-    clearOutputs(); report(`${labels[type]} uploaded for ${round}.`, 'success');
+  async function uploadRef(slot: LetterReference, file: File) {
+    const contract = await saveReferenceFile(slot, file);
+    const next = loadReferenceMeta().map((item) => item.id === slot.id ? { ...item, file: file.name, size: file.size, contract } : item);
+    setReferences(next);
+    clearOutputs(); report(labels[slot.type] + ' uploaded for ' + round + '.', 'success');
   }
-  function removeRef(type: LetterType) { removeReferenceFile(round, type); setReferences(loadReferenceMeta()); clearOutputs(); report(`${labels[type]} removed for ${round}.`); }
-  async function loadLocalFile(file: File) { const text = await file.text(); setSource(text); setOriginalSource(text); setNormalized(false); clearOutputs(); setCaseId(crypto.randomUUID()); report('Source data imported. Standardize it before generation.', 'success'); setPanel('Source Data'); }
-  function importSource(file: File) { void loadLocalFile(file); }
-  function standardizeDraft() { const value = createNormalizedSourceCopy(source); setSource(value); setNormalized(true); setRecoveryDraft(null); saveCase('SOURCE_LOCKED', { sourcePreview: value.slice(0, 1000) }); report('Source data standardized and locked for generation.', 'success'); }
+  async function removeRef(slot: LetterReference) {
+    await removeReferenceFile(slot.id);
+    const next = loadReferenceMeta().map((item) => item.id === slot.id ? { ...item, file: '', size: undefined, contract: undefined } : item);
+    setReferences(next);
+    clearOutputs(); report(labels[slot.type] + ' removed for ' + round + '.');
+  }
+  function importSource(value: string, action: string) { captureDraft(action); setSource(value); setOriginalSource(value); setNormalized(false); clearOutputs(); setCaseId(crypto.randomUUID()); report(action + ' imported. Standardize it before generation.', 'success'); setPanel('Source Data'); }
+  function standardizeDraft(value = source) { const next = createNormalizedSourceCopy(value); setSource(next.text); setNormalized(true); setRecoveryDraft(null); saveCase('SOURCE_LOCKED'); report('Source data standardized and locked for generation.', 'success'); }
   function startManualDraft(value: string) { setCaseId(crypto.randomUUID()); setSource(value); setOriginalSource(value); setNormalized(false); clearOutputs(); report('Manual draft started. Complete the source fields, then standardize.', 'success'); }
-  function setLine(key: 'name' | 'dob' | 'ssn' | 'address' | 'letterDate' | 'affidavitState' | 'affidavitCounty', value: string) {
+  function setLine(field: string, value: string) {
     const lines = source.split(/\r?\n/);
-    const prefix: Record<typeof key, string> = { name: 'Name', dob: 'DOB', ssn: 'SSN', address: 'Address', letterDate: 'Letter Date', affidavitState: 'Affidavit State', affidavitCounty: 'Affidavit County' };
-    const label = prefix[key];
-    const next = `${label}: ${value}`;
-    const index = lines.findIndex((line) => line.toLowerCase().startsWith(`${label.toLowerCase()}:`));
+    const fixed: Record<string, string> = { name: 'Name', dob: 'DOB', ssn: 'SSN', address: 'Address', letterDate: 'Letter Date', affidavitState: 'Affidavit State', affidavitCounty: 'Affidavit County' };
+    const label = field.startsWith('TEMPLATE FIELD ') ? field : fixed[field] || field;
+    const next = label + ': ' + value;
+    const index = lines.findIndex((line) => line.toLowerCase().startsWith(label.toLowerCase() + ':'));
     if (index >= 0) lines[index] = next; else lines.unshift(next);
     setSource(lines.join('\n')); setNormalized(false);
   }
   function restoreOriginal() { setSource(originalSource || source); setNormalized(false); report('Original source copy restored. Standardize again before generation.'); }
   function recoverDraft() { if (!recoveryDraft) return; setSource(recoveryDraft.text); setNormalized(recoveryDraft.normalized); report(`${recoveryDraft.label} draft restored.`, 'success'); }
-  function refBlob(type: LetterType) { return readReferenceFile(round, type); }
+  function refBlob(type: LetterType) { const slot = refs.find((item) => item.type === type); return slot ? readReferenceFile(slot.id) : Promise.resolve(null); }
   function exhibitBlob(kind: ExhibitKind) { return readTemplateExhibit(round, kind); }
+  function disputeValues(route: LetterRoute, date: string) {
+    return { consumerName: parsed.name, addressLines: parsed.address.length ? parsed.address : ['N/A'], dob: parsed.dob, ssn: parsed.ssn, letterDate: date, bureauName: bureauInfo[route.bureau].name, bureauAddressLines: bureauInfo[route.bureau].address.split('\n'), disputeItems: parsed.dispute[route.bureau].map((item) => item.displayText), hardInquiryItems: parsed.inquiry[route.bureau].map((item) => item.displayText), fraudItems: route.items.map((item) => item.displayText) };
+  }
+  function lateValues(route: LetterRoute, date: string) {
+    return { consumerName: parsed.name, addressLines: parsed.address.length ? parsed.address : ['N/A'], dob: parsed.dob, ssn: parsed.ssn, letterDate: date, bureauName: bureauInfo[route.bureau].name, bureauAddressLines: bureauInfo[route.bureau].address.split('\n'), latePaymentItems: parsed.late[route.bureau].map((item) => item.displayText) };
+  }
+  function appendixContext(kind: 'AFFIDAVIT' | 'FTC', bureau: Bureau, date: string) {
+    return { kind, bureau, documentDate: date, recipientName: bureauInfo[bureau].name, recipientAddressLines: bureauInfo[bureau].address.split('\n'), source: affidavitSource };
+  }
   async function assetBlob(kind: ExhibitKind) {
     const local = exhibitBlob(kind);
     if (local) return local;
@@ -266,12 +288,22 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   }
   async function affidavit(bureau: Bureau, date: string) {
     const file = await assetBlob('AFFIDAVIT');
-    return file ? renderMappedAppendix(file, affidavitSource, bureauInfo[bureau].name, date) : null;
+    return file ? renderMappedAppendix(toTemplateFile(file, 'AFFIDAVIT.docx'), appendixContext('AFFIDAVIT', bureau, date)) : null;
   }
   async function makeZip(files: ReviewOutput[], notes: string[], date: string) {
     const zip = new JSZip();
     const manifest = files.map((item) => ({ path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count, detail: item.detail }));
-    addOrderedPacketFolders(zip, files.map((item) => ({ path: item.path, blob: item.blob })), { date, clientName: parsed.name || 'Client', round, manifest, notes, sourceData: source });
+    const manifestJson = generationManifestText(buildGenerationManifest({
+      round,
+      parsed,
+      routes,
+      references: refs,
+      templates,
+      outputs: files.map((item, index) => normalizeGeneratedOutputForManifest({ id: item.id, path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count }, index)),
+      warnings: notes
+    }));
+    await addOrderedPacketFolders(zip, files, round, evidenceKey, parsed.name || 'Client', routes.map((route) => ({ type: route.type, bureau: route.bureau })));
+    zip.file('generation-manifest.json', manifestJson);
     return await zip.generateAsync({ type: 'blob' });
   }
   async function generate() {
@@ -280,13 +312,13 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
     setBusy(true); setWarnings([]); setOrderedZip(null); setDocDate(dateNow());
     const output: ReviewOutput[] = []; const notes: string[] = [];
     try {
-      const date = parsed.letterDate || dateNow();
+      const date = dateNow();
       for (const route of routes) {
         try {
           report(`Generating ${labels[route.type]} for ${route.bureau}…`);
           const template = await letterBlob(route.type);
           if (!template) throw new Error(`${labels[route.type]} template is missing for ${round}.`);
-          const blob = route.type === 'DISPUTE' ? await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderReferenceDisputeDocx(template, parsed, route.bureau, date)) : await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderLatePaymentReference(template, parsed, route.bureau, date));
+          const blob = route.type === 'DISPUTE' ? await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderReferenceDisputeDocx(toTemplateFile(template, labels[route.type] + '.docx'), disputeValues(route, date))) : await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderLatePaymentReference(toTemplateFile(template, labels[route.type] + '.docx'), lateValues(route, date)));
           output.push({ id: `${route.type}-${route.bureau}-LETTER`, path: `Editable Documents/${clean(parsed.name)} ${route.bureau} ${labels[route.type]}.docx`, type: route.type, role: 'LETTER', sequence: 1, bureau: route.bureau, count: route.items.length, detail: route.reason, blob, packetSteps: order(route.type) });
         } catch (error) { notes.push(`${labels[route.type]} / ${route.bureau}: ${errorMessage(error)}`); }
       }
