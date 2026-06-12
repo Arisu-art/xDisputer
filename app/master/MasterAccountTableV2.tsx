@@ -18,7 +18,7 @@ function statusText(value?: string | null) {
 
 function numberText(value?: number | null) { return typeof value === 'number' ? String(value) : 'Default'; }
 function isManager(account: ManagedAccount) { return account.role === 'manager' || account.role === 'admin'; }
-function dayUsed(limit?: EntitlementLimitRow) { return limit?.output_used_today ?? limit?.output_used_this_month ?? 0; }
+function dayUsed(limit?: EntitlementLimitRow) { return limit?.output_used_today ?? 0; }
 function agreementSummary(account: ManagedAccount, limit?: EntitlementLimitRow) {
   if (isManager(account)) return `${limit?.current_clients || 0}/${numberText(limit?.max_clients)} clients`;
   if (account.role === 'client') return `${dayUsed(limit)}/${numberText(limit?.effective_output_limit)} outputs today`;
