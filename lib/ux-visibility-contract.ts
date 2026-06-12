@@ -1,7 +1,16 @@
-export type UxPanel = 'Dashboard' | 'Templates' | 'Source Data' | 'Outputs' | 'Client Center' | 'Settings';
+export type UxPanel = string;
 export type UxTone = 'info' | 'success' | 'error';
 
+const sourceDataPanel = 'Source Data';
+const outputsPanel = 'Outputs';
+
 export type UxVisibilityInput = {
+  /**
+   * Panel names are owned by the workspace shell. This contract only needs to
+   * know which panels require special warning/preflight behavior, so it accepts
+   * any current or future panel label without breaking typecheck when navigation
+   * changes.
+   */
   panel: UxPanel;
   statusTone: UxTone;
   hasSource: boolean;
@@ -30,8 +39,8 @@ export function resolveUxVisibility(input: UxVisibilityInput): UxVisibilityRules
   return {
     showHeaderNextAction: true,
     showStatusText: input.statusTone === 'success' || input.statusTone === 'error' || input.busy,
-    showPreflightPanel: input.panel === 'Source Data' && input.hasSource && (blockedAfterGenerate || reviewNeededAfterGenerate),
-    showOutputWarnings: input.panel === 'Outputs' && input.hasGeneratedOutput,
+    showPreflightPanel: input.panel === sourceDataPanel && input.hasSource && (blockedAfterGenerate || reviewNeededAfterGenerate),
+    showOutputWarnings: input.panel === outputsPanel && input.hasGeneratedOutput,
     showBusyState: input.busy,
     allowGlobalWarningSurface: false,
     compressEmptyAssetContainers: true,
