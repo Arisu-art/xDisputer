@@ -16,6 +16,14 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
   return response;
 }
 
+function isMissingRpcError(message: string | undefined) {
+  return Boolean(message && (
+    message.includes('Could not find the function') ||
+    message.includes('does not exist') ||
+    message.includes('schema cache')
+  ));
+}
+
 export async function GET(request: NextRequest) {
   const startedAt = Date.now();
   const requestId = requestIdFrom(request);
@@ -95,6 +103,42 @@ export async function POST(request: NextRequest) {
 
     if (!manifest || typeof manifest !== 'object') {
       return noStoreJson({ error: 'Generation manifest is required.' }, { status: 400 });
+    }
+
+    if (status !== 'failed') {
+      const limitCheck = await supabase.rpc('access_check_generation_output_limit_v1', {
+        owner_id_input: userResult.user.id
+      });
+
+      if (limitCheck.error && !isMissingRpcError(limitCheck.error.message)) {
+        throw limitCheck.error;
+      }
+
+      const limitRow = Array.isArray(limitCheck.data) ? limitCheck.data[0] : null;
+      if (limitRow && limitRow.allowed === false) {
+        await logSystemEvent(supabase, {
+          requestId,
+          routePath: '/api/generation-runs',
+          eventType: 'generation_output_limit_blocked',
+          eventStatus: 'warning',
+          durationMs: Date.now() - startedAt,
+          safeMessage: limitRow.message || 'Output limit reached.',
+          metadata: {
+            outputLimit: limitRow.output_limit,
+            outputUsedThisMonth: limitRow.output_used_this_month,
+            outputRemainingThisMonth: limitRow.output_remaining_this_month
+          }
+        });
+
+        return noStoreJson({
+          error: limitRow.message || 'Monthly output limit reached.',
+          entitlement: {
+            outputLimit: limitRow.output_limit,
+            outputUsedThisMonth: limitRow.output_used_this_month,
+            outputRemainingThisMonth: limitRow.output_remaining_this_month
+          }
+        }, { status: 403 });
+      }
     }
 
     const { data, error } = await supabase
