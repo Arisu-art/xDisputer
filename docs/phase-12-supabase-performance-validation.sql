@@ -2,6 +2,11 @@
 -- Run this in Supabase SQL Editor after applying:
 --   supabase/migrations/20260612021000_phase_12_instant_reload_performance.sql
 --
+-- Important:
+--   Protected SECURITY DEFINER RPCs call auth.uid().
+--   Supabase SQL Editor does not automatically run as your app user.
+--   This script wraps the RPC checks in a transaction and sets request.jwt.claim.sub locally.
+--
 -- Replace the email below if validating as a different master/manager account.
 
 -- ============================================================
@@ -50,19 +55,28 @@ order by tablename, indexname;
 -- Expected: all eight index names should appear.
 
 -- ============================================================
--- 3. Simulate master auth context
+-- 3. Authenticated RPC validation transaction
 -- ============================================================
 
-select set_config(
-  'request.jwt.claim.sub',
-  (
-    select id::text
-    from public.profiles
-    where lower(email) = lower('mycoquibuyen2002@gmail.com')
-    limit 1
-  ),
-  false
-);
+begin;
+
+do $$
+declare
+  actor_id text;
+begin
+  select id::text
+  into actor_id
+  from public.profiles
+  where lower(email) = lower('mycoquibuyen2002@gmail.com')
+  limit 1;
+
+  if actor_id is null then
+    raise exception 'No profile found for validation email. Replace the email in docs/phase-12-supabase-performance-validation.sql and rerun.';
+  end if;
+
+  perform set_config('request.jwt.claim.sub', actor_id, true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+end $$;
 
 -- Confirm auth.uid() is now visible to SECURITY DEFINER RPCs.
 select auth.uid() as simulated_auth_uid;
@@ -75,9 +89,6 @@ explain (analyze, buffers)
 select *
 from public.access_workspace_account_summary_v1(null::uuid);
 
--- Expected: fast execution. On a small database, total runtime should usually be low.
--- Watch for avoidable sequential scans as profile/member counts grow.
-
 -- ============================================================
 -- 5. Measure compact attention queue RPC
 -- ============================================================
@@ -85,8 +96,6 @@ from public.access_workspace_account_summary_v1(null::uuid);
 explain (analyze, buffers)
 select *
 from public.access_workspace_attention_queue_v1(null::uuid, 5);
-
--- Expected: returns only the top attention rows needed by `/master` and dashboards.
 
 -- ============================================================
 -- 6. Measure paginated directory RPCs used by dashboards
@@ -134,6 +143,8 @@ from public.access_workspace_attention_queue_v1(null::uuid, 5);
 
 select *
 from public.access_workspace_account_directory_v1(null::uuid, 'pending', null, 1, 5);
+
+rollback;
 
 -- If any RPC fails with a schema cache message, run this and retry:
 notify pgrst, 'reload schema';
