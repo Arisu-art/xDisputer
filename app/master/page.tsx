@@ -2,7 +2,7 @@ import ConsoleNavLink from '../../components/ConsoleNavLink';
 import { redirect } from 'next/navigation';
 import {
   getMasterAccountSummary,
-  listMasterAccountDirectory,
+  listMasterAttentionQueue,
   type AccountDirectoryRow
 } from '../../lib/saas/account-directory';
 import { requireRole } from '../../lib/saas/session';
@@ -69,16 +69,15 @@ export default async function MasterPage({ searchParams }: PageProps) {
   const controlMessage = stringParam(params.message);
   const { user, profile, supabase } = await requireRole('master');
 
-  const [summaryResult, pendingResult, blockedResult] = await Promise.all([
+  const [summaryResult, attentionResult] = await Promise.all([
     getMasterAccountSummary(supabase),
-    listMasterAccountDirectory(supabase, { view: 'pending', page: 1, pageSize: 5 }),
-    listMasterAccountDirectory(supabase, { view: 'blocked', page: 1, pageSize: 5 })
+    listMasterAttentionQueue(supabase, 5)
   ]);
 
   const summary = summaryResult.summary;
-  const queryError = summaryResult.errorMessage || pendingResult.errorMessage || blockedResult.errorMessage;
-  const attention = [...pendingResult.accounts, ...blockedResult.accounts].slice(0, 5);
-  const attentionTotal = summary.pending + summary.blocked;
+  const queryError = summaryResult.errorMessage || attentionResult.errorMessage;
+  const attention = attentionResult.accounts;
+  const attentionTotal = attentionResult.total || summary.pending + summary.blocked;
   const coverageRate = summary.clients ? Math.round((summary.linked / summary.clients) * 100) : 0;
 
   return (
