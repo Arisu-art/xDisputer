@@ -11,6 +11,8 @@ type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
+const MASTER_REPORT_LIMIT = 120;
+
 export default async function MasterReportsPage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : {};
   const filters = normalizeGenerationReportFilters(params);
@@ -18,7 +20,7 @@ export default async function MasterReportsPage({ searchParams }: PageProps) {
   const exportHref = `/master/reports/export${generationReportQueryString(filters)}`;
 
   const { supabase } = await requireRole('master');
-  const { rows, summary, errorMessage } = await listGenerationReport(supabase, 'master', 300, filters);
+  const { rows, summary, errorMessage } = await listGenerationReport(supabase, 'master', MASTER_REPORT_LIMIT, filters);
 
   return <GenerationReportView
     scope="master"
