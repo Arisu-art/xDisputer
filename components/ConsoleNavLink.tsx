@@ -11,7 +11,7 @@ function labelText(children: ReactNode) {
   return 'Console navigation';
 }
 
-function currentHref(pathname: string, searchParams: URLSearchParams | null) {
+function currentHref(pathname: string, searchParams: { toString(): string } | null) {
   const query = searchParams?.toString();
   return `${pathname}${query ? `?${query}` : ''}`;
 }
@@ -26,15 +26,7 @@ function normalizeHref(href: string) {
   }
 }
 
-export default function ConsoleNavLink({
-  href,
-  className,
-  children
-}: {
-  href: string;
-  className?: string;
-  children: ReactNode;
-}) {
+export default function ConsoleNavLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -56,16 +48,11 @@ export default function ConsoleNavLink({
     if (event.defaultPrevented) return;
     startTransition(() => setOptimisticHref(normalizedHref));
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('xdisputer:control-nav-start', {
-        detail: { href, label: labelText(children), source: 'ConsoleNavLink' }
-      }));
+      window.dispatchEvent(new CustomEvent('xdisputer:control-nav-start', { detail: { href, label: labelText(children), source: 'ConsoleNavLink' } }));
     }
   }
 
-  const classes = [className, optimisticActive ? 'active optimistic' : '', isPending ? 'nav-pending' : '']
-    .filter(Boolean)
-    .join(' ')
-    .trim() || undefined;
+  const classes = [className, optimisticActive ? 'active optimistic' : '', isPending ? 'nav-pending' : ''].filter(Boolean).join(' ').trim() || undefined;
 
   return <Link href={href} className={classes} onClick={handleClick} onMouseEnter={warm} onFocus={warm} prefetch>{children}</Link>;
 }
