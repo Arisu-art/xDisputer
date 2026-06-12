@@ -24,6 +24,31 @@ function isMissingRpcError(message: string | undefined) {
   ));
 }
 
+function normalizeDailyEntitlement(row: any) {
+  if (!row) return null;
+  return {
+    allowed: row.allowed !== false,
+    outputLimit: typeof row.output_limit === 'number' ? row.output_limit : null,
+    outputUsedToday: Number(row.output_used_today ?? row.output_used_this_month ?? 0),
+    outputRemainingToday: typeof row.output_remaining_today === 'number'
+      ? row.output_remaining_today
+      : typeof row.output_remaining_this_month === 'number'
+        ? row.output_remaining_this_month
+        : null,
+    resetAt: row.reset_at || null,
+    resetSeconds: typeof row.reset_seconds === 'number' ? row.reset_seconds : null,
+    message: row.message || null
+  };
+}
+
+async function readDailyEntitlement(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, ownerId: string) {
+  const daily = await supabase.rpc('access_client_daily_output_entitlement_v1', { owner_id_input: ownerId });
+
+  if (!daily.error || !isMissingRpcError(daily.error.message)) return daily;
+
+  return supabase.rpc('access_check_generation_output_limit_v1', { owner_id_input: ownerId });
+}
+
 export async function GET(request: NextRequest) {
   const startedAt = Date.now();
   const requestId = requestIdFrom(request);
@@ -106,37 +131,29 @@ export async function POST(request: NextRequest) {
     }
 
     if (status !== 'failed') {
-      const limitCheck = await supabase.rpc('access_check_generation_output_limit_v1', {
-        owner_id_input: userResult.user.id
-      });
+      const limitCheck = await readDailyEntitlement(supabase, userResult.user.id);
 
       if (limitCheck.error && !isMissingRpcError(limitCheck.error.message)) {
         throw limitCheck.error;
       }
 
       const limitRow = Array.isArray(limitCheck.data) ? limitCheck.data[0] : null;
-      if (limitRow && limitRow.allowed === false) {
+      const entitlement = normalizeDailyEntitlement(limitRow);
+
+      if (entitlement && entitlement.allowed === false) {
         await logSystemEvent(supabase, {
           requestId,
           routePath: '/api/generation-runs',
           eventType: 'generation_output_limit_blocked',
           eventStatus: 'warning',
           durationMs: Date.now() - startedAt,
-          safeMessage: limitRow.message || 'Output limit reached.',
-          metadata: {
-            outputLimit: limitRow.output_limit,
-            outputUsedThisMonth: limitRow.output_used_this_month,
-            outputRemainingThisMonth: limitRow.output_remaining_this_month
-          }
+          safeMessage: entitlement.message || 'Daily output limit reached.',
+          metadata: entitlement
         });
 
         return noStoreJson({
-          error: limitRow.message || 'Monthly output limit reached.',
-          entitlement: {
-            outputLimit: limitRow.output_limit,
-            outputUsedThisMonth: limitRow.output_used_this_month,
-            outputRemainingThisMonth: limitRow.output_remaining_this_month
-          }
+          error: entitlement.message || 'Daily output limit reached.',
+          entitlement
         }, { status: 403 });
       }
     }
@@ -166,11 +183,7 @@ export async function POST(request: NextRequest) {
         selectedStatus: status
       },
       status: status === 'failed' ? 'failed' : 'recorded',
-      metadata: {
-        clientName,
-        round,
-        status
-      }
+      metadata: { clientName, round, status }
     });
 
     await logSystemEvent(supabase, {
@@ -180,14 +193,15 @@ export async function POST(request: NextRequest) {
       eventStatus: integrityError ? 'warning' : 'success',
       durationMs: Date.now() - startedAt,
       safeMessage: integrityError,
-      metadata: {
-        generationRunId: data.id,
-        round,
-        status
-      }
+      metadata: { generationRunId: data.id, round, status }
     });
 
-    return noStoreJson({ run: data });
+    const afterLimit = status === 'failed' ? null : await readDailyEntitlement(supabase, userResult.user.id);
+    const entitlement = afterLimit && !afterLimit.error && Array.isArray(afterLimit.data)
+      ? normalizeDailyEntitlement(afterLimit.data[0])
+      : null;
+
+    return noStoreJson({ run: data, entitlement });
   } catch (error) {
     await logSystemEvent(supabase, {
       requestId,
