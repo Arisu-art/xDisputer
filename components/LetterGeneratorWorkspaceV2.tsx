@@ -195,7 +195,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   const missingNodes = dispute ? requirements.filter((kind) => !effectiveTemplates[kind]) : [];
   const canGenerate = verified && routes.length > 0;
   const preflight = useMemo(() => evaluateGenerationPreflight({ round, source, normalized, parsed: affidavitRequired ? affidavitSource : parsed, routes, references: effectiveRefs, templates: effectiveTemplates, evidence, affidavitReady, customReady, strictValidation: preferences.strictValidation, preferences }), [source, normalized, parsed, affidavitRequired, affidavitSource, routes, effectiveRefs, effectiveTemplates, evidence, affidavitReady, customReady, preferences]);
-  const pipelineStages = useMemo(() => buildCasePipeline({ round, hasCase: Boolean(caseId || parsed.name), clientName: parsed.name, routes, references: effectiveRefs, templates: effectiveTemplates, evidence, preflight, outputCount: docs.length, orderedZipReady: Boolean(orderedZip), reviewedCount: docs.length ? docs.length : 0, downloaded: false, filedCount: filings.length }), [round, caseId, parsed.name, routes, effectiveRefs, effectiveTemplates, evidence, preflight, docs.length, orderedZip, filings.length]);
+  const pipelineStages = useMemo(() => buildCasePipeline({ round, hasCase: Boolean(caseId || parsed.name), clientName: parsed.name, routes, references: effectiveRefs, templates: effectiveTemplates, evidence, preflight, outputCount: docs.length, orderedZipReady: Boolean(orderedZip), reviewedCount: docs.length ? docs.length : 0, downloaded: false, filedCount: filings.length }), [round, caseId, parsed.name, routes, effectiveRefs, templates: effectiveTemplates, evidence, preflight, docs.length, orderedZip, filings.length]);
   const pipelineNextAction = useMemo(() => nextCaseAction(pipelineStages), [pipelineStages]);
   const uxRules = useMemo(() => resolveUxVisibility({ panel, statusTone, hasSource: Boolean(source.trim()), hasPreflightBlockers: preflight.blockers.length > 0, hasPreflightWarnings: preflight.warnings.length > 0, generateAttempted, busy, hasGeneratedOutput: docs.length > 0 }), [panel, statusTone, source, preflight.blockers.length, preflight.warnings.length, generateAttempted, busy, docs.length]);
 
@@ -205,23 +205,11 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   function clearOutputs() { setDocs([]); setWarnings([]); setOrderedZip(null); setDocDate(''); setGenerateAttempted(false); }
   async function persistGenerationRun(manifest: GenerationManifest) {
     try {
-      const response = await fetch('/api/generation-runs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientName: manifest.clientName,
-          round: manifest.round,
-          manifest,
-          status: 'generated'
-        })
-      });
-
-      if (!response.ok) {
-        console.warn('Generation run was not saved.', await response.text());
-      }
-    } catch (error) {
-      console.warn('Generation run persistence failed.', error);
-    }
+      const response = await fetch('/api/generation-runs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clientName: manifest.clientName, round: manifest.round, manifest, status: 'generated' }) });
+      const payload = await response.json().catch(() => null);
+      if (payload?.entitlement) window.dispatchEvent(new CustomEvent('xdisputer:output-entitlement-updated', { detail: payload.entitlement }));
+      if (!response.ok) console.warn('Generation run was not saved.', payload || await response.text());
+    } catch (error) { console.warn('Generation run persistence failed.', error); }
   }
   function captureDraft(label: string) { if (source.trim()) setRecoveryDraft({ text: source, normalized, label, capturedAt: new Date().toISOString() }); }
   function saveCase(statusValue: ClientCaseStatus, data: Partial<ClientCaseRecord> = {}) {
@@ -229,294 +217,76 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
     const name = data.clientName || parsed.name;
     if (!id || !name) return null;
     const previous = cases.find((item) => item.id === id);
-    const record: ClientCaseRecord = { id, clientName: name, round, routeCount: routes.length, bureaus: Array.from(new Set(routes.map((route) => route.bureau))), evidenceCount: data.evidenceCount ?? previous?.evidenceCount ?? evidence.supporting.length, editableCount: data.editableCount ?? previous?.editableCount ?? docs.length, pdfCount: data.pdfCount ?? previous?.pdfCount ?? 0, status: statusValue, updatedAt: new Date().toISOString() };
-    setCases(upsertClientCase(record));
+    const record: ClientCaseRecord = { id, clientName: name, round, routeCount: routes.length, bureaus: Array.from(new Set(routes.map((route) => route.bureau))), evidenceCount: evidence.supporting.length, editableCount: docs.length, pdfCount: 0, status: statusValue, updatedAt: new Date().toISOString(), ...previous, ...data };
+    const next = upsertClientCase(record);
+    setCases(next);
     return record;
   }
-  function begin() {
-    setRound(preferences.defaultRound); setSource(''); setOriginalSource(''); setRecoveryDraft(null); setNormalized(false); setCaseId(''); setEvidence(emptyEvidence()); clearOutputs(); report('Load a client source TXT to begin a new package.'); setPanel('Source Data');
+  function begin() { const id = crypto.randomUUID(); setCaseId(id); setSource(''); setOriginalSource(''); setNormalized(false); clearOutputs(); setPanel('Templates'); report('New case started. Choose or verify templates first.', 'success'); }
+  function uploadRef(type: LetterType, file: File) {
+    saveReferenceFile(round, type, file);
+    setReferences(loadReferenceMeta());
+    clearOutputs(); report(`${labels[type]} uploaded for ${round}.`, 'success');
   }
-  function importSource(value: string, action: string) {
-    if (!value.trim()) return;
-    if (source.trim()) captureDraft(`Working draft preserved before ${action.toLowerCase()} replacement`);
-    const text = createNormalizedSourceCopy(value).text;
-    const imported = parseSource(text);
-    const id = crypto.randomUUID();
-    setOriginalSource(value); setSource(text); setNormalized(true); setCaseId(id); setEvidence(emptyEvidence()); clearOutputs();
-    if (imported.name) {
-      const detected = detectRoutes(imported);
-      setCases(upsertClientCase({ id, clientName: imported.name, round, routeCount: detected.length, bureaus: Array.from(new Set(detected.map((route) => route.bureau))), evidenceCount: 0, editableCount: 0, pdfCount: 0, status: 'SOURCE_LOCKED', updatedAt: new Date().toISOString() }));
-    }
-    report(`${action} source imported and protected as the original baseline.`, 'success');
+  function removeRef(type: LetterType) { removeReferenceFile(round, type); setReferences(loadReferenceMeta()); clearOutputs(); report(`${labels[type]} removed for ${round}.`); }
+  async function loadLocalFile(file: File) { const text = await file.text(); setSource(text); setOriginalSource(text); setNormalized(false); clearOutputs(); setCaseId(crypto.randomUUID()); report('Source data imported. Standardize it before generation.', 'success'); setPanel('Source Data'); }
+  function importSource(file: File) { void loadLocalFile(file); }
+  function standardizeDraft() { const value = createNormalizedSourceCopy(source); setSource(value); setNormalized(true); setRecoveryDraft(null); saveCase('SOURCE_LOCKED', { sourcePreview: value.slice(0, 1000) }); report('Source data standardized and locked for generation.', 'success'); }
+  function startManualDraft(value: string) { setCaseId(crypto.randomUUID()); setSource(value); setOriginalSource(value); setNormalized(false); clearOutputs(); report('Manual draft started. Complete the source fields, then standardize.', 'success'); }
+  function setLine(key: 'name' | 'dob' | 'ssn' | 'address' | 'letterDate' | 'affidavitState' | 'affidavitCounty', value: string) {
+    const lines = source.split(/\r?\n/);
+    const prefix: Record<typeof key, string> = { name: 'Name', dob: 'DOB', ssn: 'SSN', address: 'Address', letterDate: 'Letter Date', affidavitState: 'Affidavit State', affidavitCounty: 'Affidavit County' };
+    const label = prefix[key];
+    const next = `${label}: ${value}`;
+    const index = lines.findIndex((line) => line.toLowerCase().startsWith(`${label.toLowerCase()}:`));
+    if (index >= 0) lines[index] = next; else lines.unshift(next);
+    setSource(lines.join('\n')); setNormalized(false);
   }
-  function standardizeDraft(value: string) {
-    if (!value.trim()) return;
-    const text = createNormalizedSourceCopy(value).text;
-    const standardized = parseSource(text);
-    const id = caseId || crypto.randomUUID();
-    setSource(text); setNormalized(true); if (!caseId) setCaseId(id); clearOutputs();
-    if (standardized.name) {
-      const detected = detectRoutes(standardized);
-      setCases(upsertClientCase({ id, clientName: standardized.name, round, routeCount: detected.length, bureaus: Array.from(new Set(detected.map((route) => route.bureau))), evidenceCount: evidence.supporting.length, editableCount: 0, pdfCount: 0, status: evidence.supporting.length ? 'EVIDENCE_READY' : 'SOURCE_LOCKED', updatedAt: new Date().toISOString() }));
-    }
-    report('Working draft standardized. The imported original remains protected and evidence has been retained.', 'success');
-  }
-  function startManualDraft(value: string) { if (source.trim()) captureDraft('Working draft preserved before blank manual format'); setOriginalSource(''); setSource(value); setNormalized(false); setCaseId(crypto.randomUUID()); setEvidence(emptyEvidence()); clearOutputs(); report('Manual draft opened. Importing a TXT later will require confirmation before replacement.'); }
-  function restoreOriginal() { if (!originalSource.trim()) return; if (source.trim() && source !== originalSource) captureDraft('Working draft saved before restoring imported original'); setSource(originalSource); setNormalized(false); clearOutputs(); report('Imported original restored. Your previous working draft is available through Recover saved draft. Supporting evidence was retained.', 'success'); }
-  function recoverDraft() { if (!recoveryDraft) return; const active: SourceDraftSnapshot = { text: source, normalized, label: 'Version saved before draft recovery', capturedAt: new Date().toISOString() }; const restored = recoveryDraft; setSource(restored.text); setNormalized(restored.normalized); setRecoveryDraft(active); clearOutputs(); report(`${restored.label} recovered. Supporting evidence was retained.`, 'success'); }
-  function setLine(key: string, value: string) {
-    const pattern = new RegExp(`^${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:.*$`, 'im');
-    const line = `${key}: ${value}`;
-    const anchor = /\n\s*\n(?=(DISPUTE ACCOUNTS|HARD INQUIRIES|LATE PAYMENTS)\b)/i;
-    setSource(pattern.test(source) ? source.replace(pattern, line) : anchor.test(source) ? source.replace(anchor, `\n${line}\n\n`) : `${source.trim()}\n${line}`);
-    setNormalized(true);
-    clearOutputs();
-  }
-
-  async function syncTemplateAsset(input: {
-    templateKind: 'LETTER' | 'EXHIBIT';
-    letterType?: LetterType;
-    exhibitKind?: ExhibitKind;
-    file: File;
-  }) {
-    const formData = new FormData();
-    formData.set('round', round);
-    formData.set('templateKind', input.templateKind);
-    if (input.letterType) formData.set('letterType', input.letterType);
-    if (input.exhibitKind) formData.set('exhibitKind', input.exhibitKind);
-    formData.set('file', input.file);
-
-    const response = await fetch('/api/template-assets', {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'x-template-upload': 'workspace'
-      },
-      body: formData
-    });
-
-    const payload = await response.json().catch(() => null);
-
-    if (!response.ok || payload?.status === 'error') {
-      throw new Error(payload?.message || 'Template could not be saved to Supabase.');
-    }
-
-    return payload?.message || 'Template saved to Supabase.';
-  }
-
-  async function deleteTemplateAsset(input: {
-    templateKind: 'LETTER' | 'EXHIBIT';
-    letterType?: LetterType;
-    exhibitKind?: ExhibitKind;
-  }) {
-    const response = await fetch('/api/template-assets', {
-      method: 'DELETE',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        'x-template-upload': 'workspace'
-      },
-      body: JSON.stringify({
-        round,
-        templateKind: input.templateKind,
-        letterType: input.letterType,
-        exhibitKind: input.exhibitKind
-      })
-    });
-
-    const payload = await response.json().catch(() => null);
-
-    if (!response.ok || payload?.status === 'error') {
-      throw new Error(payload?.message || 'Template could not be removed from Supabase.');
-    }
-
-    return payload?.message || 'Template removed from Supabase.';
-  }
-
-  async function uploadRef(slot: LetterReference, file: File) {
-    if (!isDocx(file.name)) {
-      report('Letter references accept DOCX files only.', 'error');
-      return;
-    }
-
-    try {
-      const syncMessage = await syncTemplateAsset({
-        templateKind: 'LETTER',
-        letterType: slot.type,
-        file
-      });
-
-      const contract = await saveReferenceFile(slot, file);
-
-      setReferences((items) =>
-        items.map((item) =>
-          item.id === slot.id
-            ? { ...item, file: file.name, size: file.size, contract }
-            : item
-        )
-      );
-
-      clearOutputs();
-      report(syncMessage, 'success');
-    } catch (error) {
-      report(errorMessage(error), 'error');
-    }
-  }
-
-  async function removeRef(slot: LetterReference) {
-    try {
-      const syncMessage = await deleteTemplateAsset({
-        templateKind: 'LETTER',
-        letterType: slot.type
-      });
-
-      await removeReferenceFile(slot.id);
-
-      setReferences((items) =>
-        items.map((item) =>
-          item.id === slot.id
-            ? { ...item, file: '', size: undefined, contract: undefined }
-            : item
-        )
-      );
-
-      clearOutputs();
-      report(syncMessage, 'success');
-    } catch (error) {
-      report(errorMessage(error), 'error');
-    }
-  }
-
-  async function letter(route: LetterRoute, file: File, date: string) {
-    const recipient = bureauInfo[route.bureau];
-    const identity = {
-      consumerName: parsed.name,
-      addressLines: parsed.address,
-      dob: parsed.dob,
-      ssn: parsed.ssn,
-      letterDate: date,
-      bureauName: recipient.name,
-      bureauAddressLines: recipient.address.split('\n')
-    };
-
-    return route.type === 'DISPUTE'
-      ? renderReferenceDisputeDocx(file, {
-          ...identity,
-          disputeItems: route.items
-            .filter((item) => item.type === 'DISPUTE_ACCOUNT')
-            .map((item) => item.displayText),
-          hardInquiryItems: route.items
-            .filter((item) => item.type === 'HARD_INQUIRY')
-            .map((item) => item.displayText)
-        })
-      : renderLatePaymentReference(file, {
-          ...identity,
-          latePaymentItems: route.items.map((item) => item.displayText)
-        });
-  }
-
-  async function readSupabaseTemplateFile(params: Record<string, string>) {
-    const url = `/api/template-assets/file?${new URLSearchParams(params).toString()}`;
-    const response = await fetch(url);
-
-    if (!response.ok) return null;
-
-    const blob = await response.blob();
-    const name = response.headers.get('x-template-file-name') || 'template-file';
-    return new File([blob], name, { type: blob.type || 'application/octet-stream' });
-  }
-
-  async function readLetterTemplate(reference: LetterReference, type: LetterType) {
-    const local = reference.id ? await readReferenceFile(reference.id).catch(() => null) : null;
+  function restoreOriginal() { setSource(originalSource || source); setNormalized(false); report('Original source copy restored. Standardize again before generation.'); }
+  function recoverDraft() { if (!recoveryDraft) return; setSource(recoveryDraft.text); setNormalized(recoveryDraft.normalized); report(`${recoveryDraft.label} draft restored.`, 'success'); }
+  function refBlob(type: LetterType) { return readReferenceFile(round, type); }
+  function exhibitBlob(kind: ExhibitKind) { return readTemplateExhibit(round, kind); }
+  async function assetBlob(kind: ExhibitKind) {
+    const local = exhibitBlob(kind);
     if (local) return local;
-
-    return readSupabaseTemplateFile({
-      round,
-      templateKind: 'LETTER',
-      letterType: type
-    });
+    const registryAsset = registryAssets.find((asset) => asset.template_kind === 'EXHIBIT' && asset.exhibit_kind === kind);
+    if (!registryAsset) return null;
+    const response = await fetch(`/api/template-assets/file?round=${encodeURIComponent(round)}&templateKind=EXHIBIT&exhibitKind=${kind}`);
+    if (!response.ok) throw new Error(`Could not load ${kind} template: ${await response.text()}`);
+    return await response.blob();
   }
-
-  async function readExhibitTemplate(kind: ExhibitKind) {
-    const local = await readTemplateExhibit(round, kind).catch(() => null);
+  async function letterBlob(type: LetterType) {
+    const local = refBlob(type);
     if (local) return local;
-
-    return readSupabaseTemplateFile({
-      round,
-      templateKind: 'EXHIBIT',
-      exhibitKind: kind
-    });
+    const registryAsset = registryAssets.find((asset) => asset.template_kind === 'LETTER' && asset.letter_type === type);
+    if (!registryAsset) return null;
+    const response = await fetch(`/api/template-assets/file?round=${encodeURIComponent(round)}&templateKind=LETTER&letterType=${type}`);
+    if (!response.ok) throw new Error(`Could not load ${labels[type]}: ${await response.text()}`);
+    return await response.blob();
   }
-
   async function affidavit(bureau: Bureau, date: string) {
-    const file = await readExhibitTemplate('AFFIDAVIT');
-
-    if (!file) return null;
-
-    const recipient = bureauInfo[bureau];
-    const output = await renderMappedAppendix(file, {
-      kind: 'AFFIDAVIT',
-      bureau,
-      documentDate: date,
-      recipientName: recipient.name,
-      recipientAddressLines: recipient.address.split('\n'),
-      source: affidavitSource
-    });
-
-    return affidavitJurisdiction.reviewRequired ? highlightTextInDocx(output, 'N/A') : output;
+    const file = await assetBlob('AFFIDAVIT');
+    return file ? renderMappedAppendix(file, affidavitSource, bureauInfo[bureau].name, date) : null;
   }
-
-  async function makeZip(items: ReviewOutput[], notes: string[], date: string) {
+  async function makeZip(files: ReviewOutput[], notes: string[], date: string) {
     const zip = new JSZip();
-
-    await addOrderedPacketFolders(
-      zip,
-      items,
-      round,
-      evidenceKey,
-      parsed.name,
-      routes.map((route) => ({ type: route.type, bureau: route.bureau }))
-    );
-
-    const manifest = buildGenerationManifest({
-      round,
-      parsed,
-      routes,
-      references: effectiveRefs,
-      templates: effectiveTemplates,
-      outputs: items.map((item, index) => normalizeGeneratedOutputForManifest({
-        id: item.id,
-        path: item.path,
-        type: item.type,
-        role: item.role,
-        bureau: item.bureau,
-        sequence: item.sequence,
-        count: item.count
-      }, index)),
-      warnings: notes
-    });
-
-    zip.file('Package Manifest.txt', generationManifestText(manifest));
-    zip.file('generation-manifest.json', JSON.stringify(manifest, null, 2));
-
-    return zip.generateAsync({ type: 'blob' });
+    const manifest = files.map((item) => ({ path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count, detail: item.detail }));
+    addOrderedPacketFolders(zip, files.map((item) => ({ path: item.path, blob: item.blob })), { date, clientName: parsed.name || 'Client', round, manifest, notes, sourceData: source });
+    return await zip.generateAsync({ type: 'blob' });
   }
-
   async function generate() {
     setGenerateAttempted(true);
     if (!preflight.ready) { report(preflightFailureMessage(preflight), 'error'); return; }
-    setBusy(true); setWarnings([]); setDocs([]); setOrderedZip(null);
-    const date = dateNow();
-    const output: ReviewOutput[] = [];
-    const notes: string[] = [];
+    setBusy(true); setWarnings([]); setOrderedZip(null); setDocDate(dateNow());
+    const output: ReviewOutput[] = []; const notes: string[] = [];
     try {
+      const date = parsed.letterDate || dateNow();
       for (const route of routes) {
-        const reference = effectiveRefs.find((item) => item.type === route.type);
-        report(`Generating ${route.bureau} ${labels[route.type]}…`);
         try {
-          const file = reference?.file ? await withTimeout(`Reading ${route.bureau} ${labels[route.type]} template`, () => readLetterTemplate(reference, route.type), 30_000) : null;
-          if (!file) { notes.push(`${labels[route.type]} / ${route.bureau}: DOCX reference is missing.`); continue; }
-          const blob = await withTimeout(`Generating ${route.bureau} ${labels[route.type]}`, () => letter(route, file, date));
+          report(`Generating ${labels[route.type]} for ${route.bureau}…`);
+          const template = await letterBlob(route.type);
+          if (!template) throw new Error(`${labels[route.type]} template is missing for ${round}.`);
+          const blob = route.type === 'DISPUTE' ? await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderReferenceDisputeDocx(template, parsed, route.bureau, date)) : await withTimeout(`Rendering ${labels[route.type]} for ${route.bureau}`, () => renderLatePaymentReference(template, parsed, route.bureau, date));
           output.push({ id: `${route.type}-${route.bureau}-LETTER`, path: `Editable Documents/${clean(parsed.name)} ${route.bureau} ${labels[route.type]}.docx`, type: route.type, role: 'LETTER', sequence: 1, bureau: route.bureau, count: route.items.length, detail: route.reason, blob, packetSteps: order(route.type) });
         } catch (error) { notes.push(`${labels[route.type]} / ${route.bureau}: ${errorMessage(error)}`); }
       }
@@ -548,15 +318,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
         routes,
         references: refs,
         templates,
-        outputs: output.map((item, index) => normalizeGeneratedOutputForManifest({
-          id: item.id,
-          path: item.path,
-          type: item.type,
-          role: item.role,
-          bureau: item.bureau,
-          sequence: item.sequence,
-          count: item.count
-        }, index)),
+        outputs: output.map((item, index) => normalizeGeneratedOutputForManifest({ id: item.id, path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count }, index)),
         warnings: notes
       });
       void persistGenerationRun(persistedManifest);
