@@ -58,6 +58,9 @@ export type AccountDirectoryListResult = {
   errorMessage: string | null;
 };
 
+const CONTROL_DIRECTORY_DEFAULT_PAGE_SIZE = 20;
+const CONTROL_DIRECTORY_MAX_PAGE_SIZE = 25;
+
 function safeNumber(value: unknown, fallback: number) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
@@ -82,7 +85,7 @@ export function normalizeDirectoryParams(params?: Record<string, string | string
     view: viewInput,
     query: (first(params?.q) || '').trim().slice(0, 120),
     page: safeNumber(first(params?.page), 1),
-    pageSize: Math.min(100, Math.max(10, safeNumber(first(params?.pageSize), 25)))
+    pageSize: Math.min(CONTROL_DIRECTORY_MAX_PAGE_SIZE, Math.max(10, safeNumber(first(params?.pageSize), CONTROL_DIRECTORY_DEFAULT_PAGE_SIZE)))
   };
 }
 
@@ -92,7 +95,7 @@ export function directoryQueryString(input: { view?: string; q?: string; page?: 
   if (input.view) params.set('view', input.view);
   if (input.q) params.set('q', input.q);
   if (input.page && input.page > 1) params.set('page', String(input.page));
-  if (input.pageSize && input.pageSize !== 25) params.set('pageSize', String(input.pageSize));
+  if (input.pageSize && input.pageSize !== CONTROL_DIRECTORY_DEFAULT_PAGE_SIZE) params.set('pageSize', String(input.pageSize));
 
   const query = params.toString();
   return query ? `?${query}` : '';
@@ -156,12 +159,13 @@ async function listWorkspaceAccountDirectory(
   supabase: SupabaseServerClient,
   options: AccountDirectoryOptions
 ): Promise<AccountDirectoryListResult> {
+  const pageSize = Math.min(CONTROL_DIRECTORY_MAX_PAGE_SIZE, Math.max(10, options.pageSize || CONTROL_DIRECTORY_DEFAULT_PAGE_SIZE));
   const { data, error } = await supabase.rpc('access_workspace_account_directory_v1', {
     workspace_id_input: null,
     view_input: options.view,
     search_input: options.query || null,
     page_input: options.page || 1,
-    page_size_input: options.pageSize || 25
+    page_size_input: pageSize
   });
 
   const accounts = Array.isArray(data) ? (data as WorkspaceDirectoryRpcRow[]).map(mapWorkspaceRow) : [];
@@ -171,7 +175,7 @@ async function listWorkspaceAccountDirectory(
     accounts,
     total,
     page: options.page || 1,
-    pageSize: options.pageSize || 25,
+    pageSize,
     errorMessage: error?.message || null
   };
 }
