@@ -16,7 +16,7 @@ type PendingNavigation = {
   startedAt: number;
 };
 
-function routeKey(pathname: string, searchParams: URLSearchParams | null) {
+function routeKey(pathname: string, searchParams: { toString(): string } | null) {
   const query = searchParams?.toString();
   return `${pathname}${query ? `?${query}` : ''}`;
 }
