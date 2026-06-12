@@ -14,11 +14,11 @@ type PageProps = {
 };
 
 function viewTitle(view: string) {
-  if (view === 'managers') return 'Manager accounts';
-  if (view === 'clients') return 'Client accounts';
-  if (view === 'pending') return 'Pending / unassigned clients';
-  if (view === 'blocked') return 'Disabled / suspended accounts';
-  return 'Account directory';
+  if (view === 'managers') return 'Workspace manager accounts';
+  if (view === 'clients') return 'Workspace client accounts';
+  if (view === 'pending') return 'Pending / unassigned workspace clients';
+  if (view === 'blocked') return 'Disabled / suspended workspace accounts';
+  return 'Workspace account directory';
 }
 
 function DirectoryFilter({ view, query }: { view: string; query: string }) {
@@ -27,10 +27,10 @@ function DirectoryFilter({ view, query }: { view: string; query: string }) {
       <input type="hidden" name="view" value={view} />
       <label>
         <span>Search</span>
-        <input name="q" type="search" placeholder="Email, name, role, status, or invite code" defaultValue={query} />
+        <input name="q" type="search" placeholder="Email, name, role, status, manager, or invite code" defaultValue={query} />
       </label>
       <button className="admin-action-button primary" type="submit">Search</button>
-      <a className="admin-action-button" href={`/master/accounts${directoryQueryString({ view })}`}>Reset</a>
+      <ConsoleNavLink className="admin-action-button" href={`/master/accounts${directoryQueryString({ view })}`}>Reset</ConsoleNavLink>
     </form>
   );
 }
@@ -44,8 +44,8 @@ function Pager({ view, query, page, pageSize, total }: { view: string; query: st
     <div className="directory-pager">
       <span>Page {page} of {totalPages} • {total} result(s)</span>
       <div>
-        <a className={`admin-action-button ${page <= 1 ? 'disabled' : ''}`} href={`/master/accounts${directoryQueryString({ view, q: query, page: previous, pageSize })}`}>Previous</a>
-        <a className={`admin-action-button ${page >= totalPages ? 'disabled' : ''}`} href={`/master/accounts${directoryQueryString({ view, q: query, page: next, pageSize })}`}>Next</a>
+        <ConsoleNavLink className={`admin-action-button ${page <= 1 ? 'disabled' : ''}`} href={`/master/accounts${directoryQueryString({ view, q: query, page: previous, pageSize })}`}>Previous</ConsoleNavLink>
+        <ConsoleNavLink className={`admin-action-button ${page >= totalPages ? 'disabled' : ''}`} href={`/master/accounts${directoryQueryString({ view, q: query, page: next, pageSize })}`}>Next</ConsoleNavLink>
       </div>
     </div>
   );
@@ -79,13 +79,14 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
       <aside className="admin-monitor-sidebar native-console-sidebar">
         <div className="admin-monitor-brand">
           <span>xD</span>
-          <div><strong>xDisputer</strong><small>Master console</small></div>
+          <div><strong>xDisputer</strong><small>Workspace accounts</small></div>
         </div>
 
         <div className="admin-sidebar-section-title">Operations</div>
         <nav aria-label="Master navigation">
           <ConsoleNavLink href="/master">Monitoring</ConsoleNavLink>
           <ConsoleNavLink className="active" href="/master/accounts">All accounts</ConsoleNavLink>
+          <ConsoleNavLink href="/master/workspaces">Workspaces</ConsoleNavLink>
           <ConsoleNavLink href="/master/reports">Reports</ConsoleNavLink>
           <ConsoleNavLink href="/master/audit">Audit log</ConsoleNavLink>
           <ConsoleNavLink href="/master/system">System health</ConsoleNavLink>
@@ -102,8 +103,8 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
         <header className="admin-monitor-header native-command-hero master-compact-hero">
           <div>
             <p>Master account directory</p>
-            <h1>Scalable account workflow.</h1>
-            <span>Choose one account dataset, search server-side, and paginate large account lists without breaking layout.</span>
+            <h1>Workspace-scoped account workflow.</h1>
+            <span>Reads from the Phase 11 workspace policy RPC and assignment ledger while keeping existing controls compatible.</span>
           </div>
         </header>
 
@@ -115,52 +116,52 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
 
         {selectedView === 'overview' ? (
           <section className="progressive-dataset-grid access-workflow-grid">
-            <a className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=managers">
+            <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=managers">
               <p>Manager control</p>
-              <h2>Manager accounts</h2>
+              <h2>Workspace managers</h2>
               <span>{summary.managers} manager(s)</span>
               <strong>Promote, demote, disable, reactivate, and rotate invite codes.</strong>
-            </a>
-            <a className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=clients">
+            </ConsoleNavLink>
+            <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=clients">
               <p>Client control</p>
-              <h2>Client accounts</h2>
+              <h2>Workspace clients</h2>
               <span>{summary.clients} client(s)</span>
-              <strong>Review client account state and manager assignment.</strong>
-            </a>
-            <a className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=pending">
+              <strong>Review client account state and manager assignment ledger.</strong>
+            </ConsoleNavLink>
+            <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=pending">
               <p>Pending</p>
               <h2>Pending / unassigned</h2>
               <span>{summary.pending} pending</span>
               <strong>Find users who need manager assignment or approval.</strong>
-            </a>
-            <a className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=blocked">
+            </ConsoleNavLink>
+            <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=blocked">
               <p>Blocked</p>
               <h2>Disabled / suspended</h2>
               <span>{summary.blocked} blocked</span>
               <strong>Review accounts that cannot use the platform.</strong>
-            </a>
-            <a className="progressive-dataset-card access-workflow-card" href="/master/reports">
-              <p>Reports</p>
-              <h2>Generation reports</h2>
+            </ConsoleNavLink>
+            <ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/workspaces">
+              <p>Workspace</p>
+              <h2>Tenant directory</h2>
               <span>{coverageRate}% coverage</span>
-              <strong>Open read-only platform activity reports.</strong>
-            </a>
+              <strong>Open workspace membership and assignment visibility.</strong>
+            </ConsoleNavLink>
           </section>
         ) : (
           <section className="master-access-stack">
             <div className="access-workflow-toolbar">
-              <a className="access-workflow-back" href="/master/accounts">← Account directory</a>
+              <ConsoleNavLink className="access-workflow-back" href="/master/accounts">← Account directory</ConsoleNavLink>
               <span>{directory.total} result(s)</span>
             </div>
 
             <article className="admin-monitor-card native-operation-card">
               <div className="admin-monitor-card-header">
-                <div><p>Account dataset</p><h2>{viewTitle(selectedView)}</h2></div>
+                <div><p>Workspace dataset</p><h2>{viewTitle(selectedView)}</h2></div>
                 <span>{directory.total} total</span>
               </div>
 
               <DirectoryFilter view={selectedView} query={directoryParams.query} />
-              <MasterAccountTable accounts={directory.accounts} currentUserId={user.id} emptyText="No accounts match this dataset." />
+              <MasterAccountTable accounts={directory.accounts} currentUserId={user.id} emptyText="No accounts match this workspace dataset." />
               <Pager view={selectedView} query={directoryParams.query} page={directory.page} pageSize={directory.pageSize} total={directory.total} />
             </article>
           </section>
