@@ -7,6 +7,29 @@ export type DirectoryView = 'all' | 'pending' | 'active' | 'blocked' | 'managers
 
 export type AccountDirectoryRow = ManagedAccount & {
   total_count?: number;
+  workspace_id?: string;
+  workspace_role?: string;
+  membership_status?: string;
+  assignment_status?: string | null;
+  primary_manager_email?: string | null;
+};
+
+type WorkspaceDirectoryRpcRow = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  role: ManagedAccount['role'];
+  account_status: ManagedAccount['account_status'];
+  manager_id: string | null;
+  manager_invite_code: string | null;
+  created_at: string;
+  updated_at: string;
+  workspace_id: string;
+  workspace_role: string;
+  membership_status: string;
+  assignment_status: string | null;
+  primary_manager_email: string | null;
+  total_count?: number;
 };
 
 export type AccountDirectorySummary = {
@@ -65,25 +88,89 @@ function normalizeAccount(row: AccountDirectoryRow): AccountDirectoryRow {
   };
 }
 
+function mapWorkspaceRow(row: WorkspaceDirectoryRpcRow): AccountDirectoryRow {
+  return normalizeAccount({
+    id: row.id,
+    email: row.email,
+    full_name: row.full_name,
+    role: row.role === 'admin' ? 'manager' : row.role,
+    account_status: row.account_status,
+    manager_id: row.manager_id,
+    manager_invite_code: row.manager_invite_code,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    total_count: Number(row.total_count || 0),
+    workspace_id: row.workspace_id,
+    workspace_role: row.workspace_role,
+    membership_status: row.membership_status,
+    assignment_status: row.assignment_status,
+    primary_manager_email: row.primary_manager_email
+  });
+}
+
+function mapWorkspaceSummary(row: Record<string, unknown> | null): AccountDirectorySummary {
+  return {
+    total: Number(row?.total_users || 0),
+    pending: Number(row?.pending_clients || 0),
+    active: Number(row?.active_clients || 0),
+    blocked: Number(row?.blocked_accounts || 0),
+    managers: Number(row?.manager_accounts || 0),
+    clients: Number(row?.client_accounts || 0),
+    linked: Number(row?.linked_clients || 0),
+    unassigned: Number(row?.unassigned_clients || 0)
+  };
+}
+
+async function getWorkspaceAccountSummary(supabase: SupabaseServerClient) {
+  const { data, error } = await supabase.rpc('access_workspace_account_summary_v1', {
+    workspace_id_input: null
+  });
+
+  const row = Array.isArray(data) ? data[0] : null;
+
+  return {
+    summary: mapWorkspaceSummary(row),
+    errorMessage: error?.message || null
+  };
+}
+
+async function listWorkspaceAccountDirectory(
+  supabase: SupabaseServerClient,
+  options: AccountDirectoryOptions
+) {
+  const { data, error } = await supabase.rpc('access_workspace_account_directory_v1', {
+    workspace_id_input: null,
+    view_input: options.view,
+    search_input: options.query || null,
+    page_input: options.page || 1,
+    page_size_input: options.pageSize || 25
+  });
+
+  const accounts = Array.isArray(data) ? (data as WorkspaceDirectoryRpcRow[]).map(mapWorkspaceRow) : [];
+  const total = Number(accounts[0]?.total_count || 0);
+
+  return {
+    accounts,
+    total,
+    page: options.page || 1,
+    pageSize: options.pageSize || 25,
+    errorMessage: error?.message || null
+  };
+}
+
 export async function getManagerClientSummary(supabase: SupabaseServerClient): Promise<{
   summary: AccountDirectorySummary;
   errorMessage: string | null;
 }> {
-  const { data, error } = await supabase.rpc('access_manager_client_summary');
-  const row = Array.isArray(data) ? data[0] : null;
+  const result = await getWorkspaceAccountSummary(supabase);
 
   return {
     summary: {
-      total: Number(row?.total_clients || 0),
-      pending: Number(row?.pending_clients || 0),
-      active: Number(row?.active_clients || 0),
-      blocked: Number(row?.blocked_clients || 0),
+      ...result.summary,
       managers: 0,
-      clients: Number(row?.total_clients || 0),
-      linked: Number(row?.total_clients || 0),
-      unassigned: 0
+      total: result.summary.clients
     },
-    errorMessage: error?.message || null
+    errorMessage: result.errorMessage
   };
 }
 
@@ -91,66 +178,22 @@ export async function listManagerClientDirectory(
   supabase: SupabaseServerClient,
   options: AccountDirectoryOptions
 ) {
-  const { data, error } = await supabase.rpc('access_manager_client_directory', {
-    view_input: options.view,
-    search_input: options.query || null,
-    page_input: options.page || 1,
-    page_size_input: options.pageSize || 25
+  return listWorkspaceAccountDirectory(supabase, {
+    ...options,
+    view: options.view === 'all' ? 'clients' : options.view
   });
-
-  const accounts = Array.isArray(data) ? (data as AccountDirectoryRow[]).map(normalizeAccount) : [];
-  const total = Number(accounts[0]?.total_count || 0);
-
-  return {
-    accounts,
-    total,
-    page: options.page || 1,
-    pageSize: options.pageSize || 25,
-    errorMessage: error?.message || null
-  };
 }
 
 export async function getMasterAccountSummary(supabase: SupabaseServerClient): Promise<{
   summary: AccountDirectorySummary;
   errorMessage: string | null;
 }> {
-  const { data, error } = await supabase.rpc('access_master_account_summary');
-  const row = Array.isArray(data) ? data[0] : null;
-
-  return {
-    summary: {
-      total: Number(row?.total_users || 0),
-      pending: Number(row?.pending_clients || 0),
-      active: 0,
-      blocked: Number(row?.blocked_accounts || 0),
-      managers: Number(row?.manager_accounts || 0),
-      clients: Number(row?.client_accounts || 0),
-      linked: Number(row?.linked_clients || 0),
-      unassigned: Number(row?.unassigned_clients || 0)
-    },
-    errorMessage: error?.message || null
-  };
+  return getWorkspaceAccountSummary(supabase);
 }
 
 export async function listMasterAccountDirectory(
   supabase: SupabaseServerClient,
   options: AccountDirectoryOptions
 ) {
-  const { data, error } = await supabase.rpc('access_master_account_directory', {
-    view_input: options.view,
-    search_input: options.query || null,
-    page_input: options.page || 1,
-    page_size_input: options.pageSize || 25
-  });
-
-  const accounts = Array.isArray(data) ? (data as AccountDirectoryRow[]).map(normalizeAccount) : [];
-  const total = Number(accounts[0]?.total_count || 0);
-
-  return {
-    accounts,
-    total,
-    page: options.page || 1,
-    pageSize: options.pageSize || 25,
-    errorMessage: error?.message || null
-  };
+  return listWorkspaceAccountDirectory(supabase, options);
 }
