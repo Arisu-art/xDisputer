@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useId, useState } from 'react';
+import { memo, type ReactNode, useEffect, useId, useState } from 'react';
 
 type Props = {
   eyebrow: string;
@@ -14,7 +14,7 @@ type Props = {
   children: ReactNode;
 };
 
-export default function TableFlyout({
+function TableFlyout({
   eyebrow,
   title,
   summary,
@@ -63,3 +63,5 @@ export default function TableFlyout({
     </div>}
   </>;
 }
+
+export default memo(TableFlyout);
