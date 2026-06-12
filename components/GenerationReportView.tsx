@@ -108,15 +108,13 @@ function ReportSummary({ summary }: { summary: GenerationReportSummary }) {
 }
 
 function ActivityStream({ rows, scope }: { rows: GenerationReportRow[]; scope: Scope }) {
-  const visibleRows = rows.slice(0, 18);
-
-  return <section className="admin-monitor-card native-operation-card minimal-activity-card">
-    <div className="admin-monitor-card-header compact-card-header">
+  return <section className="admin-monitor-card native-operation-card minimal-activity-card report-dataset-card">
+    <div className="admin-monitor-card-header compact-card-header report-dataset-header">
       <div><p>Activity</p><h2>Recent generation events</h2></div>
       <span>{rows.length} total</span>
     </div>
-    {visibleRows.length ? <div className="minimal-activity-list" role="list">
-      {visibleRows.map((row) => <article key={row.run_id} className="minimal-activity-row" role="listitem">
+    {rows.length ? <div className="minimal-activity-list report-dataset-scroll" role="list" tabIndex={0} aria-label="Scrollable generation report activity">
+      {rows.map((row) => <article key={row.run_id} className="minimal-activity-row" role="listitem">
         <div>
           <strong>{row.client_name || row.owner_email || 'Client activity'}</strong>
           <span>{row.round_label || 'Round not set'} · {formatDate(row.created_at)}</span>
