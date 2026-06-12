@@ -3,13 +3,30 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 const file = 'components/LetterGeneratorWorkspaceV2.tsx';
 let source = readFileSync(file, 'utf8');
-const before = '[round, caseId, parsed.name, routes, effectiveRefs, templates: effectiveTemplates, evidence, preflight, docs.length, orderedZip, filings.length]';
-const after = '[round, caseId, parsed.name, routes, effectiveRefs, effectiveTemplates, evidence, preflight, docs.length, orderedZip, filings.length]';
+let changed = false;
 
-if (source.includes(before)) {
+function replaceOnce(before, after, label) {
+  if (!source.includes(before)) return false;
   source = source.replace(before, after);
+  changed = true;
+  console.log(`Repaired ${label}.`);
+  return true;
+}
+
+replaceOnce(
+  '[round, caseId, parsed.name, routes, effectiveRefs, templates: effectiveTemplates, evidence, preflight, docs.length, orderedZip, filings.length]',
+  '[round, caseId, parsed.name, routes, effectiveRefs, effectiveTemplates, evidence, preflight, docs.length, orderedZip, filings.length]',
+  'LetterGeneratorWorkspaceV2 dependency array'
+);
+
+replaceOnce(
+  "    const manifest = files.map((item) => ({ path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count, detail: item.detail }));\n    addOrderedPacketFolders(zip, files.map((item) => ({ path: item.path, blob: item.blob })), { date, clientName: parsed.name || 'Client', round, manifest, notes, sourceData: source });\n    return await zip.generateAsync({ type: 'blob' });",
+  "    const manifest = files.map((item) => ({ path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count, detail: item.detail }));\n    const manifestJson = generationManifestText(buildGenerationManifest({\n      round,\n      parsed,\n      routes,\n      references: refs,\n      templates,\n      outputs: files.map((item, index) => normalizeGeneratedOutputForManifest({ id: item.id, path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count }, index)),\n      warnings: notes\n    }));\n    addOrderedPacketFolders(zip, files.map((item) => ({ path: item.path, blob: item.blob })), { date, clientName: parsed.name || 'Client', round, manifest, notes, sourceData: source });\n    zip.file('generation-manifest.json', manifestJson);\n    return await zip.generateAsync({ type: 'blob' });",
+  'generation-manifest.json archive output'
+);
+
+if (changed) {
   writeFileSync(file, source);
-  console.log('Repaired LetterGeneratorWorkspaceV2 dependency array.');
 } else {
-  console.log('LetterGeneratorWorkspaceV2 syntax repair not needed.');
+  console.log('LetterGeneratorWorkspaceV2 repair not needed.');
 }
