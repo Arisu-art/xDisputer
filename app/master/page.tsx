@@ -49,7 +49,7 @@ function SnapshotFooter({ count, total, href }: { count: number; total: number; 
   return (
     <div className="dashboard-snapshot-footer">
       <span>Showing 1-{Math.min(count, total)} of {total}</span>
-      <a className="dashboard-card-link" href={href}>View all</a>
+      <ConsoleNavLink className="dashboard-card-link" href={href}>View all</ConsoleNavLink>
     </div>
   );
 }
@@ -90,7 +90,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
 
         <div className="admin-sidebar-section-title">Operations</div>
         <nav aria-label="Master navigation">
-          <a className="active" href="/master">Monitoring</a>
+          <ConsoleNavLink className="active" href="/master">Monitoring</ConsoleNavLink>
           <ConsoleNavLink href="/master/accounts">All accounts</ConsoleNavLink>
           <ConsoleNavLink href="/master/accounts?view=managers">Managers</ConsoleNavLink>
           <ConsoleNavLink href="/master/accounts?view=clients">Clients</ConsoleNavLink>
@@ -141,7 +141,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
               <article className="admin-monitor-card native-operation-card dashboard-snapshot-card">
                 <div className="admin-monitor-card-header">
                   <div><p>Monitoring</p><h2>Attention queue</h2></div>
-                  <a className="dashboard-card-link" href="/master/accounts?view=pending">View pending</a>
+                  <ConsoleNavLink className="dashboard-card-link" href="/master/accounts?view=pending">View pending</ConsoleNavLink>
                 </div>
                 <StatusList accounts={attention} />
                 <SnapshotFooter count={attention.length} total={attentionTotal} href="/master/accounts?view=pending" />
@@ -150,7 +150,7 @@ export default async function MasterPage({ searchParams }: PageProps) {
               <article className="admin-monitor-card native-operation-card dashboard-snapshot-card">
                 <div className="admin-monitor-card-header">
                   <div><p>Coverage</p><h2>Client-manager assignment</h2></div>
-                  <a className="dashboard-card-link" href="/master/accounts?view=clients">View clients</a>
+                  <ConsoleNavLink className="dashboard-card-link" href="/master/accounts?view=clients">View clients</ConsoleNavLink>
                 </div>
                 <div className="dashboard-snapshot-list">
                   <div className="admin-power-list">
