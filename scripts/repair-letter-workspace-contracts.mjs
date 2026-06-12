@@ -65,12 +65,13 @@ spliceBetween(
     return { consumerName: parsed.name, addressLines: parsed.address.length ? parsed.address : ['N/A'], dob: parsed.dob, ssn: parsed.ssn, letterDate: date, bureauName: bureauInfo[route.bureau].name, bureauAddressLines: bureauInfo[route.bureau].address.split('\\n'), latePaymentItems: parsed.late[route.bureau].map((item) => item.displayText) };
   }
   function appendixContext(kind: 'AFFIDAVIT' | 'FTC', bureau: Bureau, date: string) {
-    return { kind, bureau, documentDate: date, recipientName: bureauInfo[bureau].name, recipientAddressLines: recipient.address.split('\\n'), source: affidavitSource };
+    return { kind, bureau, documentDate: date, recipientName: bureauInfo[bureau].name, recipientAddressLines: bureauInfo[bureau].address.split('\\n'), source: affidavitSource };
   }
  `,
   'render value adapters'
 );
 
+replaceAllText("recipientAddressLines: recipient.address.split('\\n')", "recipientAddressLines: bureauInfo[bureau].address.split('\\n')", 'recipient address adapter');
 replaceAllText("    return file ? renderMappedAppendix(file, affidavitSource, bureauInfo[bureau].name, date) : null;", "    return file ? renderMappedAppendix(file, appendixContext('AFFIDAVIT', bureau, date)) : null;", 'appendix renderer call');
 replaceAllText("    addOrderedPacketFolders(zip, files.map((item) => ({ path: item.path, blob: item.blob })), { date, clientName: parsed.name || 'Client', round, manifest, notes, sourceData: source });\n    zip.file('generation-manifest.json', manifestJson);", "    await addOrderedPacketFolders(zip, files, round, evidenceKey, parsed.name || 'Client', routes.map((route) => ({ type: route.type, bureau: route.bureau })));\n    zip.file('generation-manifest.json', manifestJson);", 'ordered packet archive call');
 replaceAllText('      const date = parsed.letterDate || dateNow();', '      const date = dateNow();', 'document date source');
