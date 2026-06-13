@@ -106,8 +106,8 @@
 .packet-review-empty > div {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: flex-start;
+  gap: 6px;
   padding-bottom: 2px;
 }
 .packet-review-section header strong,
@@ -119,8 +119,12 @@
 .packet-review-section header span,
 .packet-review-empty span {
   color: #64748b;
-  font-size: 10px;
-  font-weight: 750;
+  font-size: 11px;
+  font-weight: 800;
+}
+.packet-review-section header span::before {
+  content: '— ';
+  color: #94a3b8;
 }
 .packet-review-section.dispute {
   border-left: 4px solid rgba(16, 185, 129, .55);
