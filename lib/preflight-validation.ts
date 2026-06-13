@@ -95,6 +95,10 @@ function dynamicTemplateV2Validation(value: unknown): DynamicTemplateEngineV2Val
   return dynamic && typeof dynamic === 'object' ? dynamic as DynamicTemplateEngineV2Validation : null;
 }
 
+function hasDynamicTemplateV2Contract(validationJson?: Record<string, unknown> | null) {
+  return Boolean(dynamicTemplateV2Validation(validationJson)?.contract);
+}
+
 function dynamicTemplateV2Check(input: {
   id: string;
   label: string;
@@ -149,7 +153,18 @@ function templateContractCheck(input: {
   contract?: TemplateContract | null;
   validationJson?: Record<string, unknown> | null;
   requireContract: boolean;
+  preferDynamicV2?: boolean;
 }) {
+  const dynamicCheck = dynamicTemplateV2Check({
+    id: input.id,
+    label: input.label,
+    validationJson: input.validationJson
+  });
+
+  if (input.preferDynamicV2 && dynamicCheck) {
+    return dynamicCheck;
+  }
+
   const id = `templates.contract.${safeId(input.id)}`;
 
   if (!hasUsableContract(input.contract)) {
@@ -238,32 +253,23 @@ export function evaluateGenerationPreflight(input: GenerationPreflightInput): Ge
       label: `${roundSelection.round} ${letterLabels[slot.type]}`,
       contract: slot.contract,
       validationJson: slot.validationJson,
-      requireContract: true
+      requireContract: true,
+      preferDynamicV2: hasDynamicTemplateV2Contract(slot.validationJson)
     }));
-    const dynamicCheck = dynamicTemplateV2Check({
-      id: `${roundSelection.round}-${slot.type}`,
-      label: `${roundSelection.round} ${letterLabels[slot.type]}`,
-      validationJson: slot.validationJson
-    });
-    if (dynamicCheck) checks.push(dynamicCheck);
   });
 
   roundSelection.requiredExhibits.forEach((kind) => {
     const asset = input.templates[kind];
     if (!asset) return;
+    const generatedDocx = asset.mode === 'GENERATED_DOCX';
     checks.push(templateContractCheck({
       id: `${roundSelection.round}-${kind}`,
       label: `${roundSelection.round} ${exhibitLabels[kind]}`,
       contract: asset.contract,
       validationJson: asset.validationJson,
-      requireContract: asset.mode === 'GENERATED_DOCX'
+      requireContract: generatedDocx,
+      preferDynamicV2: generatedDocx && hasDynamicTemplateV2Contract(asset.validationJson)
     }));
-    const dynamicCheck = dynamicTemplateV2Check({
-      id: `${roundSelection.round}-${kind}`,
-      label: `${roundSelection.round} ${exhibitLabels[kind]}`,
-      validationJson: asset.validationJson
-    });
-    if (dynamicCheck) checks.push(dynamicCheck);
   });
 
   for (const issue of roundSelection.issues.filter((item) => item.severity === 'warning')) {
