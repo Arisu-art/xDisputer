@@ -8,7 +8,7 @@ export type TemplateAssetProvenanceSource = 'LOCAL_BROWSER' | 'SUPABASE_TEMPLATE
 
 export type TemplateAssetProvenanceMetadata = {
   assetId?: string | null;
-  source?: TemplateAssetProvenanceSource;
+  source?: TemplateAssetProvenanceSource | string;
   versionNumber?: number | null;
   contentHash?: string | null;
   validationJson?: Record<string, unknown> | null;
@@ -32,6 +32,7 @@ const META_PREFIX = 'lettergenerator.template-exhibits.v2.';
 const LEGACY_PREFIX = 'lettergenerator.template-exhibits.v1.';
 
 export const exhibitKinds: ExhibitKind[] = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
+export const configuredExhibits: ExhibitKind[] = exhibitKinds;
 
 export const exhibitModes: Record<ExhibitKind, ExhibitMode> = {
   FCRA: 'STATIC_PDF',
