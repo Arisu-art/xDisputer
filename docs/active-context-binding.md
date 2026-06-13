@@ -46,7 +46,7 @@ These contracts power:
 - Do not add manager output limits.
 - Do not add client output limits.
 - Do not add generation count limits.
-- Do not add client quota-blocked UI state or quota messaging.
+- Do not add client usage-cap blocked UI state or usage-cap messaging.
 - Keep Supabase migrations additive unless a root-cause fix explicitly requires controlled replacement of a broken function signature.
 - Avoid destructive table changes unless the user explicitly approves a data migration plan.
 - Use root-cause tracing before UI rewrites.
