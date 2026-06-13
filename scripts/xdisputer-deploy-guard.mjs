@@ -30,6 +30,8 @@ if (existsSync('scripts/repair-letter-workspace-syntax.mjs')) {
 assertFile('lib/round-template-policy.ts');
 assertFile('lib/generation-manifest.ts');
 assertFile('lib/supabase/template-registry.ts');
+assertFile('lib/readiness-checklist-control.ts');
+assertFile('scripts/readiness-checklist-disabled-guard.mjs');
 assertFile('lib/dynamic-template/field-registry.ts');
 assertFile('lib/dynamic-template/contract-v2.ts');
 assertFile('lib/dynamic-template/mapping-engine.ts');
@@ -49,7 +51,11 @@ assertContains('components/LetterGeneratorWorkspaceV2.tsx', 'buildGenerationMani
 assertContains('app/api/template-assets/route.ts', 'autoBackfillDynamicTemplateV2');
 assertContains('lib/dynamic-template/docx-layout-renderer-v2.ts', 'DOCX_LAYOUT_RENDERER_V2');
 assertContains('lib/dynamic-template/render-validation.ts', 'scanUnresolvedPlaceholders');
+assertContains('lib/readiness-checklist-control.ts', 'READINESS_CHECKLIST_DISABLED = true');
+assertContains('components/GenerationPreflightChecklist.tsx', 'if (READINESS_CHECKLIST_DISABLED) return null');
+assertContains('lib/preflight-validation.ts', 'DISABLED_PREFLIGHT_RESULT');
 
+run('node scripts/readiness-checklist-disabled-guard.mjs');
 run('npm run dynamic-template:v2:regression');
 run('npm run typecheck');
 run('npm run build');
