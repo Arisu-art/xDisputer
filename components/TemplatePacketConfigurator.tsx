@@ -52,6 +52,10 @@ function format(kind: ExhibitKind) {
   return exhibitModes[kind] === 'GENERATED_DOCX' ? 'Editable DOCX' : 'Static PDF';
 }
 
+function apiErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 export default function TemplatePacketConfigurator({
   round,
   slots,
@@ -90,6 +94,55 @@ export default function TemplatePacketConfigurator({
   }, [round]);
 
   useEffect(() => setActiveNode(null), [focusedPacket]);
+
+  async function syncLetterToSupabase(slot: LetterReference, file: File) {
+    const formData = new FormData();
+    formData.set('round', round);
+    formData.set('templateKind', 'LETTER');
+    formData.set('letterType', slot.type);
+    formData.set('file', file);
+
+    const response = await fetch('/api/template-assets', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'x-template-upload': 'workspace'
+      },
+      body: formData
+    });
+
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || payload?.status === 'error') {
+      throw new Error(payload?.message || `${slot.name} could not be saved to Supabase.`);
+    }
+
+    return payload?.message || `${slot.name} saved to Supabase.`;
+  }
+
+  async function deleteLetterFromSupabase(slot: LetterReference) {
+    const response = await fetch('/api/template-assets', {
+      method: 'DELETE',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'x-template-upload': 'workspace'
+      },
+      body: JSON.stringify({
+        round,
+        templateKind: 'LETTER',
+        letterType: slot.type
+      })
+    });
+
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok || payload?.status === 'error') {
+      throw new Error(payload?.message || `${slot.name} could not be removed from Supabase.`);
+    }
+
+    return payload?.message || `${slot.name} removed from Supabase.`;
+  }
 
   async function syncExhibitToSupabase(kind: ExhibitKind, file: File) {
     const formData = new FormData();
@@ -140,6 +193,28 @@ export default function TemplatePacketConfigurator({
     return payload?.message || `${exhibitTitles[kind]} removed from Supabase.`;
   }
 
+  async function uploadLetter(slot: LetterReference, file: File) {
+    try {
+      const syncMessage = await syncLetterToSupabase(slot, file);
+      await onUploadLetter(slot, file);
+      onMessage(syncMessage);
+      setActiveNode(null);
+    } catch (error) {
+      onMessage(apiErrorMessage(error, `${slot.name} could not be saved.`));
+    }
+  }
+
+  async function removeLetter(slot: LetterReference) {
+    try {
+      const syncMessage = await deleteLetterFromSupabase(slot);
+      await onRemoveLetter(slot);
+      onMessage(syncMessage);
+      setActiveNode(null);
+    } catch (error) {
+      onMessage(apiErrorMessage(error, `${slot.name} could not be removed.`));
+    }
+  }
+
   async function uploadExhibit(kind: ExhibitKind, file: File) {
     try {
       const syncMessage = await syncExhibitToSupabase(kind, file);
@@ -152,7 +227,7 @@ export default function TemplatePacketConfigurator({
       onMessage(`${syncMessage}${contract?.mode === 'PLACEHOLDERS' ? ` ${contract.tags.length} placeholder tag(s) mapped to Source Data.` : contract?.mode === 'LEGACY_HIGHLIGHTED' ? ' Highlighted fields will be mapped from Source Data.' : ''}`);
       setActiveNode(null);
     } catch (error) {
-      onMessage(error instanceof Error ? error.message : 'File could not be saved.');
+      onMessage(apiErrorMessage(error, 'File could not be saved.'));
     }
   }
 
@@ -166,7 +241,7 @@ export default function TemplatePacketConfigurator({
       onMessage(syncMessage);
       setActiveNode(null);
     } catch (error) {
-      onMessage(error instanceof Error ? error.message : 'File could not be removed.');
+      onMessage(apiErrorMessage(error, 'File could not be removed.'));
     }
   }
 
@@ -187,12 +262,12 @@ export default function TemplatePacketConfigurator({
                 accept=".docx"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
-                  if (file) void onUploadLetter(slot, file).then(() => setActiveNode(null));
+                  if (file) void uploadLetter(slot, file);
                   event.target.value = '';
                 }}
               />
             </label>
-            {slot.file && <button type="button" className="remove-node" onClick={() => void onRemoveLetter(slot)}>Remove</button>}
+            {slot.file && <button type="button" className="remove-node" onClick={() => void removeLetter(slot)}>Remove</button>}
           </div>
         </div>
       </div>
