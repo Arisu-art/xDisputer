@@ -48,6 +48,18 @@ function toTemplateFile(value: File | Blob, filename: string) {
   });
 }
 
+async function fetchActiveFtcTemplate(round: string) {
+  if (typeof fetch !== 'function') return null;
+
+  const response = await fetch(`/api/template-assets/file?round=${encodeURIComponent(round)}&templateKind=EXHIBIT&exhibitKind=FTC`);
+  if (!response.ok) return null;
+  return await response.blob();
+}
+
+async function resolveFtcTemplate(input: GenerateFtcWorkflowInput) {
+  return input.template || await readTemplateExhibit(input.round, 'FTC') || await fetchActiveFtcTemplate(input.round);
+}
+
 export function buildFtcWorkflowSource(parsed: ParsedSource) {
   const accounts = buildFtcAffectedAccounts(parsed);
 
@@ -65,7 +77,7 @@ export function ftcOutputPath(clientName: string, cleanName: (value: string) => 
 }
 
 export async function generateFtcWorkflowOutput(input: GenerateFtcWorkflowInput): Promise<GenerateFtcWorkflowResult> {
-  const templateBlob = input.template || await readTemplateExhibit(input.round, 'FTC');
+  const templateBlob = await resolveFtcTemplate(input);
 
   if (!templateBlob) {
     throw new Error('Required component missing: 06 FTC Identity Theft Report DOCX template is not uploaded.');
