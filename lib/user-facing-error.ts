@@ -8,7 +8,7 @@ export type UserFacingError = {
   mainCause: string;
   whatToDo: string[];
   technicalDetails: string;
-  category: 'TEMPLATE' | 'SOURCE_DATA' | 'GENERATION' | 'NETWORK' | 'ACCOUNT' | 'SYSTEM';
+  category: 'MANAGER_TEMPLATE' | 'TEMPLATE' | 'SOURCE_DATA' | 'GENERATION' | 'NETWORK' | 'ACCOUNT' | 'SYSTEM';
   suggestedPanel?: 'Templates' | 'Source Data' | 'Outputs' | 'Settings';
 };
 
@@ -42,6 +42,47 @@ export function explainWebsiteError(error: unknown, context: ErrorContext = {}):
   const lower = technicalDetails.toLowerCase();
   const operation = context.operation || 'Website action';
   const roundHint = context.round ? ` This happened while using ${context.round}.` : '';
+
+  if (has(lower, /manager template|template manager|assigned manager|manager-controlled|manager controlled|client_template_upload_disabled|no_manager_assigned/)) {
+    const assignmentMissing = has(lower, /not assigned|no_manager_assigned|manager is not assigned/);
+    const clientUpload = has(lower, /manager-controlled|manager controlled|client_template_upload_disabled|clients use the active templates/);
+
+    return {
+      id: makeId(),
+      severity: 'error',
+      category: 'MANAGER_TEMPLATE',
+      suggestedPanel: 'Templates',
+      title: assignmentMissing ? 'Template manager is not assigned' : clientUpload ? 'Template uploads are manager-controlled' : 'Manager template is missing',
+      headline: assignmentMissing
+        ? 'Your account does not have an assigned manager template library yet.'
+        : clientUpload
+          ? 'Only your assigned manager can upload or replace templates.'
+          : 'Your assigned manager has not provided the required active template.',
+      mainCause: assignmentMissing
+        ? 'The system cannot load default templates until this client is assigned to a manager.'
+        : clientUpload
+          ? 'Clients cannot upload templates because all assigned clients must use the same manager-approved templates for consistent output.'
+          : `The package cannot continue because the manager default template for this document slot is unavailable.${roundHint}`,
+      whatToDo: assignmentMissing
+        ? [
+            'Ask an admin or manager to assign this client to a manager account.',
+            'Refresh the page after the assignment is active.',
+            'Try Generate again.'
+          ]
+        : clientUpload
+          ? [
+              'Ask your assigned manager to upload or replace the template.',
+              'Refresh this page after the manager updates the active template.',
+              'Try Generate again using the manager-approved template.'
+            ]
+          : [
+              'Contact your assigned manager and ask them to upload the missing template for this round.',
+              'Ask the manager to confirm the template is active and passes validation.',
+              'Refresh this page and try Generate again.'
+            ],
+      technicalDetails
+    };
+  }
 
   if (has(lower, /template is missing|required component missing|could not load .*template|template .*not uploaded|missing required .*template/)) {
     return {
