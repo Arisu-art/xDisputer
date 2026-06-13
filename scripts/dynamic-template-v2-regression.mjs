@@ -28,6 +28,7 @@ const orchestrator = assertFile('lib/dynamic-template/render-orchestrator.ts');
 const appendixBridge = assertFile('lib/dynamic-template/appendix-renderer-v2-bridge.ts');
 const rendererMode = assertFile('lib/dynamic-template/renderer-mode.ts');
 const uploadRoute = assertFile('app/api/template-assets/route.ts');
+const readinessControl = assertFile('lib/readiness-checklist-control.ts');
 const preflight = assertFile('lib/preflight-validation.ts');
 const supplemental = assertFile('lib/supplemental-template-renderer.ts');
 const ftcWorkflow = assertFile('lib/ftc-workflow.ts');
@@ -80,7 +81,9 @@ assertIncludes(rendererMode, "'CONTRACT_V2_DIAGNOSTIC'", 'renderer mode defaults
 assertIncludes(rendererMode, 'DOCX_LAYOUT_V2', 'renderer mode has explicit DOCX_LAYOUT_V2 gate');
 assertIncludes(uploadRoute, 'autoBackfillDynamicTemplateV2', 'template GET route auto-backfills missing v2 metadata');
 assertIncludes(uploadRoute, 'validation_json: validationJson', 'template upload stores validation_json');
-assertIncludes(preflight, 'preferDynamicV2', 'preflight can prefer v2 readiness checks');
+assertIncludes(readinessControl, 'READINESS_CHECKLIST_DISABLED = true', 'readiness checklist is intentionally disabled');
+assertIncludes(preflight, 'DISABLED_PREFLIGHT_RESULT', 'preflight is disabled and non-blocking while checklist is off');
+assertIncludes(preflight, 'ready: true', 'disabled preflight cannot block generation');
 assertIncludes(supplemental, 'tryRenderDynamicAppendixTemplateV2', 'appendix renderer calls v2 bridge');
 assertIncludes(supplemental, 'renderer-v2 gate', 'appendix renderer reports v2 gate progress');
 assertIncludes(ftcWorkflow, 'resolveFtcTemplate', 'FTC workflow resolves template through local or active asset fallback');
