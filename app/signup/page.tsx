@@ -70,7 +70,7 @@ export default async function SignupPage({
             <span>New users wait until a manager approves access.</span>
           </div>
           <div>
-            <strong>No generation quota</strong>
+            <strong>Unlimited generation</strong>
             <span>Approved users can generate without output limits.</span>
           </div>
         </div>
