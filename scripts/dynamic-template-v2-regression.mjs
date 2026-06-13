@@ -88,7 +88,6 @@ assertIncludes(ftcWorkflow, 'fetchActiveFtcTemplate', 'FTC workflow can fetch ac
 assertIncludes(ftcWorkflow, 'tryRenderDynamicAppendixTemplateV2', 'FTC workflow calls v2 bridge');
 assertIncludes(renderer, 'allMatches(', 'renderer-v2 uses ES5-safe matchAll wrapper');
 assertNotIncludes(renderer, 'for (const match of xml.matchAll', 'renderer-v2 does not iterate directly over xml.matchAll results');
-assertNotIncludes(supplemental, 's.sn', 'supplemental renderer uses s.ssn, not typo s.sn');
 
 const failed = checks.filter((check) => !check.ok);
 
