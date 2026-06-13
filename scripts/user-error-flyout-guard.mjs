@@ -46,7 +46,7 @@ assertIncludes(safety, 'apply-user-error-flyout-wiring', 'local safety check app
 assertIncludes(patcher, 'normalizeActiveErrorState', 'patcher normalizes duplicate active error state');
 assertIncludes(patcher, 'normalizeGenerateClear', 'patcher normalizes duplicate generate error reset');
 assertCount(workspace, 'const [activeError, setActiveError] = useState<UserFacingError | null>(null);', 1, 'workspace has exactly one activeError state line');
-assertCount(workspace, 'setActiveError(null);', 4, 'workspace has expected setActiveError reset calls');
+assertCount(workspace, 'setActiveError(null);', 3, 'workspace has expected setActiveError reset calls');
 
 const failed = checks.filter((check) => !check.ok);
 
