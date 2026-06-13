@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSessionContext } from '../../../../lib/saas/session';
 import { workspaceAccessErrorResponse } from '../../../../lib/saas/access-entitlement';
+import { latestTemplateAssetsBySlot, templateAssetSlotKey } from '../../../../lib/supabase/template-registry';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -35,19 +36,6 @@ function assetFileUrl(asset: {
   return `/api/template-assets/file?${params.toString()}`;
 }
 
-function slotKey(asset: {
-  round_label: string;
-  template_kind: string;
-  letter_type: string | null;
-  exhibit_kind: string | null;
-}) {
-  return [
-    asset.round_label,
-    asset.template_kind,
-    asset.letter_type || asset.exhibit_kind || 'UNKNOWN'
-  ].join('::');
-}
-
 export async function GET(request: NextRequest) {
   const accessError = await workspaceAccessErrorResponse();
   if (accessError) return accessError;
@@ -66,12 +54,14 @@ export async function GET(request: NextRequest) {
 
   let query = session.supabase
     .from('template_assets')
-    .select('id, round_label, template_kind, letter_type, exhibit_kind, original_filename, mime_type, file_size, contract_json, version_number, updated_at, created_at')
+    .select('id, round_label, template_kind, letter_type, exhibit_kind, original_filename, mime_type, file_size, contract_json, validation_json, content_hash, version_number, updated_at, created_at')
     .eq('owner_id', session.user.id)
     .eq('is_active', true)
     .order('round_label', { ascending: true })
     .order('template_kind', { ascending: true })
-    .order('version_number', { ascending: false });
+    .order('version_number', { ascending: false })
+    .order('updated_at', { ascending: false })
+    .order('created_at', { ascending: false });
 
   if (round) query = query.eq('round_label', round);
 
@@ -79,10 +69,13 @@ export async function GET(request: NextRequest) {
 
   if (error) return noStoreJson({ error: error.message }, { status: 500 });
 
-  const assets = (data || []).map((asset) => ({
+  const activeAssets = latestTemplateAssetsBySlot(data || []);
+  const duplicateActiveSlotCount = Math.max(0, (data || []).length - activeAssets.length);
+
+  const assets = activeAssets.map((asset) => ({
     ...asset,
-    cache_key: `${asset.id}:${asset.version_number || 0}:${asset.updated_at || asset.created_at || ''}`,
-    slot_key: slotKey(asset),
+    cache_key: `${asset.id}:${asset.version_number || 0}:${asset.updated_at || asset.created_at || ''}:${asset.content_hash || ''}`,
+    slot_key: templateAssetSlotKey(asset),
     file_url: assetFileUrl(asset)
   }));
 
@@ -96,6 +89,7 @@ export async function GET(request: NextRequest) {
       ownerId: session.user.id,
       round: round || null,
       generatedAt: new Date().toISOString(),
+      duplicateActiveSlotCount,
       assets,
       slots
     },
