@@ -1,5 +1,6 @@
 'use client';
 
+import { READINESS_CHECKLIST_DISABLED } from '../lib/readiness-checklist-control';
 import type { GenerationPreflightResult, PreflightCheck } from '../lib/preflight-validation';
 
 type Props = {
@@ -19,6 +20,8 @@ function marker(check: PreflightCheck) {
 }
 
 export default function GenerationPreflightChecklist({ result }: Props) {
+  if (READINESS_CHECKLIST_DISABLED) return null;
+
   const blockers = result.blockers.length;
   const warnings = result.warnings.length;
   let instruction = 'Your workspace has the required items for this document suite.';
