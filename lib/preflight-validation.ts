@@ -1,8 +1,9 @@
-import { bureaus, type LetterRoute, type ParsedSource } from './letter-engine';
+import { bureaus, type LetterRoute, type LetterType, type ParsedSource } from './letter-engine';
 import { generationPacketPositions } from './generation-contract';
 import type { PacketAssets } from './packet-assets';
 import type { LetterReference } from './reference-store';
-import type { TemplateExhibits } from './template-exhibits';
+import type { ExhibitKind, TemplateExhibits } from './template-exhibits';
+import type { TemplateContract } from './template-contracts';
 import type { WorkspacePreferences } from './workspace-preferences';
 import { userFacingText } from './ux-copy-contract';
 import { resolveRoundTemplateSelection } from './round-template-policy';
@@ -42,6 +43,8 @@ export type GenerationPreflightResult = {
 const pass = (id: string, label: string, detail: string): PreflightCheck => ({ id, label, severity: 'pass', detail });
 const warn = (id: string, label: string, detail: string): PreflightCheck => ({ id, label, severity: 'warning', detail });
 const block = (id: string, label: string, detail: string): PreflightCheck => ({ id, label, severity: 'blocker', detail });
+const letterLabels: Record<LetterType, string> = { DISPUTE: 'Dispute Letter', LATE_PAYMENT: 'Late Payment Letter' };
+const exhibitLabels: Record<ExhibitKind, string> = { FCRA: 'FCRA Legal Exhibit', AFFIDAVIT: 'Affidavit', ATTACHMENT: 'Attachment', FTC: 'FTC Identity Theft Report' };
 
 function countDisputeAccounts(parsed: ParsedSource) {
   return bureaus.reduce((total, bureau) => total + parsed.dispute[bureau].length, 0);
@@ -53,6 +56,61 @@ function countHardInquiries(parsed: ParsedSource) {
 
 function countLatePayments(parsed: ParsedSource) {
   return bureaus.reduce((total, bureau) => total + parsed.late[bureau].length, 0);
+}
+
+function safeId(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function list(values: string[], fallback: string) {
+  return values.length ? values.join(', ') : fallback;
+}
+
+function hasUsableContract(contract: TemplateContract | undefined | null): contract is TemplateContract {
+  return Boolean(contract && contract.validation && Array.isArray(contract.validation.missingFields));
+}
+
+function templateContractCheck(input: {
+  id: string;
+  label: string;
+  contract?: TemplateContract | null;
+  requireContract: boolean;
+}) {
+  const id = `templates.contract.${safeId(input.id)}`;
+
+  if (!hasUsableContract(input.contract)) {
+    return input.requireContract
+      ? warn(id, `${input.label} contract`, `${input.label} has no contract metadata yet. Re-upload or rescan the template so preflight can prove its canonical fields before production generation.`)
+      : pass(id, `${input.label} contract`, `${input.label} is static or does not require source-populated contract fields.`);
+  }
+
+  const validation = input.contract.validation;
+  const missingFields = validation.missingFields || [];
+  const unknownRequiredFields = validation.unknownRequiredFields || [];
+  const errors = validation.errors || [];
+  const warnings = validation.warnings || [];
+
+  if (validation.status === 'BLOCKED' || missingFields.length || unknownRequiredFields.length) {
+    return block(
+      id,
+      `${input.label} contract`,
+      `${input.label} is not generation-ready. Missing canonical fields: ${list(missingFields, 'none')}. Unknown required fields: ${list(unknownRequiredFields, 'none')}. ${errors.join(' ')}`.trim()
+    );
+  }
+
+  if (validation.status === 'WARNING' || warnings.length) {
+    return warn(
+      id,
+      `${input.label} contract`,
+      `${input.label} is usable with contract warning(s): ${warnings.join(' ') || 'review recommended.'}`
+    );
+  }
+
+  return pass(
+    id,
+    `${input.label} contract`,
+    `${input.label} contract is ${validation.status.toLowerCase()} with ${Math.round(validation.confidence * 100)}% confidence.`
+  );
 }
 
 export function evaluateGenerationPreflight(input: GenerationPreflightInput): GenerationPreflightResult {
@@ -98,6 +156,27 @@ export function evaluateGenerationPreflight(input: GenerationPreflightInput): Ge
   checks.push(roundSelection.missingExhibits.length
     ? block('templates.exhibits', `${roundSelection.round} packet templates`, `Missing required ${roundSelection.round} packet item(s): ${roundSelection.missingExhibits.join(', ')}.`)
     : pass('templates.exhibits', `${roundSelection.round} packet templates`, `Required ${roundSelection.round} packet templates are ready.`));
+
+  roundSelection.letterSlots.forEach((slot) => {
+    if (!slot.file) return;
+    checks.push(templateContractCheck({
+      id: `${roundSelection.round}-${slot.type}`,
+      label: `${roundSelection.round} ${letterLabels[slot.type]}`,
+      contract: slot.contract,
+      requireContract: true
+    }));
+  });
+
+  roundSelection.requiredExhibits.forEach((kind) => {
+    const asset = input.templates[kind];
+    if (!asset) return;
+    checks.push(templateContractCheck({
+      id: `${roundSelection.round}-${kind}`,
+      label: `${roundSelection.round} ${exhibitLabels[kind]}`,
+      contract: asset.contract,
+      requireContract: asset.mode === 'GENERATED_DOCX'
+    }));
+  });
 
   for (const issue of roundSelection.issues.filter((item) => item.severity === 'warning')) {
     checks.push(warn(issue.code, `${roundSelection.round} policy`, issue.message));
