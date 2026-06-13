@@ -5,7 +5,7 @@ export type Round = '1st Round' | '2nd Round' | '3rd Round' | 'Final';
 export type TemplateAssetProvenanceSource = 'LOCAL_BROWSER' | 'SUPABASE_TEMPLATE_ASSET' | 'UNKNOWN';
 export type TemplateAssetProvenanceMetadata = {
   assetId?: string | null;
-  source?: TemplateAssetProvenanceSource;
+  source?: TemplateAssetProvenanceSource | string;
   versionNumber?: number | null;
   contentHash?: string | null;
   validationJson?: Record<string, unknown> | null;
