@@ -31,6 +31,7 @@ import './packet-editor-fullscreen.css';
 import './evidence-command-header.css';
 import './template-progressive-studio.css';
 import './source-progressive-studio.css';
+import './notepad-packet-review.css';
 import './workflow-geometry-normalization.css';
 import './client-operations.css';
 import './client-saas-refresh.css';
