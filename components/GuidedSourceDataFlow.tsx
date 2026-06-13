@@ -25,6 +25,8 @@ type Props = {
   evidenceKey: string;
   evidence: PacketAssets;
   canGenerate: boolean;
+  /** Legacy prop kept for compatibility while older workspace repairs are removed. */
+  generationBlockers?: string[];
   missingLetters: string[];
   missingInsertCount: number;
   affidavitRequired: boolean;
