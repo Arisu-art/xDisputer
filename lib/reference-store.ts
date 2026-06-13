@@ -2,7 +2,15 @@ import type { LetterType } from './letter-engine';
 import { inspectTemplateContract, type TemplateContract } from './template-contracts';
 
 export type Round = '1st Round' | '2nd Round' | '3rd Round' | 'Final';
-export type LetterReference = { id: string; round: Round; type: LetterType; name: string; file: string; size?: number; contract?: TemplateContract };
+export type TemplateAssetProvenanceSource = 'LOCAL_BROWSER' | 'SUPABASE_TEMPLATE_ASSET' | 'UNKNOWN';
+export type TemplateAssetProvenanceMetadata = {
+  assetId?: string | null;
+  source?: TemplateAssetProvenanceSource;
+  versionNumber?: number | null;
+  contentHash?: string | null;
+  validationJson?: Record<string, unknown> | null;
+};
+export type LetterReference = TemplateAssetProvenanceMetadata & { id: string; round: Round; type: LetterType; name: string; file: string; size?: number; contract?: TemplateContract };
 
 const DB_NAME = 'lettergenerator-private-templates';
 const STORE_NAME = 'files';
@@ -88,50 +96,41 @@ export async function recoverReferenceMetaFromFiles(values: LetterReference[] = 
 
     if (!file) return slot;
 
-    const kind = slot.type === 'DISPUTE' ? 'DISPUTE_LETTER' : 'LATE_PAYMENT_LETTER';
-    const contract = slot.contract || await inspectTemplateContract(file, kind).catch(() => slot.contract);
+    if (slot.file === file.name && slot.size === file.size) return slot;
 
-    return {
-      ...slot,
-      file: slot.file || file.name,
-      size: slot.size || file.size,
-      contract
-    };
+    const contract = await inspectTemplateContract(file, slot.type === 'LATE_PAYMENT' ? 'LATE_PAYMENT_LETTER' : 'DISPUTE_LETTER').catch(() => slot.contract);
+    return { ...slot, file: file.name, size: file.size, contract };
   }));
 
   saveReferenceMeta(recovered);
   return recovered;
 }
-
 export async function saveReferenceFile(slot: LetterReference, file: File) {
-  const contract = await inspectTemplateContract(file, slot.type === 'DISPUTE' ? 'DISPUTE_LETTER' : 'LATE_PAYMENT_LETTER');
+  if (!/\.docx$/i.test(file.name)) throw new Error('Reference templates must be DOCX files.');
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(file, slot.id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-  db.close();
-  return contract;
-}
-export async function readReferenceFile(id: string): Promise<File | null> {
-  const db = await openDb();
-  const value = await new Promise<File | null>((resolve, reject) => {
-    const request = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(id);
-    request.onsuccess = () => resolve((request.result as File) || null);
+    const request = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(file, slot.id);
+    request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
   });
   db.close();
-  return value;
+  return inspectTemplateContract(file, slot.type === 'LATE_PAYMENT' ? 'LATE_PAYMENT_LETTER' : 'DISPUTE_LETTER');
+}
+export async function readReferenceFile(id: string) {
+  const db = await openDb();
+  const file = await new Promise<File | null>((resolve, reject) => {
+    const request = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(id);
+    request.onsuccess = () => resolve((request.result as File | undefined) || null);
+    request.onerror = () => reject(request.error);
+  });
+  db.close(); return file;
 }
 export async function removeReferenceFile(id: string) {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).delete(id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+    const request = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
   });
   db.close();
 }
