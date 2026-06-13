@@ -1,6 +1,8 @@
 import { buildFtcAffectedAccounts, renderFtcIdentityTheftReportDocx, type FtcAffectedAccount } from './ftc-report-renderer';
-import type { ParsedSource } from './letter-engine';
+import { bureauInfo, type Bureau, type ParsedSource } from './letter-engine';
 import { readTemplateExhibit } from './template-exhibits';
+import { tryRenderDynamicAppendixTemplateV2 } from './dynamic-template/appendix-renderer-v2-bridge';
+import type { DynamicTemplateRendererMode } from './dynamic-template/renderer-mode';
 
 export const FTC_PACKET_ROLE = 'FTC' as const;
 export const FTC_PACKET_BUREAU = 'CLIENT' as const;
@@ -27,6 +29,9 @@ export type GenerateFtcWorkflowInput = {
   date: string;
   cleanName: (value: string) => string;
   packetSteps: string[];
+  template?: File | Blob | null;
+  bureau?: Bureau | null;
+  rendererMode?: DynamicTemplateRendererMode | string | null;
 };
 
 export type GenerateFtcWorkflowResult = {
@@ -34,6 +39,14 @@ export type GenerateFtcWorkflowResult = {
   notes: string[];
   accounts: FtcAffectedAccount[];
 };
+
+function toTemplateFile(value: File | Blob, filename: string) {
+  if (value instanceof File) return value;
+  return new File([value], filename, {
+    type: value.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    lastModified: Date.now()
+  });
+}
 
 export function buildFtcWorkflowSource(parsed: ParsedSource) {
   const accounts = buildFtcAffectedAccounts(parsed);
@@ -52,18 +65,38 @@ export function ftcOutputPath(clientName: string, cleanName: (value: string) => 
 }
 
 export async function generateFtcWorkflowOutput(input: GenerateFtcWorkflowInput): Promise<GenerateFtcWorkflowResult> {
-  const template = await readTemplateExhibit(input.round, 'FTC');
+  const templateBlob = input.template || await readTemplateExhibit(input.round, 'FTC');
 
-  if (!template) {
+  if (!templateBlob) {
     throw new Error('Required component missing: 06 FTC Identity Theft Report DOCX template is not uploaded.');
   }
 
+  const template = toTemplateFile(templateBlob, FTC_PACKET_FILENAME);
   const workflow = buildFtcWorkflowSource(input.parsed);
-  const blob = await renderFtcIdentityTheftReportDocx(workflow.source, input.date, template);
+  const bureau = input.bureau || 'EQUIFAX';
+  const v2 = await tryRenderDynamicAppendixTemplateV2({
+    template,
+    context: {
+      kind: 'FTC',
+      bureau,
+      documentDate: input.date,
+      recipientName: bureauInfo[bureau].name,
+      recipientAddressLines: bureauInfo[bureau].address.split('\n'),
+      source: workflow.source,
+      round: input.round as any
+    },
+    rendererMode: input.rendererMode
+  });
+  const blob = v2?.blob || await renderFtcIdentityTheftReportDocx(workflow.source, input.date, template);
+  const notes = [...workflow.notes];
+
+  if (v2) {
+    notes.push(`FTC Identity Theft Report: rendered by Dynamic Template Engine v2 with grade ${v2.engine.quality.tier}/${v2.engine.quality.score}.`);
+  }
 
   return {
     accounts: workflow.accounts,
-    notes: workflow.notes,
+    notes,
     output: {
       id: 'CLIENT-FTC-IDENTITY-THEFT-REPORT',
       path: ftcOutputPath(input.parsed.name, input.cleanName),
