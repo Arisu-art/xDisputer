@@ -59,10 +59,10 @@ Observed failures to eliminate:
 | Phase | Status | Target | Exit criteria |
 | --- | --- | --- | --- |
 | 0 | Coded foundation | Existing upload gate, active template storage, preflight, manifest, and Supabase activation | Existing typecheck/build/guard pass. |
-| 1 | Scaffold coded | Contract v2 scanner | `lib/dynamic-template/contract-v2.ts` scans DOCX XML parts, placeholders, repeat blocks, table-row prototypes, header/footer fields, and unsupported zones. Full upload/preflight enforcement is pending. |
-| 2 | Scaffold coded | Canonical field registry v2 | `lib/dynamic-template/field-registry.ts` defines required/optional/repeating/conditional fields for Dispute Letter, Late Payment Letter, Affidavit, FTC, FCRA, and Attachment. |
-| 3 | Diagnostics coded | Mapping engine v2 | Diagnostics endpoint exists for contract-v2 inspection. Full source-to-render-plan mapping engine is pending. |
-| 4 | Pending | Layout-preserving DOCX renderer v2 | Inline, multiline, paragraph-block, and table-row rendering preserve template styles. |
+| 1 | Wired scaffold | Contract v2 scanner | Scanner exists and upload/preflight now store/read v2 diagnostics. Full strict activation enforcement remains pending. |
+| 2 | Wired scaffold | Canonical field registry v2 | Registry defines required/optional/repeating/conditional fields for Dispute Letter, Late Payment Letter, Affidavit, FTC, FCRA, and Attachment. |
+| 3 | Scaffold coded | Mapping engine v2 | `lib/dynamic-template/mapping-engine.ts` builds source-aware render plans with blockers, warnings, field values, repeat counts, and table-row clone operations. UI renderer integration remains pending. |
+| 4 | Mode-gated | Layout-preserving DOCX renderer v2 | Renderer mode gate exists. Actual DOCX layout renderer implementation remains pending behind explicit mode. |
 | 5 | Pending | Render validation and proof manifest | Output records unresolved placeholders, repeated counts, field counts, renderer version, contract version, and template hash. |
 | 6 | Pending | Regression test pack | Test 1st/2nd/3rd/Final templates, cross-round uploads, tables, colors, missing anchors, and invalid templates. |
 
@@ -82,6 +82,8 @@ Know exactly what a template can render before accepting it.
 - Header/footer scanner.
 - Unsupported location detector.
 - Round wording compatibility warnings.
+- Upload route storage in `validation_json.dynamicTemplateEngineV2`.
+- Preflight reader for `validationJson.dynamicTemplateEngineV2.contract`.
 
 ### Acceptance checks
 
@@ -231,9 +233,9 @@ Prevent output regressions when templates change.
 1. Create `lib/dynamic-template/field-registry.ts`. **Done.**
 2. Create `lib/dynamic-template/contract-v2.ts`. **Done.**
 3. Add contract-v2 diagnostics without replacing current renderer. **Done through `app/api/template-assets/diagnostics/route.ts`.**
-4. Add upload/preflight warnings based on contract-v2.
-5. Create render-plan builder.
-6. Add renderer-v2 behind a feature flag or explicit renderer mode.
+4. Add upload/preflight warnings based on contract-v2. **Done.**
+5. Create render-plan builder. **Done through `lib/dynamic-template/mapping-engine.ts`.**
+6. Add renderer-v2 behind a feature flag or explicit renderer mode. **Done through `lib/dynamic-template/renderer-mode.ts`; renderer implementation still pending.**
 7. Promote renderer-v2 only after regression tests pass.
 
 ## Non-negotiable implementation rules
@@ -253,3 +255,7 @@ Prevent output regressions when templates change.
 - 2026-06-14: Added `lib/dynamic-template/field-registry.ts` with whole-packet canonical fields for Dispute Letter, Late Payment Letter, Affidavit, FTC, FCRA, and Attachment.
 - 2026-06-14: Added `lib/dynamic-template/contract-v2.ts` with XML part scanning, canonical placeholder detection, repeat block/table-row prototype detection, header/footer detection, unsupported-zone warnings, and round mismatch warning logic.
 - 2026-06-14: Added `app/api/template-assets/diagnostics/route.ts` so v2 contract diagnostics can be tested without replacing the current renderer.
+- 2026-06-14: Added upload-route storage for `validation_json.dynamicTemplateEngineV2` and response payload v2 diagnostics.
+- 2026-06-14: Added preflight checks for dynamic template v2 diagnostics on active template metadata.
+- 2026-06-14: Added `lib/dynamic-template/mapping-engine.ts` render-plan builder.
+- 2026-06-14: Added `lib/dynamic-template/renderer-mode.ts` to keep renderer-v2 behind explicit mode while stable renderer remains default.
