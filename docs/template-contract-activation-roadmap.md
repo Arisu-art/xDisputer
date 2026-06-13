@@ -15,17 +15,20 @@ Preserve user-uploaded template layout while making generated output consistent 
 - `app/api/template-assets/route.ts` now inspects uploaded template contracts, blocks `BLOCKED` contracts before storage, computes `content_hash`, stores `validation_json`, detects duplicate active uploads, and archives superseded versions instead of immediately deleting them.
 - `app/api/template-assets/manifest/route.ts` now resolves one latest active template per owner + round + slot and reports duplicate active slot diagnostics.
 - `lib/generation-manifest.ts` now supports source hash, source summary, template provenance, template validation state, template versions, content hashes, outputs, warnings, and packet order.
+- `supabase/migrations/20260613062000_template_asset_active_slot_guard.sql` adds database-level duplicate active-slot cleanup plus a unique active-slot guard.
+- `supabase/migrations/20260613062500_template_asset_retention_candidates.sql` adds a read-only retention candidate view for archived templates beyond the newest two archived versions per slot.
+- `app/api/template-assets/retention/route.ts` exposes read-only owner-scoped retention candidates for future cleanup UI.
 
 ## Enhancement roadmap
 
 | Step | Status | Target | Why |
 | --- | --- | --- | --- |
 | 1 | Coded | Template contract inspection | Let different layouts share the same canonical meaning. |
-| 2 | Partially coded | Contract activation gate | Blocked templates now fail before storage; database-transaction activation is still pending. |
+| 2 | Mostly coded | Contract activation gate | Blocked templates fail before storage; DB unique active-slot guard is coded. Atomic activation RPC is still pending. |
 | 3 | Coded | Content hash on upload | Avoid duplicate active storage and improve traceability. |
 | 4 | Coded | Validation JSON on asset row | Store why a template was accepted, warned, or blocked. |
 | 5 | Coded | Latest-active slot resolver | Manifest hydration now selects the latest active asset per owner + round + slot. |
-| 6 | Partially coded | Restore-window retention | Superseded versions are now archived instead of deleted; database cleanup policy is still pending. |
+| 6 | Mostly coded | Restore-window retention | Superseded versions are archived; retention candidates are visible. Destructive cleanup remains manual/pending. |
 | 7 | Coded | Preflight contract checks | Generation now blocks active templates with missing canonical fields or unknown required fields. |
 | 8 | Partially coded | Generation manifest | Builder records source hash and template provenance; workspace component still needs effective asset metadata wiring. |
 
@@ -37,7 +40,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 4. Invalid upload must not replace the previous active template.
 5. User-owned templates must never bleed across users or rounds.
 6. Generation should either produce deterministic output or block with a clear reason.
-7. Storage should keep active template plus archived metadata; destructive cleanup should run only through an explicit database-backed retention policy.
+7. Storage should keep active template plus archived metadata; destructive cleanup should run only through an explicit manual or database-backed retention policy.
 
 ## What-if matrix
 
@@ -52,10 +55,10 @@ Preserve user-uploaded template layout while making generated output consistent 
 | Wrong file type is uploaded | Reject before storage. | Coded. |
 | Duplicate active file is uploaded | Reuse active version metadata and avoid duplicate storage. | Coded when `content_hash` is present. |
 | New upload is invalid | Keep previous active version. | Coded because invalid upload is blocked before storage/insert. |
-| Multiple active rows exist for one slot | Manifest chooses the latest active version by slot freshness and reports duplicate diagnostics. | Coded. |
+| Multiple active rows exist for one slot | Manifest chooses latest active; SQL migration normalizes duplicates and adds a unique active-slot guard. | Coded. |
 | Old active template lacks contract metadata | Generation preflight warns and asks for re-upload/rescan before production use. | Coded. |
 | Generated output must be explainable later | Manifest builder records source and template proof fields. | Partially coded. |
-| Many old versions exist | Archive superseded versions; cleanup later through explicit policy. | App-level archive coded; storage cleanup policy pending. |
+| Many old versions exist | Archive superseded versions; retention view/API shows cleanup candidates beyond the newest two archived versions per slot. | Mostly coded. |
 
 ## Expected implementation outcome
 
@@ -72,4 +75,4 @@ canonical source packet
 
 ## Next coding step
 
-Finish workspace manifest wiring so generated manifests receive effective template metadata from Supabase-backed templates. Database-level activation and cleanup policy remain the next Supabase hardening step.
+Finish workspace manifest wiring so generated manifests receive effective template metadata from Supabase-backed templates. Atomic activation RPC and destructive storage cleanup remain optional Supabase hardening steps.
