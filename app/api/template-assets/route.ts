@@ -1,6 +1,7 @@
+import { createHash } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSessionContext } from '../../../lib/saas/session';
-import { inspectTemplateContract, type TemplateDocumentKind } from '../../../lib/template-contracts';
+import { inspectTemplateContract, templateContractGateMessage, type TemplateContract, type TemplateDocumentKind } from '../../../lib/template-contracts';
 import type { ExhibitKind } from '../../../lib/template-exhibits';
 import type { LetterType } from '../../../lib/letter-engine';
 import type { Round } from '../../../lib/reference-store';
@@ -79,6 +80,40 @@ function validateSlot(input: {
   return null;
 }
 
+function sha256FromArrayBuffer(buffer: ArrayBuffer) {
+  return createHash('sha256').update(Buffer.from(buffer)).digest('hex');
+}
+
+function buildValidationJson(contract: TemplateContract, input: {
+  round: Round;
+  templateKind: TemplateKind;
+  letterType: LetterType | null;
+  exhibitKind: ExhibitKind | null;
+  contentHash: string;
+}) {
+  return {
+    status: contract.validation.status,
+    confidence: contract.validation.confidence,
+    renderMode: contract.validation.renderMode,
+    requiredFields: contract.validation.requiredFields,
+    fulfilledFields: contract.validation.fulfilledFields,
+    missingFields: contract.validation.missingFields,
+    unknownRequiredFields: contract.validation.unknownRequiredFields,
+    warnings: contract.validation.warnings,
+    errors: contract.validation.errors,
+    whatIfs: contract.validation.whatIfs,
+    aliasesUsed: contract.validation.aliasesUsed,
+    contentHash: input.contentHash,
+    slot: {
+      round: input.round,
+      templateKind: input.templateKind,
+      letterType: input.letterType,
+      exhibitKind: input.exhibitKind
+    },
+    evaluatedAt: new Date().toISOString()
+  };
+}
+
 async function findExistingAssets(session: Awaited<ReturnType<typeof getSessionContext>>, input: {
   round: string;
   templateKind: string;
@@ -87,7 +122,7 @@ async function findExistingAssets(session: Awaited<ReturnType<typeof getSessionC
 }) {
   let query = session.supabase
     .from('template_assets')
-    .select('id, storage_bucket, storage_path, version_number')
+    .select('id, storage_bucket, storage_path, version_number, is_active, content_hash')
     .eq('owner_id', session.user!.id)
     .eq('round_label', input.round)
     .eq('template_kind', input.templateKind)
@@ -209,6 +244,15 @@ export async function POST(request: NextRequest) {
     const targetType = resolvedLetterType || resolvedExhibitKind;
     if (!targetType) return respond(request, 'error', 'Template type is required.');
 
+    const fileBuffer = await file.arrayBuffer();
+    const contentHash = sha256FromArrayBuffer(fileBuffer);
+    const contract = await inspectTemplateContract(new File([fileBuffer], file.name, { type: file.type, lastModified: file.lastModified }), kind);
+    const gateMessage = templateContractGateMessage(contract);
+
+    if (gateMessage) {
+      return respond(request, 'error', gateMessage, 422, { validation: contract.validation });
+    }
+
     const existing = await findExistingAssets(session, {
       round,
       templateKind,
@@ -219,9 +263,26 @@ export async function POST(request: NextRequest) {
     if (existing.error) return respond(request, 'error', existing.error.message, 500);
 
     const existingAssets = existing.data || [];
-    const nextVersion = existingAssets[0]?.version_number ? existingAssets[0].version_number + 1 : 1;
+    const activeSameContent = existingAssets.find((asset) => asset.is_active && asset.content_hash === contentHash);
 
-    const contract = await inspectTemplateContract(file, kind);
+    if (activeSameContent) {
+      return respond(
+        request,
+        'ok',
+        `${round} ${targetType} template is already active with the same file content.`,
+        200,
+        { assetId: activeSameContent.id, duplicate: true, contentHash, validation: contract.validation }
+      );
+    }
+
+    const nextVersion = existingAssets[0]?.version_number ? existingAssets[0].version_number + 1 : 1;
+    const validationJson = buildValidationJson(contract, {
+      round,
+      templateKind: resolvedTemplateKind,
+      letterType: resolvedLetterType,
+      exhibitKind: resolvedExhibitKind,
+      contentHash
+    });
 
     const storagePath = templateStoragePath({
       userId: session.user.id,
@@ -235,7 +296,7 @@ export async function POST(request: NextRequest) {
 
     const upload = await session.supabase.storage
       .from('template-assets')
-      .upload(storagePath, file, {
+      .upload(storagePath, new Blob([fileBuffer], { type: file.type || 'application/octet-stream' }), {
         contentType: file.type || 'application/octet-stream',
         upsert: false
       });
@@ -255,12 +316,16 @@ export async function POST(request: NextRequest) {
         original_filename: file.name,
         mime_type: file.type || 'application/octet-stream',
         file_size: file.size,
+        content_hash: contentHash,
         contract_json: contract,
+        validation_json: validationJson,
         rule_json: {
           round,
           templateKind,
           letterType: resolvedLetterType,
-          exhibitKind: resolvedExhibitKind
+          exhibitKind: resolvedExhibitKind,
+          contractStatus: contract.validation.status,
+          contractConfidence: contract.validation.confidence
         },
         version_number: nextVersion,
         is_active: true
@@ -282,7 +347,7 @@ export async function POST(request: NextRequest) {
         'ok',
         `${round} ${targetType} template saved. Cleanup warning: ${cleanup.warning}`,
         200,
-        { assetId: insert.data.id, cleanupWarning: cleanup.warning }
+        { assetId: insert.data.id, cleanupWarning: cleanup.warning, contentHash, validation: contract.validation }
       );
     }
 
@@ -291,7 +356,7 @@ export async function POST(request: NextRequest) {
       'ok',
       `${round} ${targetType} template saved. ${cleanup.deleted} old version(s) removed.`,
       200,
-      { assetId: insert.data.id, oldVersionsRemoved: cleanup.deleted }
+      { assetId: insert.data.id, oldVersionsRemoved: cleanup.deleted, contentHash, validation: contract.validation }
     );
   } catch (error) {
     try {
