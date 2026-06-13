@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
 const conflictPattern = /^(<<<<<<<|=======|>>>>>>>)/m;
@@ -19,6 +19,14 @@ const volatileGeneratedPaths = [
   '.next/dev/trace',
   '.next/dev/cache',
   'tsconfig.tsbuildinfo'
+];
+
+const sourceTypoGuards = [
+  {
+    path: 'lib/supplemental-template-renderer.ts',
+    pattern: /\bs\.sn\b/,
+    message: 'Known source typo found: use s.ssn, not s.sn.'
+  }
 ];
 
 function fail(message, details = []) {
@@ -51,21 +59,22 @@ function cleanVolatileGeneratedArtifacts() {
   }
 }
 
-function repairKnownSourceTypos() {
-  const path = 'lib/supplemental-template-renderer.ts';
-  if (!existsSync(path)) return;
+function assertNoKnownSourceTypos() {
+  const failures = [];
 
-  const source = readFileSync(path, 'utf8');
-  const repaired = source.replace(/\bs\.sn\b/g, 's.ssn');
+  for (const guard of sourceTypoGuards) {
+    if (!existsSync(guard.path)) continue;
+    const source = readFileSync(guard.path, 'utf8');
+    if (guard.pattern.test(source)) failures.push(`  - ${guard.path}: ${guard.message}`);
+  }
 
-  if (repaired !== source) {
-    writeFileSync(path, repaired);
-    console.log('Repaired known supplemental renderer source typo: s.sn -> s.ssn');
+  if (failures.length) {
+    fail('Known source typo guard failed. Fix the source file; safety checks must not rewrite code.', failures);
   }
 }
 
 cleanVolatileGeneratedArtifacts();
-repairKnownSourceTypos();
+assertNoKnownSourceTypos();
 
 let unmerged = '';
 try {
