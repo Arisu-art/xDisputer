@@ -8,6 +8,9 @@ export type TemplateKind = 'LETTER' | 'EXHIBIT';
 export type TemplateAssetRecord = {
   id: string;
   owner_id: string;
+  manager_user_id?: string | null;
+  uploaded_by_user_id?: string | null;
+  template_scope?: 'MANAGER' | null;
   round_label: Round;
   template_kind: TemplateKind;
   letter_type: LetterType | null;
@@ -39,15 +42,20 @@ export type TemplateAssetSlotLike = {
 };
 
 export function templateStoragePath(input: {
-  userId: string;
+  userId?: string;
+  managerUserId?: string;
   round: Round;
   kind: TemplateKind;
   type: LetterType | ExhibitKind;
   filename: string;
 }) {
+  const owner = input.managerUserId || input.userId;
+  if (!owner) throw new Error('Template storage path requires a manager user id.');
+
   const safeRound = input.round.replace(/\s+/g, '-').toLowerCase();
   const safeFile = input.filename.replace(/[^a-z0-9._-]+/gi, '-');
-  return `${input.userId}/${safeRound}/${input.kind.toLowerCase()}/${input.type}/${Date.now()}-${safeFile}`;
+  const safeType = String(input.type).replace(/[^a-z0-9._-]+/gi, '-').toLowerCase();
+  return `manager/${owner}/${safeRound}/${input.kind.toLowerCase()}/${safeType}/${Date.now()}-${safeFile}`;
 }
 
 export function templateAssetSlotKey(asset: TemplateAssetSlotLike) {
@@ -100,9 +108,10 @@ export function templateAssetSlotMap<T extends TemplateAssetSlotLike>(assets: T[
 
 export async function listActiveTemplateAssets(
   supabase: SupabaseClient,
-  round: Round
+  round: Round,
+  managerUserId?: string | null
 ) {
-  return supabase
+  let query = supabase
     .from('template_assets')
     .select('*')
     .eq('round_label', round)
@@ -110,4 +119,8 @@ export async function listActiveTemplateAssets(
     .order('version_number', { ascending: false })
     .order('updated_at', { ascending: false })
     .order('created_at', { ascending: false });
+
+  if (managerUserId) query = query.eq('manager_user_id', managerUserId);
+
+  return query;
 }
