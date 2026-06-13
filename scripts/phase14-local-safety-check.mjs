@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
 const conflictPattern = /^(<<<<<<<|=======|>>>>>>>)/m;
@@ -8,7 +8,8 @@ const filesToCheck = [
   'components/LetterGeneratorWorkspaceV2.tsx',
   'app/api/generation-runs/route.ts',
   'app/api/template-assets/route.ts',
-  'lib/letter-engine.ts'
+  'lib/letter-engine.ts',
+  'lib/supplemental-template-renderer.ts'
 ];
 
 const volatileGeneratedPaths = [
@@ -50,7 +51,21 @@ function cleanVolatileGeneratedArtifacts() {
   }
 }
 
+function repairKnownSourceTypos() {
+  const path = 'lib/supplemental-template-renderer.ts';
+  if (!existsSync(path)) return;
+
+  const source = readFileSync(path, 'utf8');
+  const repaired = source.replace(/\bs\.sn\b/g, 's.ssn');
+
+  if (repaired !== source) {
+    writeFileSync(path, repaired);
+    console.log('Repaired known supplemental renderer source typo: s.sn -> s.ssn');
+  }
+}
+
 cleanVolatileGeneratedArtifacts();
+repairKnownSourceTypos();
 
 let unmerged = '';
 try {
