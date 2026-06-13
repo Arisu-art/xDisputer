@@ -80,12 +80,18 @@ export default function OutputReviewWorkspace({
 
   return (
     <section className="outputs-workspace guided-output-workspace progressive-output-workspace">
-      <section className="panel output-stage output-review-stage shared-stage-surface">
-        <header className="output-stage-header output-progressive-command">
+      <section className="panel output-stage output-review-stage shared-stage-surface compact-output-review-stage">
+        <header className="output-stage-header output-progressive-command output-review-command-merged">
           <div className="output-stage-heading">
             <p className="eyebrow">Review and delivery</p>
             <h2>{review.headline}</h2>
             <p>{review.instruction}</p>
+          </div>
+          <div className="output-download-command">
+            <span>{review.reviewedPackets}/{review.totalPackets} reviewed</span>
+            <button type="button" className="action-button" disabled={!zipName || !review.readyToDownload} onClick={onZip}>
+              Download final package
+            </button>
           </div>
         </header>
 
@@ -126,17 +132,6 @@ export default function OutputReviewWorkspace({
             {warnings.slice(0, 3).map((warning, index) => <p key={index}>{userFacingText(warning, 'error')}</p>)}
           </section>
         )}
-
-        <section className="complete-package-delivery">
-          <div>
-            <p className="eyebrow">Final package</p>
-            <h3>Download final package</h3>
-            <p>{review.reviewedPackets}/{review.totalPackets} packet{review.totalPackets === 1 ? '' : 's'} reviewed. Review each prepared packet, then download the final organized package.</p>
-          </div>
-          <button type="button" className="action-button" disabled={!zipName || !review.readyToDownload} onClick={onZip}>
-            Download final package
-          </button>
-        </section>
       </section>
 
       {selected && (
