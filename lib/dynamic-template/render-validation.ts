@@ -21,6 +21,14 @@ export type DynamicTemplateRepeatValidation = {
   blockers: string[];
 };
 
+type OperationIdentityLike = {
+  kind?: string | null;
+  canonicalKey?: string | null;
+  alias?: string | null;
+  partName?: string | null;
+  tableRowIndex?: number | null;
+};
+
 export type DynamicTemplateRenderValidationResult = {
   version: 1;
   status: 'PASS' | 'WARNING' | 'FAIL';
@@ -103,8 +111,8 @@ function repeatCount(operation: DynamicRenderPlanOperation) {
   return Math.max(0, Number(operation.repeatCount || 0));
 }
 
-function operationIdentity(operation: Pick<DynamicRenderPlanOperation, 'kind' | 'canonicalKey' | 'alias' | 'partName' | 'tableRowIndex'>) {
-  return [operation.kind, operation.canonicalKey || '', operation.alias || '', operation.partName || '', operation.tableRowIndex || ''].join('::');
+function operationIdentity(operation: OperationIdentityLike) {
+  return [operation.kind || '', operation.canonicalKey || '', operation.alias || '', operation.partName || '', operation.tableRowIndex || ''].join('::');
 }
 
 function validateRepeatProof(input: {
