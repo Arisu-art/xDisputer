@@ -1,11 +1,24 @@
 import PizZip from 'pizzip';
-import type { DynamicRenderPlan } from './mapping-engine';
+import type { DynamicRenderPlan, DynamicRenderPlanOperation } from './mapping-engine';
 import type { DocxLayoutRendererV2Result } from './docx-layout-renderer-v2';
 
 export type DynamicTemplateUnresolvedPlaceholder = {
   alias: string;
   partName: string;
   required: boolean;
+};
+
+export type DynamicTemplateRepeatValidation = {
+  expectedRepeatOperations: number;
+  appliedRepeatOperations: number;
+  expectedTableRowCloneOperations: number;
+  appliedTableRowCloneOperations: number;
+  expectedRepeatedItems: number;
+  appliedRepeatedItems: number;
+  skippedRepeatOperations: number;
+  skippedTableRowCloneOperations: number;
+  warnings: string[];
+  blockers: string[];
 };
 
 export type DynamicTemplateRenderValidationResult = {
@@ -17,6 +30,7 @@ export type DynamicTemplateRenderValidationResult = {
   planStatus: DynamicRenderPlan['status'];
   unresolvedPlaceholders: DynamicTemplateUnresolvedPlaceholder[];
   unresolvedRequiredPlaceholders: DynamicTemplateUnresolvedPlaceholder[];
+  repeatValidation: DynamicTemplateRepeatValidation;
   appliedOperationCount: number;
   skippedOperationCount: number;
   mutatedPartCount: number;
@@ -36,6 +50,10 @@ export type DynamicTemplateRenderValidationResult = {
     repeatOperationCount: number;
     tableRowCloneCount: number;
     conditionalOperationCount: number;
+    expectedRepeatedItems: number;
+    appliedRepeatedItems: number;
+    skippedRepeatOperations: number;
+    skippedTableRowCloneOperations: number;
     unresolvedPlaceholderCount: number;
     unresolvedRequiredPlaceholderCount: number;
     mutatedParts: string[];
@@ -77,6 +95,62 @@ async function arrayBufferFromBlob(blob: Blob | ArrayBuffer) {
   return blob instanceof ArrayBuffer ? blob : await blob.arrayBuffer();
 }
 
+function repeatOperations(plan: DynamicRenderPlan) {
+  return plan.operations.filter((operation) => operation.kind === 'REPEAT_BLOCK' || operation.kind === 'TABLE_ROW_CLONE');
+}
+
+function repeatCount(operation: DynamicRenderPlanOperation) {
+  return Math.max(0, Number(operation.repeatCount || 0));
+}
+
+function operationIdentity(operation: Pick<DynamicRenderPlanOperation, 'kind' | 'canonicalKey' | 'alias' | 'partName' | 'tableRowIndex'>) {
+  return [operation.kind, operation.canonicalKey || '', operation.alias || '', operation.partName || '', operation.tableRowIndex || ''].join('::');
+}
+
+function validateRepeatProof(input: {
+  plan: DynamicRenderPlan;
+  renderResult: DocxLayoutRendererV2Result;
+}): DynamicTemplateRepeatValidation {
+  const plannedRepeats = repeatOperations(input.plan);
+  const plannedRepeatIds = new Set(plannedRepeats.map(operationIdentity));
+  const plannedTableIds = new Set(plannedRepeats.filter((operation) => operation.kind === 'TABLE_ROW_CLONE').map(operationIdentity));
+  const appliedRepeatIds = new Set(input.renderResult.proof.appliedOperations.filter((operation) => operation.kind === 'REPEAT_BLOCK' || operation.kind === 'TABLE_ROW_CLONE').map(operationIdentity));
+  const appliedTableIds = new Set(input.renderResult.proof.appliedOperations.filter((operation) => operation.kind === 'TABLE_ROW_CLONE').map(operationIdentity));
+  const skippedRepeatIds = new Set(input.renderResult.proof.skippedOperations.filter((operation) => operation.kind === 'REPEAT_BLOCK' || operation.kind === 'TABLE_ROW_CLONE').map(operationIdentity));
+  const skippedTableIds = new Set(input.renderResult.proof.skippedOperations.filter((operation) => operation.kind === 'TABLE_ROW_CLONE').map(operationIdentity));
+  const expectedRepeatedItems = plannedRepeats.reduce((total, operation) => total + repeatCount(operation), 0);
+  const appliedRepeatedItems = plannedRepeats
+    .filter((operation) => appliedRepeatIds.has(operationIdentity(operation)))
+    .reduce((total, operation) => total + repeatCount(operation), 0);
+  const warnings: string[] = [];
+  const blockers: string[] = [];
+
+  if (plannedRepeatIds.size && appliedRepeatIds.size < plannedRepeatIds.size) {
+    warnings.push(`Renderer-v2 applied ${appliedRepeatIds.size} of ${plannedRepeatIds.size} planned repeat operation(s).`);
+  }
+
+  if (plannedTableIds.size && appliedTableIds.size < plannedTableIds.size) {
+    warnings.push(`Renderer-v2 applied ${appliedTableIds.size} of ${plannedTableIds.size} planned table-row clone operation(s).`);
+  }
+
+  if (expectedRepeatedItems > 0 && appliedRepeatedItems === 0) {
+    blockers.push(`Renderer-v2 expected ${expectedRepeatedItems} repeated item(s) but did not apply any repeat/table clone operation.`);
+  }
+
+  return {
+    expectedRepeatOperations: plannedRepeatIds.size,
+    appliedRepeatOperations: appliedRepeatIds.size,
+    expectedTableRowCloneOperations: plannedTableIds.size,
+    appliedTableRowCloneOperations: appliedTableIds.size,
+    expectedRepeatedItems,
+    appliedRepeatedItems,
+    skippedRepeatOperations: skippedRepeatIds.size,
+    skippedTableRowCloneOperations: skippedTableIds.size,
+    warnings,
+    blockers
+  };
+}
+
 export async function scanUnresolvedPlaceholders(input: {
   rendered: Blob | ArrayBuffer;
   plan: DynamicRenderPlan;
@@ -116,8 +190,9 @@ export async function validateDynamicTemplateRender(input: {
     plan: input.plan
   });
   const unresolvedRequiredPlaceholders = unresolvedPlaceholders.filter((placeholder) => placeholder.required);
-  const warnings = [...input.renderResult.proof.warnings];
-  const blockers = [...input.renderResult.proof.blockers];
+  const repeatValidation = validateRepeatProof(input);
+  const warnings = [...input.renderResult.proof.warnings, ...repeatValidation.warnings];
+  const blockers = [...input.renderResult.proof.blockers, ...repeatValidation.blockers];
 
   if (unresolvedRequiredPlaceholders.length) {
     blockers.push(`Rendered DOCX still contains ${unresolvedRequiredPlaceholders.length} unresolved required placeholder(s).`);
@@ -142,6 +217,7 @@ export async function validateDynamicTemplateRender(input: {
     planStatus: input.plan.status,
     unresolvedPlaceholders,
     unresolvedRequiredPlaceholders,
+    repeatValidation,
     appliedOperationCount: input.renderResult.proof.appliedOperations.length,
     skippedOperationCount: input.renderResult.proof.skippedOperations.length,
     mutatedPartCount: input.renderResult.proof.mutatedParts.length,
@@ -161,6 +237,10 @@ export async function validateDynamicTemplateRender(input: {
       repeatOperationCount: input.plan.diagnostics.repeatOperationCount,
       tableRowCloneCount: input.plan.diagnostics.tableRowCloneCount,
       conditionalOperationCount: input.plan.diagnostics.conditionalOperationCount,
+      expectedRepeatedItems: repeatValidation.expectedRepeatedItems,
+      appliedRepeatedItems: repeatValidation.appliedRepeatedItems,
+      skippedRepeatOperations: repeatValidation.skippedRepeatOperations,
+      skippedTableRowCloneOperations: repeatValidation.skippedTableRowCloneOperations,
       unresolvedPlaceholderCount: unresolvedPlaceholders.length,
       unresolvedRequiredPlaceholderCount: unresolvedRequiredPlaceholders.length,
       mutatedParts: input.renderResult.proof.mutatedParts
@@ -182,6 +262,7 @@ export function dynamicTemplateRenderValidationManifest(validation: DynamicTempl
       mutatedPartCount: validation.mutatedPartCount,
       repeatedOperationCount: validation.repeatedOperationCount,
       tableRowCloneOperationCount: validation.tableRowCloneOperationCount,
+      repeatValidation: validation.repeatValidation,
       unresolvedPlaceholderCount: validation.unresolvedPlaceholders.length,
       unresolvedRequiredPlaceholderCount: validation.unresolvedRequiredPlaceholders.length,
       warnings: validation.warnings,
