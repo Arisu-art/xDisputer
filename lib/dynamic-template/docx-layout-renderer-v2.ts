@@ -24,7 +24,7 @@ export type DocxLayoutRendererV2Result = {
   blob: Blob;
   proof: {
     renderer: 'DOCX_LAYOUT_RENDERER_V2';
-    rendererVersion: '0.2.0-blocks-and-split-runs';
+    rendererVersion: '0.2.1-es5-safe-split-runs';
     rendererMode: DynamicTemplateRendererMode;
     planStatus: DynamicRenderPlan['status'];
     mutatedParts: string[];
@@ -137,6 +137,10 @@ function tokenFromMatch(match: RegExpExecArray) {
   return String(match[1] || match[2] || match[3] || '').trim();
 }
 
+function allMatches(value: string, regex: RegExp) {
+  return Array.from(value.matchAll(regex));
+}
+
 function valueToText(value: DynamicRenderPlanValue | undefined) {
   if (!value) return '';
   if (typeof value.value === 'boolean') return '';
@@ -192,7 +196,7 @@ function collectTextNodes(xml: string) {
   const nodes: TextNodeRange[] = [];
   let aggregate = '';
 
-  for (const match of xml.matchAll(TEXT_NODE_PATTERN)) {
+  allMatches(xml, TEXT_NODE_PATTERN).forEach((match) => {
     const full = match[0];
     const attributes = match[1] || '';
     const rawText = match[2] || '';
@@ -205,7 +209,7 @@ function collectTextNodes(xml: string) {
     const textEnd = aggregate.length;
 
     nodes.push({ fullStart, fullEnd: fullStart + full.length, bodyStart, bodyEnd, attributes, rawText, text, textStart, textEnd });
-  }
+  });
 
   return { nodes, aggregate };
 }
@@ -213,7 +217,7 @@ function collectTextNodes(xml: string) {
 function replaceSplitAliasOnce(xml: string, alias: string, replacementXml: string) {
   const { nodes, aggregate } = collectTextNodes(xml);
   const regex = aliasTextRegex(alias);
-  const matches = Array.from(aggregate.matchAll(regex));
+  const matches = allMatches(aggregate, regex);
   const match = matches.at(-1);
 
   if (!match || typeof match.index !== 'number') return { xml, replacements: 0 };
@@ -282,7 +286,7 @@ function booleanValue(operation: DynamicRenderPlanOperation) {
 }
 
 function paragraphRanges(xml: string) {
-  return Array.from(xml.matchAll(PARAGRAPH_PATTERN)).map((match) => ({
+  return allMatches(xml, PARAGRAPH_PATTERN).map((match) => ({
     start: match.index || 0,
     end: (match.index || 0) + match[0].length,
     xml: match[0]
@@ -322,7 +326,7 @@ function replaceConditionalOperation(xml: string, operation: DynamicRenderPlanOp
 
 function replaceRecordTokens(rowXml: string, record: Record<string, string | string[]>) {
   let output = rowXml;
-  const matches = Array.from(rowXml.matchAll(PLACEHOLDER_PATTERN));
+  const matches = allMatches(rowXml, PLACEHOLDER_PATTERN);
 
   for (const match of matches) {
     const alias = tokenFromMatch(match);
@@ -466,7 +470,7 @@ export async function renderDocxLayoutV2(input: {
       blob: input.template,
       proof: {
         renderer: 'DOCX_LAYOUT_RENDERER_V2',
-        rendererVersion: '0.2.0-blocks-and-split-runs',
+        rendererVersion: '0.2.1-es5-safe-split-runs',
         rendererMode: input.rendererMode,
         planStatus: input.plan.status,
         mutatedParts: [],
@@ -508,7 +512,7 @@ export async function renderDocxLayoutV2(input: {
     blob,
     proof: {
       renderer: 'DOCX_LAYOUT_RENDERER_V2',
-      rendererVersion: '0.2.0-blocks-and-split-runs',
+      rendererVersion: '0.2.1-es5-safe-split-runs',
       rendererMode: input.rendererMode,
       planStatus: input.plan.status,
       mutatedParts,
