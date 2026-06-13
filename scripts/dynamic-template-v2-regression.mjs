@@ -42,6 +42,10 @@ for (const term of ['assertDocxLayoutRendererV2Allowed', 'TABLE_ROW_PATTERN', 'c
   assertIncludes(renderer, term, `renderer-v2 foundation includes ${term}`);
 }
 
+for (const term of ['TEXT_NODE_PATTERN', 'replaceSplitAlias', 'split-run', 'cloneParagraphBlockOperation', 'paragraph-block-clone', 'replaceConditionalOperation', 'conditional-removed', 'conditional-kept']) {
+  assertIncludes(renderer, term, `renderer-v2 handles ${term}`);
+}
+
 for (const term of ['scanUnresolvedPlaceholders', 'unresolvedRequiredPlaceholders', 'dynamicTemplateRenderValidationManifest', 'mutatedPartCount']) {
   assertIncludes(validation, term, `render validation includes ${term}`);
 }
