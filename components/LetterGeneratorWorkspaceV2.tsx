@@ -47,6 +47,9 @@ type RegistryTemplateAsset = {
   mime_type: string;
   file_size: number | null;
   contract_json: unknown;
+  validation_json?: Record<string, unknown> | null;
+  content_hash?: string | null;
+  version_number?: number | null;
 };
 
 const panels: Panel[] = ['Dashboard', 'Templates', 'Source Data', 'Outputs', 'Client Center', 'Settings'];
@@ -158,7 +161,12 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
       ...slot,
       file: registryAsset.original_filename,
       size: registryAsset.file_size || undefined,
-      contract: registryAsset.contract_json as any
+      contract: registryAsset.contract_json as any,
+      assetId: registryAsset.id,
+      source: 'SUPABASE_TEMPLATE_ASSET',
+      versionNumber: registryAsset.version_number || null,
+      contentHash: registryAsset.content_hash || null,
+      validationJson: registryAsset.validation_json || null
     };
   }), [refs, registryAssets]);
 
@@ -180,7 +188,12 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
         name: registryAsset.original_filename,
         type: registryAsset.mime_type,
         size: registryAsset.file_size || 0,
-        contract: registryAsset.contract_json as any
+        contract: registryAsset.contract_json as any,
+        assetId: registryAsset.id,
+        source: 'SUPABASE_TEMPLATE_ASSET',
+        versionNumber: registryAsset.version_number || null,
+        contentHash: registryAsset.content_hash || null,
+        validationJson: registryAsset.validation_json || null
       };
     });
 
@@ -298,8 +311,8 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
       round,
       parsed,
       routes,
-      references: refs,
-      templates,
+      references: effectiveRefs,
+      templates: effectiveTemplates,
       outputs: files.map((item, index) => normalizeGeneratedOutputForManifest({ id: item.id, path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count }, index)),
       warnings: notes
     }));
