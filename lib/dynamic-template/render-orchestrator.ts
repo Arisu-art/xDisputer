@@ -6,6 +6,7 @@ import { buildDynamicTemplateRenderPlan, dynamicRenderPlanSummary, type DynamicR
 import { renderDocxLayoutV2, type DocxLayoutRendererV2Result } from './docx-layout-renderer-v2';
 import { validateDynamicTemplateRender, dynamicTemplateRenderValidationManifest, type DynamicTemplateRenderValidationResult } from './render-validation';
 import { gradeDynamicTemplateRender, dynamicTemplateQualityManifest, type DynamicTemplateQualityGrade } from './quality-framework';
+import { evaluateDynamicTemplateAdvancedZones, dynamicTemplateAdvancedZoneManifest, type DynamicTemplateAdvancedZoneDecision } from './advanced-zone-policy';
 import { resolveDynamicTemplateRendererMode, type DynamicTemplateRendererMode } from './renderer-mode';
 
 export type DynamicTemplateEngineV2Result = {
@@ -13,6 +14,7 @@ export type DynamicTemplateEngineV2Result = {
   status: 'RENDERED' | 'BLOCKED';
   blob: Blob;
   contract: DynamicTemplateContractV2;
+  advancedZones: DynamicTemplateAdvancedZoneDecision;
   plan: DynamicRenderPlan;
   renderResult: DocxLayoutRendererV2Result;
   validation: DynamicTemplateRenderValidationResult;
@@ -35,6 +37,7 @@ export async function renderDynamicDocxTemplateV2(input: {
 }): Promise<DynamicTemplateEngineV2Result> {
   const rendererMode = resolveDynamicTemplateRendererMode({ explicitMode: input.rendererMode });
   const contract = await inspectDynamicTemplateContractV2(input.template, input.kind, input.round);
+  const advancedZones = evaluateDynamicTemplateAdvancedZones(contract);
   const plan = buildDynamicTemplateRenderPlan({
     contract,
     parsed: input.parsed,
@@ -43,9 +46,10 @@ export async function renderDynamicDocxTemplateV2(input: {
     documentDate: input.documentDate
   });
 
-  if (contract.status === 'BLOCKED' || plan.status === 'BLOCKED') {
+  if (contract.status === 'BLOCKED' || plan.status === 'BLOCKED' || advancedZones.status === 'BLOCKED') {
     const reason = [
       ...contract.errors,
+      ...advancedZones.blockers,
       ...plan.blockers,
       contract.missingFields.length ? `Missing required canonical field(s): ${contract.missingFields.join(', ')}.` : ''
     ].filter(Boolean).join(' ');
@@ -54,7 +58,7 @@ export async function renderDynamicDocxTemplateV2(input: {
 
   const renderResult = await renderDocxLayoutV2({
     template: input.template,
-    plan,
+    plan: advancedZones.warnings.length ? { ...plan, warnings: [...plan.warnings, ...advancedZones.warnings] } : plan,
     rendererMode
   });
   const validation = await validateDynamicTemplateRender({ plan, renderResult });
@@ -69,6 +73,7 @@ export async function renderDynamicDocxTemplateV2(input: {
     status: 'RENDERED',
     blob: renderResult.blob,
     contract,
+    advancedZones,
     plan,
     renderResult,
     validation,
@@ -86,6 +91,7 @@ export async function renderDynamicDocxTemplateV2(input: {
           warnings: contract.warnings,
           diagnostics: contract.diagnostics
         },
+        ...dynamicTemplateAdvancedZoneManifest(advancedZones),
         renderPlan: dynamicRenderPlanSummary(plan),
         ...dynamicTemplateRenderValidationManifest(validation),
         ...dynamicTemplateQualityManifest(quality)
