@@ -33,13 +33,14 @@ export type UxVisibilityRules = {
 };
 
 export function resolveUxVisibility(input: UxVisibilityInput): UxVisibilityRules {
-  const blockedAfterGenerate = input.generateAttempted && input.statusTone === 'error' && input.hasPreflightBlockers;
-  const reviewNeededAfterGenerate = input.generateAttempted && input.statusTone === 'error' && input.hasPreflightWarnings;
+  const inSourceData = input.panel === sourceDataPanel && input.hasSource;
+  const blockedNow = inSourceData && input.hasPreflightBlockers;
+  const reviewNeededNow = inSourceData && input.hasPreflightWarnings && (input.generateAttempted || input.statusTone === 'error');
 
   return {
     showHeaderNextAction: true,
     showStatusText: input.statusTone === 'success' || input.statusTone === 'error' || input.busy,
-    showPreflightPanel: input.panel === sourceDataPanel && input.hasSource && (blockedAfterGenerate || reviewNeededAfterGenerate),
+    showPreflightPanel: blockedNow || reviewNeededNow,
     showOutputWarnings: input.panel === outputsPanel && input.hasGeneratedOutput,
     showBusyState: input.busy,
     allowGlobalWarningSurface: false,
