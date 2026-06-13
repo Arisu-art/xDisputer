@@ -1,5 +1,10 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+
+if (existsSync('scripts/apply-user-error-flyout-wiring.mjs')) {
+  execSync('node scripts/apply-user-error-flyout-wiring.mjs', { stdio: 'inherit' });
+}
 
 const file = 'components/LetterGeneratorWorkspaceV2.tsx';
 let source = readFileSync(file, 'utf8');
