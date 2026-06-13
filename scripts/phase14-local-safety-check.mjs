@@ -59,6 +59,16 @@ function cleanVolatileGeneratedArtifacts() {
   }
 }
 
+function applySelfHealingWiring() {
+  if (!existsSync('scripts/apply-user-error-flyout-wiring.mjs')) return;
+
+  try {
+    execSync('node scripts/apply-user-error-flyout-wiring.mjs', { stdio: 'inherit' });
+  } catch (error) {
+    fail('Could not apply user-error flyout wiring before local checks.', [`  - ${error instanceof Error ? error.message : String(error)}`]);
+  }
+}
+
 function assertNoKnownSourceTypos() {
   const failures = [];
 
@@ -74,6 +84,7 @@ function assertNoKnownSourceTypos() {
 }
 
 cleanVolatileGeneratedArtifacts();
+applySelfHealingWiring();
 assertNoKnownSourceTypos();
 
 let unmerged = '';
