@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/repair-letter-workspace-syntax.mjs && node scripts/repair-letter-workspace-contracts.mjs && node scripts/repair-letter-workspace-blob-boundaries.mjs && node scripts/repair-letter-workspace-header-chip.mjs && node scripts/repair-fast-template-upload.mjs && node scripts/repair-fast-template-asset-route.mjs && node scripts/repair-phase14-generation-snapshots.mjs && node scripts/phase14-build-guardrails.mjs && node scripts/repair-generate-click-feedback.mjs",
     "build": "next build",
     "start": "next start",
     "ai:code": "node scripts/ai-coding-assistant.js",
@@ -12,7 +11,6 @@
     "ai:code:help": "node scripts/ai-coding-assistant.js --help",
     "ai:process": "node scripts/ai-code-processor.js",
     "ai:apply": "node scripts/apply-changes.js",
-    "pretypecheck": "node scripts/repair-letter-workspace-syntax.mjs && node scripts/repair-letter-workspace-contracts.mjs && node scripts/repair-letter-workspace-blob-boundaries.mjs && node scripts/repair-letter-workspace-header-chip.mjs && node scripts/repair-fast-template-upload.mjs && node scripts/repair-fast-template-asset-route.mjs && node scripts/repair-phase14-generation-snapshots.mjs && node scripts/phase14-build-guardrails.mjs && node scripts/repair-generate-click-feedback.mjs",
     "typecheck": "tsc --noEmit",
     "quality:check": "npm run typecheck && npm run build",
     "xdisputer:guard": "node scripts/xdisputer-deploy-guard.mjs",
