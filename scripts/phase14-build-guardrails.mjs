@@ -94,6 +94,16 @@ function guardGuidedSourceDataFlow() {
     );
   }
 
+  source = source.replace('Source TXT', 'Source Notepad');
+  source = source.replace('Add client source data', 'Upload or review client Notepad data');
+  source = source.replace('Import a TXT as a protected original, or open a manual draft. Working edits can always be recovered before replacement.', 'Upload a Notepad/TXT source file into a clean canvas. The original is protected, the working draft stays editable, and FTC fields are not added during normalization.');
+  source = source.replace('Upload TXT file', 'Upload Notepad/TXT');
+  source = source.replace('Import a client TXT and preserve an untouched original baseline.', 'Drop in the client source file, preserve the original, then clean only the fields needed for dispute packet generation.');
+  source = source.replace('Review source data', 'Review normalized Notepad canvas');
+  source = source.replace('Prepare only fields used by active packet documents. Retired FTC data is not required for generation.', 'Review the normalized source canvas. FTC fields are intentionally excluded from Notepad normalization for now.');
+  source = source.replace('Import new TXT', 'Import new Notepad/TXT');
+  source = source.replace('Standardize the working draft to continue.', 'Standardize the Notepad draft to continue.');
+
   save(file, before, source);
 }
 
@@ -113,8 +123,85 @@ function guardWorkspaceV2() {
   save(file, before, source);
 }
 
+function guardLetterEngineNotepadNormalization() {
+  const file = 'lib/letter-engine.ts';
+  let source = read(file);
+  const before = source;
+
+  source = source.replace(" if (parsed.ftcReportNumber || parsed.ftcAccounts.length) sections.push(`FTC REPORT NUMBER: ${parsed.ftcReportNumber}`, `FTC REPORT DATE: ${parsed.ftcReportDate}`, '', 'FTC AFFECTED ACCOUNTS', ...ftcLines(parsed.ftcAccounts, parsed.ftcReportDate));", '');
+  source = source.replace(" parsed.ftcReportNumber ? 'FTC report number' : '', parsed.ftcAccounts.length ? 'FTC affected accounts' : '',", '');
+  source = source.replace("FTC REPORT NUMBER:\nFTC REPORT DATE: AUTO - US EASTERN DATE MINUS 5 DAYS\n\nFTC AFFECTED ACCOUNTS - MAXIMUM 5; THIS SECTION CONTROLS FTC OUTPUT ORDER\nAccount Name: EXAMPLE ACCOUNT OR INQUIRY\nAccount Number:\nDate Discovered: M/YYYY\nFraudulent Amount:\n\n", '');
+
+  save(file, before, source);
+}
+
+function guardNotepadCanvasCss() {
+  const file = 'app/source-progressive-studio.css';
+  let source = read(file);
+  const before = source;
+  const marker = '/* Notepad Source Canvas UX */';
+
+  if (!source.includes(marker)) {
+    source += `
+
+${marker}
+.source-editor-stage {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 9% 0%, rgba(96, 115, 139, .10), transparent 31%), linear-gradient(180deg, #fff 0%, #f8fafc 100%) !important;
+}
+.source-editor-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(15, 23, 42, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(15, 23, 42, .025) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(180deg, rgba(0,0,0,.34), transparent 72%);
+}
+.source-editor-stage > * { position: relative; z-index: 1; }
+.source-editor-layout { grid-template-columns: minmax(260px, 315px) minmax(0, 1fr); align-items: stretch; }
+.source-editor-tools.compact {
+  overflow: hidden;
+  border-color: rgba(100, 116, 139, .24);
+  background: rgba(255,255,255,.82);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, .07);
+  backdrop-filter: blur(14px);
+}
+.source-tool-upload {
+  padding: 12px;
+  border: 1px dashed rgba(100, 116, 139, .34);
+  border-radius: 15px;
+  background: rgba(248, 250, 252, .86);
+}
+.source-tool-upload:hover { border-color: var(--ui-gray-primary); background: #fff; }
+.source-focused-text {
+  min-height: min(660px, calc(100dvh - 360px));
+  border-color: rgba(100, 116, 139, .28);
+  background: linear-gradient(90deg, rgba(248,250,252,.95) 0 52px, rgba(226,232,240,.75) 52px 53px, #fff 53px 100%), repeating-linear-gradient(180deg, transparent 0 27px, rgba(148, 163, 184, .14) 28px 29px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.92), inset 0 0 0 1px rgba(255,255,255,.45), 0 20px 48px rgba(15, 23, 42, .08);
+  color: #0f172a;
+  line-height: 1.76;
+  tab-size: 2;
+}
+.source-focused-text:focus {
+  outline: none;
+  border-color: var(--ui-gray-primary);
+  background: #fff;
+  box-shadow: 0 0 0 5px rgba(100, 116, 139, .10), 0 24px 55px rgba(15, 23, 42, .10);
+}
+.source-record-summary { border-color: rgba(16, 185, 129, .34); box-shadow: 0 12px 28px rgba(16, 185, 129, .10); }
+@media (max-width: 1100px) { .source-focused-text { min-height: 520px; } }
+`;
+  }
+
+  save(file, before, source);
+}
+
 guardTemplateAssetsRoute();
 guardGenerationRunsRoute();
 guardGuidedSourceDataFlow();
 guardWorkspaceV2();
+guardLetterEngineNotepadNormalization();
+guardNotepadCanvasCss();
 console.log('Phase 14 build guardrails complete.');
