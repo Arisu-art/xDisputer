@@ -6,16 +6,36 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const write = (file, value) => fs.writeFileSync(path.join(root, file), value);
 
 function once(content, search, replacement, label) {
+  if (content.includes(replacement.trim())) return content;
   if (!content.includes(search)) {
-    if (content.includes(replacement.trim())) return content;
     throw new Error(`Phase 14 repair missing anchor: ${label}`);
   }
   return content.replace(search, replacement);
 }
 
+function removeDuplicateSnapshotDeclarations(content) {
+  const declaration = `    const sourceSnapshot = body?.sourceSnapshot ?? body?.source ?? null;
+    const templateSnapshot = body?.templateSnapshot ?? body?.template ?? null;
+    const rulesSnapshot = body?.rulesSnapshot ?? body?.rules ?? null;
+    const outputSnapshot = body?.outputSnapshot ?? body?.output ?? null;
+`;
+
+  const first = content.indexOf(declaration);
+  if (first < 0) return content;
+
+  let next = content;
+  let index = next.indexOf(declaration, first + declaration.length);
+  while (index >= 0) {
+    next = next.slice(0, index) + next.slice(index + declaration.length);
+    index = next.indexOf(declaration, first + declaration.length);
+  }
+  return next;
+}
+
 function patchGenerationRunsRoute() {
   const file = 'app/api/generation-runs/route.ts';
   let c = read(file);
+  c = removeDuplicateSnapshotDeclarations(c);
 
   if (!c.includes("../../../lib/saas/generation-snapshots")) {
     c = c.replace(
@@ -95,7 +115,7 @@ function patchGenerationRunsRoute() {
       eventType: 'generation_run_create',`);
   }
 
-  write(file, c);
+  write(file, removeDuplicateSnapshotDeclarations(c));
 }
 
 function patchWorkspace() {
