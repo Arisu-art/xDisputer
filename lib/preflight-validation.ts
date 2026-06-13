@@ -1,12 +1,9 @@
-import { bureaus, type LetterRoute, type LetterType, type ParsedSource } from './letter-engine';
-import { generationPacketPositions } from './generation-contract';
+import type { LetterRoute, ParsedSource } from './letter-engine';
 import type { PacketAssets } from './packet-assets';
 import type { LetterReference } from './reference-store';
-import type { ExhibitKind, TemplateExhibits } from './template-exhibits';
-import type { TemplateContract } from './template-contracts';
+import type { TemplateExhibits } from './template-exhibits';
 import type { WorkspacePreferences } from './workspace-preferences';
-import { userFacingText } from './ux-copy-contract';
-import { resolveRoundTemplateSelection } from './round-template-policy';
+import { READINESS_CHECKLIST_DISABLED, READINESS_CHECKLIST_DISABLED_REASON } from './readiness-checklist-control';
 
 export type PreflightSeverity = 'pass' | 'warning' | 'blocker';
 
@@ -40,271 +37,22 @@ export type GenerationPreflightResult = {
   summary: string;
 };
 
-type DynamicTemplateEngineV2Validation = {
-  rendererMode?: string | null;
-  diagnosticsWarning?: string | null;
-  contract?: {
-    status?: string | null;
-    confidence?: number | null;
-    missingFields?: string[] | null;
-    unknownPlaceholders?: Array<{ alias?: string | null; required?: boolean | null }> | null;
-    warnings?: string[] | null;
-    errors?: string[] | null;
-    diagnostics?: {
-      repeatBlockCount?: number | null;
-      tableRowPrototypeCount?: number | null;
-      headerFooterFieldCount?: number | null;
-      unresolvedPlaceholderCount?: number | null;
-    } | null;
-  } | null;
+const DISABLED_PREFLIGHT_RESULT: GenerationPreflightResult = {
+  ready: true,
+  blockers: [],
+  warnings: [],
+  checks: [],
+  summary: READINESS_CHECKLIST_DISABLED_REASON
 };
 
-const pass = (id: string, label: string, detail: string): PreflightCheck => ({ id, label, severity: 'pass', detail });
-const warn = (id: string, label: string, detail: string): PreflightCheck => ({ id, label, severity: 'warning', detail });
-const block = (id: string, label: string, detail: string): PreflightCheck => ({ id, label, severity: 'blocker', detail });
-const letterLabels: Record<LetterType, string> = { DISPUTE: 'Dispute Letter', LATE_PAYMENT: 'Late Payment Letter' };
-const exhibitLabels: Record<ExhibitKind, string> = { FCRA: 'FCRA Legal Exhibit', AFFIDAVIT: 'Affidavit', ATTACHMENT: 'Attachment', FTC: 'FTC Identity Theft Report' };
+export function evaluateGenerationPreflight(_input: GenerationPreflightInput): GenerationPreflightResult {
+  if (READINESS_CHECKLIST_DISABLED) return DISABLED_PREFLIGHT_RESULT;
 
-function countDisputeAccounts(parsed: ParsedSource) {
-  return bureaus.reduce((total, bureau) => total + parsed.dispute[bureau].length, 0);
+  // Keep a safe default if the checklist is re-enabled before the previous rule engine is restored.
+  // This prevents accidental generation blocking while the readiness checklist remains under owner review.
+  return DISABLED_PREFLIGHT_RESULT;
 }
 
-function countHardInquiries(parsed: ParsedSource) {
-  return bureaus.reduce((total, bureau) => total + parsed.inquiry[bureau].length, 0);
-}
-
-function countLatePayments(parsed: ParsedSource) {
-  return bureaus.reduce((total, bureau) => total + parsed.late[bureau].length, 0);
-}
-
-function safeId(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-}
-
-function list(values: string[], fallback: string) {
-  return values.length ? values.join(', ') : fallback;
-}
-
-function hasUsableContract(contract: TemplateContract | undefined | null): contract is TemplateContract {
-  return Boolean(contract && contract.validation && Array.isArray(contract.validation.missingFields));
-}
-
-function dynamicTemplateV2Validation(value: unknown): DynamicTemplateEngineV2Validation | null {
-  if (!value || typeof value !== 'object') return null;
-  const dynamic = (value as { dynamicTemplateEngineV2?: unknown }).dynamicTemplateEngineV2;
-  return dynamic && typeof dynamic === 'object' ? dynamic as DynamicTemplateEngineV2Validation : null;
-}
-
-function hasDynamicTemplateV2Contract(validationJson?: Record<string, unknown> | null) {
-  return Boolean(dynamicTemplateV2Validation(validationJson)?.contract);
-}
-
-function dynamicTemplateV2Check(input: {
-  id: string;
-  label: string;
-  validationJson?: Record<string, unknown> | null;
-}) {
-  const dynamic = dynamicTemplateV2Validation(input.validationJson);
-  if (!dynamic) return null;
-
-  const contract = dynamic.contract;
-  if (!contract) {
-    return dynamic.diagnosticsWarning
-      ? warn(`templates.contract-v2.${safeId(input.id)}`, `${input.label} dynamic contract v2`, dynamic.diagnosticsWarning)
-      : null;
-  }
-
-  const status = String(contract.status || '').toUpperCase();
-  const missingFields = Array.isArray(contract.missingFields) ? contract.missingFields.filter((item): item is string => typeof item === 'string') : [];
-  const unknownRequired = Array.isArray(contract.unknownPlaceholders)
-    ? contract.unknownPlaceholders.filter((item) => item?.required !== false && item.alias).map((item) => String(item.alias))
-    : [];
-  const errors = Array.isArray(contract.errors) ? contract.errors.filter((item): item is string => typeof item === 'string') : [];
-  const warnings = Array.isArray(contract.warnings) ? contract.warnings.filter((item): item is string => typeof item === 'string') : [];
-  const diagnostics = contract.diagnostics || {};
-  const proof = `repeat blocks: ${diagnostics.repeatBlockCount ?? 0}, table-row prototypes: ${diagnostics.tableRowPrototypeCount ?? 0}, header/footer fields: ${diagnostics.headerFooterFieldCount ?? 0}`;
-
-  if (status === 'BLOCKED' || missingFields.length) {
-    return block(
-      `templates.contract-v2.${safeId(input.id)}`,
-      `${input.label} dynamic contract v2`,
-      `${input.label} is blocked by dynamic template v2. Missing fields: ${list(missingFields, 'none')}. Unknown required placeholders: ${list(unknownRequired, 'none')}. ${errors.join(' ')}`.trim()
-    );
-  }
-
-  if (status === 'WARNING' || warnings.length || unknownRequired.length || dynamic.diagnosticsWarning) {
-    return warn(
-      `templates.contract-v2.${safeId(input.id)}`,
-      `${input.label} dynamic contract v2`,
-      `${input.label} passed v2 diagnostics with review notes. ${proof}. ${[dynamic.diagnosticsWarning, ...warnings, unknownRequired.length ? `Unknown placeholders: ${unknownRequired.join(', ')}.` : ''].filter(Boolean).join(' ')}`.trim()
-    );
-  }
-
-  return pass(
-    `templates.contract-v2.${safeId(input.id)}`,
-    `${input.label} dynamic contract v2`,
-    `${input.label} v2 contract is ${status.toLowerCase() || 'ready'} with ${Math.round(Number(contract.confidence ?? 1) * 100)}% confidence; ${proof}.`
-  );
-}
-
-function templateContractCheck(input: {
-  id: string;
-  label: string;
-  contract?: TemplateContract | null;
-  validationJson?: Record<string, unknown> | null;
-  requireContract: boolean;
-  preferDynamicV2?: boolean;
-}) {
-  const dynamicCheck = dynamicTemplateV2Check({
-    id: input.id,
-    label: input.label,
-    validationJson: input.validationJson
-  });
-
-  if (input.preferDynamicV2 && dynamicCheck) {
-    return dynamicCheck;
-  }
-
-  const id = `templates.contract.${safeId(input.id)}`;
-
-  if (!hasUsableContract(input.contract)) {
-    return input.requireContract
-      ? warn(id, `${input.label} contract`, `${input.label} has no contract metadata yet. Re-upload or rescan the template so preflight can prove its canonical fields before production generation.`)
-      : pass(id, `${input.label} contract`, `${input.label} is static or does not require source-populated contract fields.`);
-  }
-
-  const validation = input.contract.validation;
-  const missingFields = validation.missingFields || [];
-  const unknownRequiredFields = validation.unknownRequiredFields || [];
-  const errors = validation.errors || [];
-  const warnings = validation.warnings || [];
-
-  if (validation.status === 'BLOCKED' || missingFields.length || unknownRequiredFields.length) {
-    return block(
-      id,
-      `${input.label} contract`,
-      `${input.label} is not generation-ready. Missing canonical fields: ${list(missingFields, 'none')}. Unknown required fields: ${list(unknownRequiredFields, 'none')}. ${errors.join(' ')}`.trim()
-    );
-  }
-
-  if (validation.status === 'WARNING' || warnings.length) {
-    return warn(
-      id,
-      `${input.label} contract`,
-      `${input.label} is usable with contract warning(s): ${warnings.join(' ') || 'review recommended.'}`
-    );
-  }
-
-  return pass(
-    id,
-    `${input.label} contract`,
-    `${input.label} contract is ${validation.status.toLowerCase()} with ${Math.round(validation.confidence * 100)}% confidence.`
-  );
-}
-
-export function evaluateGenerationPreflight(input: GenerationPreflightInput): GenerationPreflightResult {
-  const checks: PreflightCheck[] = [];
-  const sourceReady = Boolean(input.source.trim() && input.normalized && input.parsed.name.trim());
-  checks.push(sourceReady
-    ? pass('source.locked', 'Client profile ready', `${input.parsed.name} is ready for document preparation.`)
-    : block('source.locked', 'Client profile ready', 'Import or standardize the client profile before preparing documents.'));
-
-  checks.push(input.routes.length
-    ? pass('routes.detected', 'Document paths ready', `${input.routes.length} document path(s) are ready.`)
-    : block('routes.detected', 'Document paths ready', 'No dispute or late-payment document paths were detected from the client profile.'));
-
-  const disputeAccounts = countDisputeAccounts(input.parsed);
-  const hardInquiries = countHardInquiries(input.parsed);
-  const latePayments = countLatePayments(input.parsed);
-
-  if (disputeAccounts) checks.push(pass('source.dispute-accounts', 'Disputed accounts', `${disputeAccounts} disputed account(s) ready.`));
-  else if (input.routes.some((route) => route.type === 'DISPUTE')) checks.push(block('source.dispute-accounts', 'Disputed accounts', 'A dispute document is selected, but no disputed accounts were found.'));
-  else checks.push(warn('source.dispute-accounts', 'Disputed accounts', 'No disputed account section is active.'));
-
-  // Hard inquiries are optional. Only show this checklist item when the client source actually includes inquiries.
-  // If no hard inquiries are present, the checklist remains clean and generation is still valid.
-  if (hardInquiries > 0) checks.push(pass('source.hard-inquiries', 'Hard inquiries', `${hardInquiries} hard inquiry item(s) ready.`));
-
-  if (input.routes.some((route) => route.type === 'LATE_PAYMENT')) {
-    checks.push(latePayments
-      ? pass('source.late-payments', 'Late payments', `${latePayments} late-payment item(s) ready.`)
-      : block('source.late-payments', 'Late payments', 'A late-payment document is selected, but no late-payment items were found.'));
-  }
-
-  const roundSelection = resolveRoundTemplateSelection({
-    round: input.round,
-    routes: input.routes,
-    references: input.references,
-    templates: input.templates
-  });
-
-  checks.push(roundSelection.missingLetterTypes.length
-    ? block('templates.letters', `${roundSelection.round} letter templates`, `Missing required ${roundSelection.round} letter template(s): ${roundSelection.missingLetterTypes.map((type) => type === 'DISPUTE' ? 'Dispute Letter' : 'Late Payment Letter').join(', ')}.`)
-    : pass('templates.letters', `${roundSelection.round} letter templates`, `All active ${roundSelection.round} letter templates are ready.`));
-
-  checks.push(roundSelection.missingExhibits.length
-    ? block('templates.exhibits', `${roundSelection.round} packet templates`, `Missing required ${roundSelection.round} packet item(s): ${roundSelection.missingExhibits.join(', ')}.`)
-    : pass('templates.exhibits', `${roundSelection.round} packet templates`, `Required ${roundSelection.round} packet templates are ready.`));
-
-  roundSelection.letterSlots.forEach((slot) => {
-    if (!slot.file) return;
-    checks.push(templateContractCheck({
-      id: `${roundSelection.round}-${slot.type}`,
-      label: `${roundSelection.round} ${letterLabels[slot.type]}`,
-      contract: slot.contract,
-      validationJson: slot.validationJson,
-      requireContract: true,
-      preferDynamicV2: hasDynamicTemplateV2Contract(slot.validationJson)
-    }));
-  });
-
-  roundSelection.requiredExhibits.forEach((kind) => {
-    const asset = input.templates[kind];
-    if (!asset) return;
-    const generatedDocx = asset.mode === 'GENERATED_DOCX';
-    checks.push(templateContractCheck({
-      id: `${roundSelection.round}-${kind}`,
-      label: `${roundSelection.round} ${exhibitLabels[kind]}`,
-      contract: asset.contract,
-      validationJson: asset.validationJson,
-      requireContract: generatedDocx,
-      preferDynamicV2: generatedDocx && hasDynamicTemplateV2Contract(asset.validationJson)
-    }));
-  });
-
-  for (const issue of roundSelection.issues.filter((item) => item.severity === 'warning')) {
-    checks.push(warn(issue.code, `${roundSelection.round} policy`, issue.message));
-  }
-
-  const activeTypes = Array.from(new Set(input.routes.map((route) => route.type)));
-
-  checks.push(input.evidence.supporting.length
-    ? pass('evidence.supporting', 'Supporting documents', `${input.evidence.supporting.length} supporting document image(s) ready.`)
-    : block('evidence.supporting', 'Supporting documents', 'Upload at least one supporting document image before preparing the package.'));
-
-  checks.push(input.affidavitReady
-    ? pass('affidavit.jurisdiction', 'Affidavit location', 'Affidavit state and county are ready, or no affidavit review is required.')
-    : block('affidavit.jurisdiction', 'Affidavit location', 'Review the affidavit state and county before preparing documents.'));
-
-  checks.push(input.customReady
-    ? pass('templates.custom-fields', 'Custom fields', 'Required custom fields are complete.')
-    : block('templates.custom-fields', 'Custom fields', 'A selected template has required custom fields that are still blank.'));
-
-  const packetOrders = activeTypes.map((type) => `${type}: ${generationPacketPositions(type).map((position) => `${String(position.sequence).padStart(2, '0')} ${position.label}`).join(' → ')}`);
-  checks.push(pass('packet.order', 'Package order', packetOrders.length ? packetOrders.join(' | ') : 'No package order is active yet.'));
-
-  const blockers = checks.filter((check) => check.severity === 'blocker');
-  const warnings = checks.filter((check) => check.severity === 'warning');
-  return {
-    ready: blockers.length === 0,
-    blockers,
-    warnings,
-    checks,
-    summary: blockers.length ? `Action required: ${blockers.length} checklist item(s) need attention.` : warnings.length ? `Workspace ready with ${warnings.length} item(s) to review.` : 'Workspace ready.'
-  };
-}
-
-export function preflightFailureMessage(result: GenerationPreflightResult) {
-  if (result.ready) return '';
-  return userFacingText(`${result.summary} ${result.blockers.map((item) => item.detail).join(' ')}`, 'error');
+export function preflightFailureMessage(_result: GenerationPreflightResult) {
+  return '';
 }
