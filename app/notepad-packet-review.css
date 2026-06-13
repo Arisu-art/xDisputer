@@ -1,14 +1,30 @@
 /* Notepad source review and packet scope confirmation canvas. */
 .packet-review-stage {
-  gap: 20px !important;
+  gap: 18px !important;
   background:
     radial-gradient(circle at 9% 0%, rgba(59, 130, 246, .08), transparent 30%),
     linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
 }
 .packet-review-stage .source-progressive-command {
   min-height: 104px;
-  padding-bottom: 8px;
+  padding-bottom: 18px;
   border-bottom: 1px solid rgba(148, 163, 184, .20);
+}
+.compact-packet-review .source-progressive-command {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 18px;
+  min-height: 126px;
+}
+.compact-packet-review .source-progressive-heading h2 {
+  margin-bottom: 8px;
+}
+.compact-packet-review .source-progressive-heading p:last-child {
+  max-width: 960px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
 }
 .packet-review-metrics {
   display: flex;
@@ -31,58 +47,20 @@
   letter-spacing: .03em;
 }
 .packet-review-client-card {
-  padding: 18px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  border: 1px solid rgba(100, 116, 139, .18);
-  border-radius: 22px;
-  background: rgba(255,255,255,.88);
-  box-shadow: 0 16px 32px rgba(15, 23, 42, .055);
-}
-.packet-review-client-card .eyebrow {
-  margin: 0 0 5px;
-  color: #64748b;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-}
-.packet-review-client-card h3 {
-  margin: 0;
-  color: #0f172a;
-  font-size: 22px;
-  letter-spacing: -.05em;
-}
-.packet-review-client-card p {
-  margin: 5px 0 0;
-  color: #64748b;
-  font-size: 12px;
-}
-.packet-review-client-card > strong {
-  flex: none;
-  min-height: 38px;
-  padding: 0 14px;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid rgba(34, 197, 94, .24);
-  border-radius: 999px;
-  color: #047857;
-  background: #ecfdf5;
-  font-size: 12px;
+  display: none !important;
 }
 .packet-review-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 18px;
+  align-items: start;
 }
 .packet-review-bureau-card {
   min-height: 300px;
   padding: 17px;
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 16px;
   border: 1px solid rgba(100, 116, 139, .18);
   border-radius: 24px;
   background: rgba(255,255,255,.92);
@@ -90,17 +68,17 @@
 }
 .packet-review-bureau-card > header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, .18);
 }
 .packet-review-bureau-card header span {
-  color: #64748b;
-  font-size: 10px;
-  font-weight: 750;
+  display: none;
 }
 .packet-review-bureau-card h3 {
-  margin: 3px 0 0;
+  margin: 0;
   color: #0f172a;
   font-size: 19px;
   letter-spacing: -.04em;
@@ -120,7 +98,7 @@
   padding: 12px;
   display: grid;
   gap: 10px;
-  border: 1px solid rgba(148, 163, 184, .16);
+  border: 1px solid rgba(148, 163, 184, .18);
   border-radius: 18px;
   background: #f8fafc;
 }
@@ -130,6 +108,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  padding-bottom: 2px;
 }
 .packet-review-section header strong,
 .packet-review-empty strong {
@@ -143,26 +122,39 @@
   font-size: 10px;
   font-weight: 750;
 }
+.packet-review-section.dispute {
+  border-left: 4px solid rgba(16, 185, 129, .55);
+}
+.packet-review-section.inquiry {
+  border-left: 4px solid rgba(100, 116, 139, .35);
+}
+.packet-review-section.late {
+  border-left: 4px solid rgba(249, 115, 22, .50);
+}
 .packet-review-item-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 .packet-review-item {
-  padding: 10px;
+  padding: 11px;
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-columns: 34px minmax(0, 1fr);
   align-items: start;
   gap: 10px;
-  border: 1px solid rgba(148, 163, 184, .16);
+  border: 1px solid rgba(148, 163, 184, .18);
   border-radius: 14px;
   background: #fff;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, .035);
+}
+.packet-review-item + .packet-review-item {
+  margin-top: 0;
 }
 .packet-review-item-index {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 11px;
   color: #475569;
   background: #f1f5f9;
   font-size: 10px;
@@ -186,21 +178,7 @@
   overflow-wrap: anywhere;
 }
 .packet-review-item > span {
-  padding: 6px 8px;
-  border-radius: 999px;
-  color: #334155;
-  background: #f1f5f9;
-  font-size: 9px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-.packet-review-section.dispute .packet-review-item > span {
-  color: #047857;
-  background: #ecfdf5;
-}
-.packet-review-section.late .packet-review-item > span {
-  color: #9a3412;
-  background: #fff7ed;
+  display: none;
 }
 .packet-review-footer {
   position: sticky;
@@ -219,13 +197,11 @@
   border-radius: 15px;
 }
 @media (max-width: 1180px) {
+  .compact-packet-review .source-progressive-command { grid-template-columns: 1fr; align-items: start; }
   .packet-review-grid { grid-template-columns: 1fr; }
-  .packet-review-client-card { display: grid; }
 }
 @media (max-width: 720px) {
   .packet-review-metrics,
   .packet-review-footer { display: grid; justify-content: stretch; }
   .packet-review-footer button { width: 100%; min-width: 0; }
-  .packet-review-item { grid-template-columns: 30px minmax(0, 1fr); }
-  .packet-review-item > span { grid-column: 2; justify-self: start; }
 }
