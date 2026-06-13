@@ -7,12 +7,15 @@ import type { LetterType } from '../../../lib/letter-engine';
 import type { Round } from '../../../lib/reference-store';
 import { templateStoragePath, type TemplateKind } from '../../../lib/supabase/template-registry';
 import { workspaceAccessErrorResponse } from '../../../lib/saas/access-entitlement';
+import { inspectDynamicTemplateContractV2, dynamicTemplateContractV2Summary, type DynamicTemplateContractV2 } from '../../../lib/dynamic-template/contract-v2';
+import { dynamicRendererModePolicy, resolveDynamicTemplateRendererMode, type DynamicTemplateRendererMode } from '../../../lib/dynamic-template/renderer-mode';
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
 const allowedExhibitKinds = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
 
 type SessionContext = Awaited<ReturnType<typeof getSessionContext>>;
+type DynamicRendererPolicy = ReturnType<typeof dynamicRendererModePolicy>;
 
 type ExistingTemplateAsset = {
   id: string;
@@ -103,12 +106,44 @@ function sha256FromArrayBuffer(buffer: ArrayBuffer) {
   return createHash('sha256').update(Buffer.from(buffer)).digest('hex');
 }
 
+function safeErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
+async function inspectDynamicContractV2Safely(input: {
+  file: File;
+  kind: TemplateDocumentKind;
+  round: Round;
+  rendererPolicy: DynamicRendererPolicy;
+}) {
+  if (!input.rendererPolicy.collectContractV2Diagnostics) {
+    return { contract: null as DynamicTemplateContractV2 | null, warning: null as string | null };
+  }
+
+  try {
+    return { contract: await inspectDynamicTemplateContractV2(input.file, input.kind, input.round), warning: null as string | null };
+  } catch (error) {
+    return {
+      contract: null as DynamicTemplateContractV2 | null,
+      warning: `Dynamic template v2 diagnostics failed but stable upload validation continued: ${safeErrorMessage(error)}`
+    };
+  }
+}
+
+function dynamicContractSummary(contract: DynamicTemplateContractV2 | null) {
+  return contract ? dynamicTemplateContractV2Summary(contract) : null;
+}
+
 function buildValidationJson(contract: TemplateContract, input: {
   round: Round;
   templateKind: TemplateKind;
   letterType: LetterType | null;
   exhibitKind: ExhibitKind | null;
   contentHash: string;
+  rendererMode: DynamicTemplateRendererMode;
+  rendererPolicy: DynamicRendererPolicy;
+  dynamicContractV2: DynamicTemplateContractV2 | null;
+  dynamicContractV2Warning: string | null;
 }) {
   return {
     status: contract.validation.status,
@@ -128,6 +163,12 @@ function buildValidationJson(contract: TemplateContract, input: {
       templateKind: input.templateKind,
       letterType: input.letterType,
       exhibitKind: input.exhibitKind
+    },
+    dynamicTemplateEngineV2: {
+      rendererMode: input.rendererMode,
+      rendererPolicy: input.rendererPolicy,
+      diagnosticsWarning: input.dynamicContractV2Warning,
+      contract: dynamicContractSummary(input.dynamicContractV2)
     },
     evaluatedAt: new Date().toISOString()
   };
@@ -288,6 +329,11 @@ export async function POST(request: NextRequest) {
       return respond(request, 'error', 'No authenticated user.', 401);
     }
 
+    const rendererMode = resolveDynamicTemplateRendererMode({
+      requestHeader: request.headers.get('x-dynamic-template-renderer-mode')
+    });
+    const rendererPolicy = dynamicRendererModePolicy(rendererMode);
+
     const formData = await request.formData();
 
     const round = String(formData.get('round') || '').trim() as Round;
@@ -320,11 +366,20 @@ export async function POST(request: NextRequest) {
 
     const fileBuffer = await file.arrayBuffer();
     const contentHash = sha256FromArrayBuffer(fileBuffer);
-    const contract = await inspectTemplateContract(new File([fileBuffer], file.name, { type: file.type, lastModified: file.lastModified }), kind);
+    const templateFile = new File([fileBuffer], file.name, { type: file.type, lastModified: file.lastModified });
+    const dynamicV2 = await inspectDynamicContractV2Safely({ file: templateFile, kind, round, rendererPolicy });
+    const contract = await inspectTemplateContract(templateFile, kind);
     const gateMessage = templateContractGateMessage(contract);
 
     if (gateMessage) {
-      return respond(request, 'error', gateMessage, 422, { validation: contract.validation });
+      return respond(request, 'error', gateMessage, 422, {
+        validation: contract.validation,
+        dynamicTemplateEngineV2: {
+          rendererMode,
+          diagnosticsWarning: dynamicV2.warning,
+          contract: dynamicContractSummary(dynamicV2.contract)
+        }
+      });
     }
 
     const existing = await findExistingAssets(session, {
@@ -345,7 +400,17 @@ export async function POST(request: NextRequest) {
         'ok',
         `${round} ${targetType} template is already active with the same file content.`,
         200,
-        { assetId: activeSameContent.id, duplicate: true, contentHash, validation: contract.validation }
+        {
+          assetId: activeSameContent.id,
+          duplicate: true,
+          contentHash,
+          validation: contract.validation,
+          dynamicTemplateEngineV2: {
+            rendererMode,
+            diagnosticsWarning: dynamicV2.warning,
+            contract: dynamicContractSummary(dynamicV2.contract)
+          }
+        }
       );
     }
 
@@ -355,7 +420,11 @@ export async function POST(request: NextRequest) {
       templateKind: resolvedTemplateKind,
       letterType: resolvedLetterType,
       exhibitKind: resolvedExhibitKind,
-      contentHash
+      contentHash,
+      rendererMode,
+      rendererPolicy,
+      dynamicContractV2: dynamicV2.contract,
+      dynamicContractV2Warning: dynamicV2.warning
     });
 
     const storagePath = templateStoragePath({
@@ -400,7 +469,13 @@ export async function POST(request: NextRequest) {
           exhibitKind: resolvedExhibitKind,
           contractStatus: contract.validation.status,
           contractConfidence: contract.validation.confidence,
-          activationPolicy: 'insert-inactive-activate-template-asset-rpc'
+          activationPolicy: 'insert-inactive-activate-template-asset-rpc',
+          dynamicTemplateEngineV2: {
+            rendererMode,
+            status: dynamicV2.contract?.status || null,
+            confidence: dynamicV2.contract?.confidence || null,
+            diagnosticsWarning: dynamicV2.warning
+          }
         },
         version_number: nextVersion,
         is_active: false,
@@ -439,7 +514,18 @@ export async function POST(request: NextRequest) {
       'ok',
       `${round} ${targetType} template saved as active version. ${activation.archived} previous active version(s) archived.`,
       200,
-      { assetId: insert.data.id, archivedVersions: activation.archived, activationMode: activation.mode, contentHash, validation: contract.validation }
+      {
+        assetId: insert.data.id,
+        archivedVersions: activation.archived,
+        activationMode: activation.mode,
+        contentHash,
+        validation: contract.validation,
+        dynamicTemplateEngineV2: {
+          rendererMode,
+          diagnosticsWarning: dynamicV2.warning,
+          contract: dynamicContractSummary(dynamicV2.contract)
+        }
+      }
     );
   } catch (error) {
     try {
