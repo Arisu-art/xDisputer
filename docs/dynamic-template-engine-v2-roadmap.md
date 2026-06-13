@@ -16,6 +16,20 @@ Always mutate the uploaded DOCX in place.
 When repeating data, clone the nearest styled prototype block or table row.
 ```
 
+## Whole-packet scope
+
+Editable DOCX components covered by Dynamic Template Engine v2:
+
+- Dispute Letter DOCX
+- Late Payment Letter DOCX
+- Affidavit DOCX
+- FTC Identity Theft Report DOCX
+
+Static insert-only PDF components covered by packet policy:
+
+- FCRA Legal Exhibit PDF
+- Attachment PDF
+
 ## Current problem statement
 
 The current system can accept and render dynamic templates, but output consistency is not strong enough when a materially different template is uploaded into another round slot, for example using a Final Round dispute template in a First Round dispute slot.
@@ -45,9 +59,9 @@ Observed failures to eliminate:
 | Phase | Status | Target | Exit criteria |
 | --- | --- | --- | --- |
 | 0 | Coded foundation | Existing upload gate, active template storage, preflight, manifest, and Supabase activation | Existing typecheck/build/guard pass. |
-| 1 | Pending | Contract v2 scanner | Detect canonical fields, aliases, occurrences, table locations, repeat markers, and unsupported zones. |
-| 2 | Pending | Canonical field registry v2 | One strict registry defines required/optional/repeating/conditional fields by document kind. |
-| 3 | Pending | Mapping engine v2 | Source data resolves into a deterministic render plan before DOCX generation. |
+| 1 | Scaffold coded | Contract v2 scanner | `lib/dynamic-template/contract-v2.ts` scans DOCX XML parts, placeholders, repeat blocks, table-row prototypes, header/footer fields, and unsupported zones. Full upload/preflight enforcement is pending. |
+| 2 | Scaffold coded | Canonical field registry v2 | `lib/dynamic-template/field-registry.ts` defines required/optional/repeating/conditional fields for Dispute Letter, Late Payment Letter, Affidavit, FTC, FCRA, and Attachment. |
+| 3 | Diagnostics coded | Mapping engine v2 | Diagnostics endpoint exists for contract-v2 inspection. Full source-to-render-plan mapping engine is pending. |
 | 4 | Pending | Layout-preserving DOCX renderer v2 | Inline, multiline, paragraph-block, and table-row rendering preserve template styles. |
 | 5 | Pending | Render validation and proof manifest | Output records unresolved placeholders, repeated counts, field counts, renderer version, contract version, and template hash. |
 | 6 | Pending | Regression test pack | Test 1st/2nd/3rd/Final templates, cross-round uploads, tables, colors, missing anchors, and invalid templates. |
@@ -110,6 +124,8 @@ One source of truth for all template fields and aliases.
 - `client.name`, `client.addressLines`, `letter.date`, `bureau.name`, and `bureau.addressLines` are consistently defined.
 - `accounts.dispute` is required for dispute account routes.
 - `accounts.latePayments` is required for late-payment routes.
+- Affidavit DOCX requires `client.name`, `client.addressLines`, `client.ssnMasked`, `letter.date`, `affidavit.state`, `affidavit.county`, and `accounts.dispute`.
+- FTC DOCX supports client identity, FTC report fields, FTC statement, and affected account repeats.
 - Optional fields can be blank without breaking render.
 - Required custom fields block until mapped or supplied.
 
@@ -212,9 +228,9 @@ Prevent output regressions when templates change.
 
 ## Immediate coding order
 
-1. Create `lib/dynamic-template/field-registry.ts`.
-2. Create `lib/dynamic-template/contract-v2.ts`.
-3. Add contract-v2 diagnostics without replacing current renderer.
+1. Create `lib/dynamic-template/field-registry.ts`. **Done.**
+2. Create `lib/dynamic-template/contract-v2.ts`. **Done.**
+3. Add contract-v2 diagnostics without replacing current renderer. **Done through `app/api/template-assets/diagnostics/route.ts`.**
 4. Add upload/preflight warnings based on contract-v2.
 5. Create render-plan builder.
 6. Add renderer-v2 behind a feature flag or explicit renderer mode.
@@ -233,4 +249,7 @@ Prevent output regressions when templates change.
 
 ## Progress log
 
-- 2026-06-14: Roadmap created. Next coding step is Phase 2 foundation: canonical field registry v2, followed by Phase 1 scanner scaffolding.
+- 2026-06-14: Roadmap created.
+- 2026-06-14: Added `lib/dynamic-template/field-registry.ts` with whole-packet canonical fields for Dispute Letter, Late Payment Letter, Affidavit, FTC, FCRA, and Attachment.
+- 2026-06-14: Added `lib/dynamic-template/contract-v2.ts` with XML part scanning, canonical placeholder detection, repeat block/table-row prototype detection, header/footer detection, unsupported-zone warnings, and round mismatch warning logic.
+- 2026-06-14: Added `app/api/template-assets/diagnostics/route.ts` so v2 contract diagnostics can be tested without replacing the current renderer.
