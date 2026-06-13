@@ -134,6 +134,23 @@ async function findExistingAssets(session: Awaited<ReturnType<typeof getSessionC
   return query;
 }
 
+async function archiveAssetRecords(session: Awaited<ReturnType<typeof getSessionContext>>, assets: Array<{ id: string }>) {
+  if (!assets.length) return { archived: 0, warning: null as string | null };
+
+  const ids = assets.map((asset) => asset.id);
+  const update = await session.supabase
+    .from('template_assets')
+    .update({ is_active: false, archived_at: new Date().toISOString() })
+    .eq('owner_id', session.user!.id)
+    .in('id', ids);
+
+  if (update.error) {
+    return { archived: 0, warning: update.error.message };
+  }
+
+  return { archived: assets.length, warning: null };
+}
+
 async function deleteAssetRecordsAndFiles(session: Awaited<ReturnType<typeof getSessionContext>>, assets: Array<{
   id: string;
   storage_bucket: string;
@@ -325,10 +342,12 @@ export async function POST(request: NextRequest) {
           letterType: resolvedLetterType,
           exhibitKind: resolvedExhibitKind,
           contractStatus: contract.validation.status,
-          contractConfidence: contract.validation.confidence
+          contractConfidence: contract.validation.confidence,
+          activationPolicy: 'latest-valid-upload-archives-superseded-versions'
         },
         version_number: nextVersion,
-        is_active: true
+        is_active: true,
+        archived_at: null
       })
       .select('id')
       .single();
@@ -338,25 +357,27 @@ export async function POST(request: NextRequest) {
       return respond(request, 'error', insert.error.message, 500);
     }
 
-    const oldAssets = existingAssets.filter((asset) => asset.id !== insert.data.id);
-    const cleanup = await deleteAssetRecordsAndFiles(session, oldAssets);
+    uploadedPath = null;
 
-    if (cleanup.warning) {
+    const oldAssets = existingAssets.filter((asset) => asset.id !== insert.data.id);
+    const archive = await archiveAssetRecords(session, oldAssets);
+
+    if (archive.warning) {
       return respond(
         request,
         'ok',
-        `${round} ${targetType} template saved. Cleanup warning: ${cleanup.warning}`,
+        `${round} ${targetType} template saved. Archive warning: ${archive.warning}`,
         200,
-        { assetId: insert.data.id, cleanupWarning: cleanup.warning, contentHash, validation: contract.validation }
+        { assetId: insert.data.id, archiveWarning: archive.warning, contentHash, validation: contract.validation }
       );
     }
 
     return respond(
       request,
       'ok',
-      `${round} ${targetType} template saved. ${cleanup.deleted} old version(s) removed.`,
+      `${round} ${targetType} template saved as active version. ${archive.archived} previous version(s) archived.`,
       200,
-      { assetId: insert.data.id, oldVersionsRemoved: cleanup.deleted, contentHash, validation: contract.validation }
+      { assetId: insert.data.id, archivedVersions: archive.archived, contentHash, validation: contract.validation }
     );
   } catch (error) {
     try {
