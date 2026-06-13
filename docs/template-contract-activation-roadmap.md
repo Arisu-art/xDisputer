@@ -11,9 +11,9 @@ Preserve user-uploaded template layout while making generated output consistent 
 - `lib/template-contracts.ts` defines canonical fields, aliases, required fields by document kind, validation status, confidence, and what-if guidance.
 - `lib/round-template-policy.ts` defines per-round intent, strictness, required letters, required exhibits, and packet order.
 - `lib/preflight-validation.ts` blocks generation when source, routes, templates, evidence, affidavit data, or required custom fields are incomplete.
-- `lib/supabase/template-registry.ts` models owner-scoped, round-scoped, versioned template assets.
+- `lib/supabase/template-registry.ts` models owner-scoped, round-scoped, versioned template assets and now exposes a latest-active slot resolver.
 - `app/api/template-assets/route.ts` now inspects uploaded template contracts, blocks `BLOCKED` contracts before storage, computes `content_hash`, stores `validation_json`, detects duplicate active uploads, and archives superseded versions instead of immediately deleting them.
-- `app/api/template-assets/manifest/route.ts` exposes active template metadata for workspace hydration.
+- `app/api/template-assets/manifest/route.ts` now resolves one latest active template per owner + round + slot and reports duplicate active slot diagnostics.
 
 ## Enhancement roadmap
 
@@ -23,7 +23,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 | 2 | Partially coded | Contract activation gate | Blocked templates now fail before storage; database-transaction activation is still pending. |
 | 3 | Coded | Content hash on upload | Avoid duplicate active storage and improve traceability. |
 | 4 | Coded | Validation JSON on asset row | Store why a template was accepted, warned, or blocked. |
-| 5 | Existing, enhance | Latest-active slot resolver | Always use owner + round + slot + active version, never filename guessing. |
+| 5 | Coded | Latest-active slot resolver | Manifest hydration now selects the latest active asset per owner + round + slot. |
 | 6 | Partially coded | Restore-window retention | Superseded versions are now archived instead of deleted; database cleanup policy is still pending. |
 | 7 | Existing, enhance | Preflight contract checks | Block generation if active templates are missing required canonical fields. |
 | 8 | Existing, enhance | Generation manifest | Record source hash, template versions, template hashes, routes, and output summary. |
@@ -51,6 +51,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 | Wrong file type is uploaded | Reject before storage. | Coded. |
 | Duplicate active file is uploaded | Reuse active version metadata and avoid duplicate storage. | Coded when `content_hash` is present. |
 | New upload is invalid | Keep previous active version. | Coded because invalid upload is blocked before storage/insert. |
+| Multiple active rows exist for one slot | Manifest chooses the latest active version by slot freshness and reports duplicate diagnostics. | Coded. |
 | Many old versions exist | Archive superseded versions; cleanup later through explicit policy. | App-level archive coded; storage cleanup policy pending. |
 
 ## Expected implementation outcome
@@ -68,4 +69,4 @@ canonical source packet
 
 ## Next coding step
 
-Add a Supabase RPC for atomic slot activation and archived-version retention. The app-level gate and archive behavior are active, but database-level activation should still be added so activation and archiving happen in one database transaction.
+Enhance preflight to read active template contract validation metadata from the resolved template assets and fail fast if any active template contract is `BLOCKED` or missing required canonical fields. Database-level activation and cleanup policy remain the next Supabase hardening step.
