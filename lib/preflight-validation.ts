@@ -40,6 +40,25 @@ export type GenerationPreflightResult = {
   summary: string;
 };
 
+type DynamicTemplateEngineV2Validation = {
+  rendererMode?: string | null;
+  diagnosticsWarning?: string | null;
+  contract?: {
+    status?: string | null;
+    confidence?: number | null;
+    missingFields?: string[] | null;
+    unknownPlaceholders?: Array<{ alias?: string | null; required?: boolean | null }> | null;
+    warnings?: string[] | null;
+    errors?: string[] | null;
+    diagnostics?: {
+      repeatBlockCount?: number | null;
+      tableRowPrototypeCount?: number | null;
+      headerFooterFieldCount?: number | null;
+      unresolvedPlaceholderCount?: number | null;
+    } | null;
+  } | null;
+};
+
 const pass = (id: string, label: string, detail: string): PreflightCheck => ({ id, label, severity: 'pass', detail });
 const warn = (id: string, label: string, detail: string): PreflightCheck => ({ id, label, severity: 'warning', detail });
 const block = (id: string, label: string, detail: string): PreflightCheck => ({ id, label, severity: 'blocker', detail });
@@ -70,10 +89,65 @@ function hasUsableContract(contract: TemplateContract | undefined | null): contr
   return Boolean(contract && contract.validation && Array.isArray(contract.validation.missingFields));
 }
 
+function dynamicTemplateV2Validation(value: unknown): DynamicTemplateEngineV2Validation | null {
+  if (!value || typeof value !== 'object') return null;
+  const dynamic = (value as { dynamicTemplateEngineV2?: unknown }).dynamicTemplateEngineV2;
+  return dynamic && typeof dynamic === 'object' ? dynamic as DynamicTemplateEngineV2Validation : null;
+}
+
+function dynamicTemplateV2Check(input: {
+  id: string;
+  label: string;
+  validationJson?: Record<string, unknown> | null;
+}) {
+  const dynamic = dynamicTemplateV2Validation(input.validationJson);
+  if (!dynamic) return null;
+
+  const contract = dynamic.contract;
+  if (!contract) {
+    return dynamic.diagnosticsWarning
+      ? warn(`templates.contract-v2.${safeId(input.id)}`, `${input.label} dynamic contract v2`, dynamic.diagnosticsWarning)
+      : null;
+  }
+
+  const status = String(contract.status || '').toUpperCase();
+  const missingFields = Array.isArray(contract.missingFields) ? contract.missingFields.filter((item): item is string => typeof item === 'string') : [];
+  const unknownRequired = Array.isArray(contract.unknownPlaceholders)
+    ? contract.unknownPlaceholders.filter((item) => item?.required !== false && item.alias).map((item) => String(item.alias))
+    : [];
+  const errors = Array.isArray(contract.errors) ? contract.errors.filter((item): item is string => typeof item === 'string') : [];
+  const warnings = Array.isArray(contract.warnings) ? contract.warnings.filter((item): item is string => typeof item === 'string') : [];
+  const diagnostics = contract.diagnostics || {};
+  const proof = `repeat blocks: ${diagnostics.repeatBlockCount ?? 0}, table-row prototypes: ${diagnostics.tableRowPrototypeCount ?? 0}, header/footer fields: ${diagnostics.headerFooterFieldCount ?? 0}`;
+
+  if (status === 'BLOCKED' || missingFields.length) {
+    return block(
+      `templates.contract-v2.${safeId(input.id)}`,
+      `${input.label} dynamic contract v2`,
+      `${input.label} is blocked by dynamic template v2. Missing fields: ${list(missingFields, 'none')}. Unknown required placeholders: ${list(unknownRequired, 'none')}. ${errors.join(' ')}`.trim()
+    );
+  }
+
+  if (status === 'WARNING' || warnings.length || unknownRequired.length || dynamic.diagnosticsWarning) {
+    return warn(
+      `templates.contract-v2.${safeId(input.id)}`,
+      `${input.label} dynamic contract v2`,
+      `${input.label} passed v2 diagnostics with review notes. ${proof}. ${[dynamic.diagnosticsWarning, ...warnings, unknownRequired.length ? `Unknown placeholders: ${unknownRequired.join(', ')}.` : ''].filter(Boolean).join(' ')}`.trim()
+    );
+  }
+
+  return pass(
+    `templates.contract-v2.${safeId(input.id)}`,
+    `${input.label} dynamic contract v2`,
+    `${input.label} v2 contract is ${status.toLowerCase() || 'ready'} with ${Math.round(Number(contract.confidence ?? 1) * 100)}% confidence; ${proof}.`
+  );
+}
+
 function templateContractCheck(input: {
   id: string;
   label: string;
   contract?: TemplateContract | null;
+  validationJson?: Record<string, unknown> | null;
   requireContract: boolean;
 }) {
   const id = `templates.contract.${safeId(input.id)}`;
@@ -163,8 +237,15 @@ export function evaluateGenerationPreflight(input: GenerationPreflightInput): Ge
       id: `${roundSelection.round}-${slot.type}`,
       label: `${roundSelection.round} ${letterLabels[slot.type]}`,
       contract: slot.contract,
+      validationJson: slot.validationJson,
       requireContract: true
     }));
+    const dynamicCheck = dynamicTemplateV2Check({
+      id: `${roundSelection.round}-${slot.type}`,
+      label: `${roundSelection.round} ${letterLabels[slot.type]}`,
+      validationJson: slot.validationJson
+    });
+    if (dynamicCheck) checks.push(dynamicCheck);
   });
 
   roundSelection.requiredExhibits.forEach((kind) => {
@@ -174,8 +255,15 @@ export function evaluateGenerationPreflight(input: GenerationPreflightInput): Ge
       id: `${roundSelection.round}-${kind}`,
       label: `${roundSelection.round} ${exhibitLabels[kind]}`,
       contract: asset.contract,
+      validationJson: asset.validationJson,
       requireContract: asset.mode === 'GENERATED_DOCX'
     }));
+    const dynamicCheck = dynamicTemplateV2Check({
+      id: `${roundSelection.round}-${kind}`,
+      label: `${roundSelection.round} ${exhibitLabels[kind]}`,
+      validationJson: asset.validationJson
+    });
+    if (dynamicCheck) checks.push(dynamicCheck);
   });
 
   for (const issue of roundSelection.issues.filter((item) => item.severity === 'warning')) {
