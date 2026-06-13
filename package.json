@@ -16,6 +16,7 @@
     "ai:process": "node scripts/ai-code-processor.js",
     "ai:apply": "node scripts/apply-changes.js",
     "xdisputer:guard": "node scripts/xdisputer-deploy-guard.mjs",
+    "dynamic-template:v2:regression": "node scripts/dynamic-template-v2-regression.mjs",
     "safe:sync": "bash scripts/safe-sync-guard.sh",
     "init:connections": "bash scripts/init-xdisputer-connections.sh",
     "verify:production": "node scripts/verify-production-build.mjs",
