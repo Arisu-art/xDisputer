@@ -32,7 +32,11 @@ const META_PREFIX = 'lettergenerator.template-exhibits.v2.';
 const LEGACY_PREFIX = 'lettergenerator.template-exhibits.v1.';
 
 export const exhibitKinds: ExhibitKind[] = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
-export const configuredExhibits: ExhibitKind[] = exhibitKinds;
+
+export function configuredExhibits(values: Partial<TemplateExhibits> | null | undefined): ExhibitKind[] {
+  if (!values) return [];
+  return exhibitKinds.filter((kind) => Boolean(values[kind]));
+}
 
 export const exhibitModes: Record<ExhibitKind, ExhibitMode> = {
   FCRA: 'STATIC_PDF',
