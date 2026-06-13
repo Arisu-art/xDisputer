@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
 const conflictPattern = /^(<<<<<<<|=======|>>>>>>>)/m;
@@ -9,6 +9,15 @@ const filesToCheck = [
   'app/api/generation-runs/route.ts',
   'app/api/template-assets/route.ts',
   'lib/letter-engine.ts'
+];
+
+const volatileGeneratedPaths = [
+  '.next/dev/types',
+  '.next/dev/server',
+  '.next/dev/static',
+  '.next/dev/trace',
+  '.next/dev/cache',
+  'tsconfig.tsbuildinfo'
 ];
 
 function fail(message, details = []) {
@@ -21,6 +30,27 @@ function fail(message, details = []) {
   console.error('  grep -n "<<<<<<<\\|=======\\|>>>>>>>" components/GuidedSourceDataFlow.tsx || true');
   process.exit(1);
 }
+
+function cleanVolatileGeneratedArtifacts() {
+  const removed = [];
+
+  for (const artifactPath of volatileGeneratedPaths) {
+    if (!existsSync(artifactPath)) continue;
+
+    try {
+      rmSync(artifactPath, { recursive: true, force: true });
+      removed.push(artifactPath);
+    } catch (error) {
+      fail('Could not clean stale generated artifacts before local checks.', [`  - ${artifactPath}: ${error instanceof Error ? error.message : String(error)}`]);
+    }
+  }
+
+  if (removed.length) {
+    console.log(`Cleaned stale generated artifact(s): ${removed.join(', ')}`);
+  }
+}
+
+cleanVolatileGeneratedArtifacts();
 
 let unmerged = '';
 try {
