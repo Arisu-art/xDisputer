@@ -12,6 +12,17 @@ const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
 const allowedExhibitKinds = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
 
+type SessionContext = Awaited<ReturnType<typeof getSessionContext>>;
+
+type ExistingTemplateAsset = {
+  id: string;
+  storage_bucket: string;
+  storage_path: string;
+  version_number: number | null;
+  is_active: boolean | null;
+  content_hash: string | null;
+};
+
 function wantsJson(request: NextRequest) {
   return request.headers.get('accept')?.includes('application/json')
     || request.headers.get('x-template-upload') === 'workspace';
@@ -80,6 +91,14 @@ function validateSlot(input: {
   return null;
 }
 
+function isMissingRpcError(message: string | undefined) {
+  return Boolean(message && (
+    message.includes('Could not find the function') ||
+    message.includes('does not exist') ||
+    message.includes('schema cache')
+  ));
+}
+
 function sha256FromArrayBuffer(buffer: ArrayBuffer) {
   return createHash('sha256').update(Buffer.from(buffer)).digest('hex');
 }
@@ -114,7 +133,7 @@ function buildValidationJson(contract: TemplateContract, input: {
   };
 }
 
-async function findExistingAssets(session: Awaited<ReturnType<typeof getSessionContext>>, input: {
+async function findExistingAssets(session: SessionContext, input: {
   round: string;
   templateKind: string;
   letterType: string | null;
@@ -134,7 +153,7 @@ async function findExistingAssets(session: Awaited<ReturnType<typeof getSessionC
   return query;
 }
 
-async function archiveAssetRecords(session: Awaited<ReturnType<typeof getSessionContext>>, assets: Array<{ id: string }>) {
+async function archiveAssetRecords(session: SessionContext, assets: Array<{ id: string }>) {
   if (!assets.length) return { archived: 0, warning: null as string | null };
 
   const ids = assets.map((asset) => asset.id);
@@ -151,7 +170,44 @@ async function archiveAssetRecords(session: Awaited<ReturnType<typeof getSession
   return { archived: assets.length, warning: null };
 }
 
-async function deleteAssetRecordsAndFiles(session: Awaited<ReturnType<typeof getSessionContext>>, assets: Array<{
+async function activateInsertedTemplateAsset(session: SessionContext, input: {
+  assetId: string;
+  existingAssets: ExistingTemplateAsset[];
+}) {
+  const activation = await session.supabase.rpc('app_activate_template_asset_v1', {
+    asset_id_input: input.assetId
+  });
+
+  if (!activation.error) {
+    const row = Array.isArray(activation.data) ? activation.data[0] : null;
+    return {
+      archived: Number(row?.archived_count || 0),
+      warning: null as string | null,
+      mode: 'rpc' as const
+    };
+  }
+
+  if (!isMissingRpcError(activation.error.message)) {
+    return { archived: 0, warning: activation.error.message, mode: 'rpc' as const };
+  }
+
+  const activeAssets = input.existingAssets.filter((asset) => asset.is_active);
+  const archive = await archiveAssetRecords(session, activeAssets);
+
+  if (archive.warning) return { archived: archive.archived, warning: archive.warning, mode: 'fallback' as const };
+
+  const activate = await session.supabase
+    .from('template_assets')
+    .update({ is_active: true, archived_at: null })
+    .eq('owner_id', session.user!.id)
+    .eq('id', input.assetId);
+
+  if (activate.error) return { archived: archive.archived, warning: activate.error.message, mode: 'fallback' as const };
+
+  return { archived: archive.archived, warning: null, mode: 'fallback' as const };
+}
+
+async function deleteAssetRecordsAndFiles(session: SessionContext, assets: Array<{
   id: string;
   storage_bucket: string;
   storage_path: string;
@@ -220,6 +276,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   let uploadedPath: string | null = null;
+  let insertedAssetId: string | null = null;
 
   try {
     const accessError = await workspaceAccessErrorResponse();
@@ -343,11 +400,11 @@ export async function POST(request: NextRequest) {
           exhibitKind: resolvedExhibitKind,
           contractStatus: contract.validation.status,
           contractConfidence: contract.validation.confidence,
-          activationPolicy: 'latest-valid-upload-archives-superseded-versions'
+          activationPolicy: 'insert-inactive-activate-template-asset-rpc'
         },
         version_number: nextVersion,
-        is_active: true,
-        archived_at: null
+        is_active: false,
+        archived_at: new Date().toISOString()
       })
       .select('id')
       .single();
@@ -357,33 +414,45 @@ export async function POST(request: NextRequest) {
       return respond(request, 'error', insert.error.message, 500);
     }
 
-    uploadedPath = null;
+    insertedAssetId = insert.data.id;
 
-    const oldAssets = existingAssets.filter((asset) => asset.id !== insert.data.id);
-    const archive = await archiveAssetRecords(session, oldAssets);
+    const activation = await activateInsertedTemplateAsset(session, {
+      assetId: insert.data.id,
+      existingAssets
+    });
 
-    if (archive.warning) {
-      return respond(
-        request,
-        'ok',
-        `${round} ${targetType} template saved. Archive warning: ${archive.warning}`,
-        200,
-        { assetId: insert.data.id, archiveWarning: archive.warning, contentHash, validation: contract.validation }
-      );
+    if (activation.warning) {
+      await session.supabase.storage.from('template-assets').remove([storagePath]);
+      await session.supabase
+        .from('template_assets')
+        .delete()
+        .eq('owner_id', session.user.id)
+        .eq('id', insert.data.id);
+      return respond(request, 'error', activation.warning, 500);
     }
+
+    uploadedPath = null;
+    insertedAssetId = null;
 
     return respond(
       request,
       'ok',
-      `${round} ${targetType} template saved as active version. ${archive.archived} previous version(s) archived.`,
+      `${round} ${targetType} template saved as active version. ${activation.archived} previous active version(s) archived.`,
       200,
-      { assetId: insert.data.id, archivedVersions: archive.archived, contentHash, validation: contract.validation }
+      { assetId: insert.data.id, archivedVersions: activation.archived, activationMode: activation.mode, contentHash, validation: contract.validation }
     );
   } catch (error) {
     try {
+      const session = await getSessionContext();
       if (uploadedPath) {
-        const session = await getSessionContext();
         await session.supabase.storage.from('template-assets').remove([uploadedPath]);
+      }
+      if (insertedAssetId && session.user) {
+        await session.supabase
+          .from('template_assets')
+          .delete()
+          .eq('owner_id', session.user.id)
+          .eq('id', insertedAssetId);
       }
     } catch {
       // Best effort cleanup only.
