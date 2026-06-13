@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "pretypecheck": "node scripts/phase14-local-safety-check.mjs && node scripts/repair-remove-duplicate-generate-stage.mjs",
+    "pretypecheck": "node scripts/phase14-local-safety-check.mjs",
     "typecheck": "tsc --noEmit",
-    "prebuild": "node scripts/phase14-local-safety-check.mjs && node scripts/repair-remove-duplicate-generate-stage.mjs",
+    "prebuild": "node scripts/phase14-local-safety-check.mjs",
     "build": "next build",
     "start": "next start",
     "quality:check": "npm run typecheck && npm run build",
