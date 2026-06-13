@@ -94,6 +94,13 @@ function guardGuidedSourceDataFlow() {
     );
   }
 
+  if (!source.includes('const clientSummary = useMemo')) {
+    source = source.replace(
+      '  }, [parsed, routes.length]);\n\n  useEffect(() => {',
+      '  }, [parsed, routes.length]);\n\n  const clientSummary = useMemo(() => {\n    const address = parsed.address.join(\' \') || \'Address unavailable\';\n    const dob = parsed.dob || \'DOB unavailable\';\n    const ssn = parsed.ssn || \'SSN unavailable\';\n    return `${parsed.name || \'Client name unavailable\'} · ${address} · DOB ${dob} · SSN ${ssn}`;\n  }, [parsed.address, parsed.dob, parsed.name, parsed.ssn]);\n\n  useEffect(() => {'
+    );
+  }
+
   source = source.replace('Source TXT', 'Source Notepad');
   source = source.replace('Add client source data', 'Upload or review client Notepad data');
   source = source.replace('Import a TXT as a protected original, or open a manual draft. Working edits can always be recovered before replacement.', 'Upload a Notepad/TXT source file into a clean canvas. The original is protected, the working draft stays editable, and FTC fields are not added during normalization.');
@@ -103,6 +110,20 @@ function guardGuidedSourceDataFlow() {
   source = source.replace('Prepare only fields used by active packet documents. Retired FTC data is not required for generation.', 'Review the normalized source canvas. FTC fields are intentionally excluded from Notepad normalization for now.');
   source = source.replace('Import new TXT', 'Import new Notepad/TXT');
   source = source.replace('Standardize the working draft to continue.', 'Standardize the Notepad draft to continue.');
+
+  source = source.replace(
+    'className="panel source-progressive-stage packet-review-stage shared-stage-surface"',
+    'className="panel source-progressive-stage packet-review-stage compact-packet-review shared-stage-surface"'
+  );
+  source = source.replace(
+    '<SourceStageHeader eyebrow="Step 02 · Review packet scope" title="Confirm accounts by bureau" description="Review what will be inserted into the generated letters before packet generation."><div className="packet-review-metrics"><span>{reviewTotals.activeBureaus} bureau group{reviewTotals.activeBureaus === 1 ? \'\' : \'s\'}</span><span>{reviewTotals.dispute} dispute</span><span>{reviewTotals.inquiry} inquiry</span><span>{reviewTotals.late} late</span></div></SourceStageHeader>\n      <div className="packet-review-client-card"><div><p className="eyebrow">Detected client</p><h3>{parsed.name || \'Client name unavailable\'}</h3><p>{parsed.address.join(\' \') || \'Address unavailable\'} · DOB {parsed.dob || \'N/A\'} · SSN {parsed.ssn || \'N/A\'}</p></div><strong>{reviewTotals.routes} output route{reviewTotals.routes === 1 ? \'\' : \'s\'}</strong></div>',
+    '<SourceStageHeader eyebrow="Step 02 · Review packet scope" title="Confirm accounts by bureau" description={clientSummary}><div className="packet-review-metrics"><span>{reviewTotals.activeBureaus} bureau groups</span><span>{reviewTotals.routes} output routes</span><span>{reviewTotals.dispute} dispute</span><span>{reviewTotals.inquiry} inquiry</span><span>{reviewTotals.late} late</span></div></SourceStageHeader>'
+  );
+  source = source.replace(
+    '<article className="packet-review-bureau-card" key={bureau}><header><div><span>{bureauInfo[bureau].name}</span><h3>{bureau}</h3></div><strong>{parsed.dispute[bureau].length + parsed.inquiry[bureau].length + parsed.late[bureau].length} item{parsed.dispute[bureau].length + parsed.inquiry[bureau].length + parsed.late[bureau].length === 1 ? \'\' : \'s\'}</strong></header><PacketReviewSection title="For dispute letter" kind="dispute" items={parsed.dispute[bureau]} />',
+    '<article className="packet-review-bureau-card" key={bureau}><header><div><h3>{bureau}</h3></div><strong>{parsed.dispute[bureau].length + parsed.inquiry[bureau].length + parsed.late[bureau].length} item{parsed.dispute[bureau].length + parsed.inquiry[bureau].length + parsed.late[bureau].length === 1 ? \'\' : \'s\'}</strong></header><PacketReviewSection title="Dispute letter" kind="dispute" items={parsed.dispute[bureau]} />'
+  );
+  source = source.replace('\n          <span>{itemLabel(kind)}</span>', '');
 
   save(file, before, source);
 }
