@@ -73,7 +73,7 @@ export default async function AccountPendingPage({
 
         <div className="saas-auth-feature-grid">
           <div>
-            <strong>No quota limits</strong>
+            <strong>No output caps</strong>
             <span>Approved clients can generate without output limits.</span>
           </div>
           <div>
