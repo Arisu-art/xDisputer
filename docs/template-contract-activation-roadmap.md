@@ -12,7 +12,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 - `lib/round-template-policy.ts` defines per-round intent, strictness, required letters, required exhibits, and packet order.
 - `lib/preflight-validation.ts` blocks generation when source, routes, templates, evidence, affidavit data, or required custom fields are incomplete.
 - `lib/supabase/template-registry.ts` models owner-scoped, round-scoped, versioned template assets.
-- `app/api/template-assets/route.ts` now inspects uploaded template contracts, blocks `BLOCKED` contracts before storage, computes `content_hash`, stores `validation_json`, and detects duplicate active uploads.
+- `app/api/template-assets/route.ts` now inspects uploaded template contracts, blocks `BLOCKED` contracts before storage, computes `content_hash`, stores `validation_json`, detects duplicate active uploads, and archives superseded versions instead of immediately deleting them.
 - `app/api/template-assets/manifest/route.ts` exposes active template metadata for workspace hydration.
 
 ## Enhancement roadmap
@@ -24,7 +24,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 | 3 | Coded | Content hash on upload | Avoid duplicate active storage and improve traceability. |
 | 4 | Coded | Validation JSON on asset row | Store why a template was accepted, warned, or blocked. |
 | 5 | Existing, enhance | Latest-active slot resolver | Always use owner + round + slot + active version, never filename guessing. |
-| 6 | Pending | Restore-window retention | Keep latest active and a small number of archived versions for free-tier storage control. |
+| 6 | Partially coded | Restore-window retention | Superseded versions are now archived instead of deleted; database cleanup policy is still pending. |
 | 7 | Existing, enhance | Preflight contract checks | Block generation if active templates are missing required canonical fields. |
 | 8 | Existing, enhance | Generation manifest | Record source hash, template versions, template hashes, routes, and output summary. |
 
@@ -36,7 +36,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 4. Invalid upload must not replace the previous active template.
 5. User-owned templates must never bleed across users or rounds.
 6. Generation should either produce deterministic output or block with a clear reason.
-7. Storage should keep active template plus a small restore window, then remove older archived files.
+7. Storage should keep active template plus archived metadata; destructive cleanup should run only through an explicit database-backed retention policy.
 
 ## What-if matrix
 
@@ -51,7 +51,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 | Wrong file type is uploaded | Reject before storage. | Coded. |
 | Duplicate active file is uploaded | Reuse active version metadata and avoid duplicate storage. | Coded when `content_hash` is present. |
 | New upload is invalid | Keep previous active version. | Coded because invalid upload is blocked before storage/insert. |
-| Many old versions exist | Keep restore window, clean older archived storage. | Pending because current route still removes previous versions after successful replacement. |
+| Many old versions exist | Archive superseded versions; cleanup later through explicit policy. | App-level archive coded; storage cleanup policy pending. |
 
 ## Expected implementation outcome
 
@@ -68,4 +68,4 @@ canonical source packet
 
 ## Next coding step
 
-Add a Supabase RPC for atomic slot activation and archived-version retention. The app-level gate is already active, but database-level activation should be added before changing retention behavior so there is never a moment where an invalid or partial upload can replace the working active template.
+Add a Supabase RPC for atomic slot activation and archived-version retention. The app-level gate and archive behavior are active, but database-level activation should still be added so activation and archiving happen in one database transaction.
