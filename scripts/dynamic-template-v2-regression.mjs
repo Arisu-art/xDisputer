@@ -23,11 +23,14 @@ const mapping = assertFile('lib/dynamic-template/mapping-engine.ts');
 const renderer = assertFile('lib/dynamic-template/docx-layout-renderer-v2.ts');
 const validation = assertFile('lib/dynamic-template/render-validation.ts');
 const quality = assertFile('lib/dynamic-template/quality-framework.ts');
+const advancedZones = assertFile('lib/dynamic-template/advanced-zone-policy.ts');
 const orchestrator = assertFile('lib/dynamic-template/render-orchestrator.ts');
 const appendixBridge = assertFile('lib/dynamic-template/appendix-renderer-v2-bridge.ts');
 const rendererMode = assertFile('lib/dynamic-template/renderer-mode.ts');
 const uploadRoute = assertFile('app/api/template-assets/route.ts');
 const preflight = assertFile('lib/preflight-validation.ts');
+const supplemental = assertFile('lib/supplemental-template-renderer.ts');
+const ftcWorkflow = assertFile('lib/ftc-workflow.ts');
 
 for (const term of ['DISPUTE_LETTER', 'LATE_PAYMENT_LETTER', 'AFFIDAVIT', 'FTC', 'FCRA', 'ATTACHMENT']) {
   assertIncludes(registry, term, `field registry covers ${term}`);
@@ -53,7 +56,7 @@ for (const term of ['TEXT_NODE_PATTERN', 'replaceSplitAlias', 'split-run', 'clon
   assertIncludes(renderer, term, `renderer-v2 handles ${term}`);
 }
 
-for (const term of ['scanUnresolvedPlaceholders', 'unresolvedRequiredPlaceholders', 'dynamicTemplateRenderValidationManifest', 'mutatedPartCount']) {
+for (const term of ['scanUnresolvedPlaceholders', 'unresolvedRequiredPlaceholders', 'dynamicTemplateRenderValidationManifest', 'mutatedPartCount', 'repeatValidation', 'expectedRepeatedItems', 'appliedRepeatedItems']) {
   assertIncludes(validation, term, `render validation includes ${term}`);
 }
 
@@ -61,11 +64,15 @@ for (const term of ['gradeDynamicTemplateRender', 'DynamicTemplateQualityGrade',
   assertIncludes(quality, term, `quality framework includes ${term}`);
 }
 
-for (const term of ['renderDynamicDocxTemplateV2', 'inspectDynamicTemplateContractV2', 'buildDynamicTemplateRenderPlan', 'renderDocxLayoutV2', 'validateDynamicTemplateRender', 'gradeDynamicTemplateRender']) {
+for (const term of ['evaluateDynamicTemplateAdvancedZones', 'dynamicTemplateAdvancedZoneManifest', 'TEXT_BOX', 'DRAWING', 'CONTENT_CONTROL', 'ALT_CHUNK']) {
+  assertIncludes(advancedZones, term, `advanced-zone policy includes ${term}`);
+}
+
+for (const term of ['renderDynamicDocxTemplateV2', 'inspectDynamicTemplateContractV2', 'buildDynamicTemplateRenderPlan', 'renderDocxLayoutV2', 'validateDynamicTemplateRender', 'gradeDynamicTemplateRender', 'evaluateDynamicTemplateAdvancedZones']) {
   assertIncludes(orchestrator, term, `orchestrator connects ${term}`);
 }
 
-for (const term of ['tryRenderDynamicAppendixTemplateV2', 'AFFIDAVIT', 'FTC', 'shouldUseDynamicDocxLayoutV2', 'renderDynamicDocxTemplateV2']) {
+for (const term of ['tryRenderDynamicAppendixTemplateV2', 'AFFIDAVIT', 'FTC', 'ftcRoute', 'shouldUseDynamicDocxLayoutV2', 'renderDynamicDocxTemplateV2']) {
   assertIncludes(appendixBridge, term, `appendix bridge connects ${term}`);
 }
 
@@ -74,8 +81,14 @@ assertIncludes(rendererMode, 'DOCX_LAYOUT_V2', 'renderer mode has explicit DOCX_
 assertIncludes(uploadRoute, 'autoBackfillDynamicTemplateV2', 'template GET route auto-backfills missing v2 metadata');
 assertIncludes(uploadRoute, 'validation_json: validationJson', 'template upload stores validation_json');
 assertIncludes(preflight, 'preferDynamicV2', 'preflight can prefer v2 readiness checks');
+assertIncludes(supplemental, 'tryRenderDynamicAppendixTemplateV2', 'appendix renderer calls v2 bridge');
+assertIncludes(supplemental, 'renderer-v2 gate', 'appendix renderer reports v2 gate progress');
+assertIncludes(ftcWorkflow, 'resolveFtcTemplate', 'FTC workflow resolves template through local or active asset fallback');
+assertIncludes(ftcWorkflow, 'fetchActiveFtcTemplate', 'FTC workflow can fetch active template asset');
+assertIncludes(ftcWorkflow, 'tryRenderDynamicAppendixTemplateV2', 'FTC workflow calls v2 bridge');
 assertIncludes(renderer, 'allMatches(', 'renderer-v2 uses ES5-safe matchAll wrapper');
 assertNotIncludes(renderer, 'for (const match of xml.matchAll', 'renderer-v2 does not iterate directly over xml.matchAll results');
+assertNotIncludes(supplemental, 's.sn', 'supplemental renderer uses s.ssn, not typo s.sn');
 
 const failed = checks.filter((check) => !check.ok);
 
