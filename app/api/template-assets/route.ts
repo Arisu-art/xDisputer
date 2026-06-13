@@ -13,6 +13,7 @@ import { dynamicRendererModePolicy, resolveDynamicTemplateRendererMode, type Dyn
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
 const allowedExhibitKinds = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
+const AUTO_V2_BACKFILL_LIMIT = 12;
 
 type SessionContext = Awaited<ReturnType<typeof getSessionContext>>;
 type DynamicRendererPolicy = ReturnType<typeof dynamicRendererModePolicy>;
@@ -24,6 +25,17 @@ type ExistingTemplateAsset = {
   version_number: number | null;
   is_active: boolean | null;
   content_hash: string | null;
+};
+
+type ActiveTemplateAsset = ExistingTemplateAsset & {
+  round_label: Round;
+  template_kind: TemplateKind;
+  letter_type: LetterType | null;
+  exhibit_kind: ExhibitKind | null;
+  original_filename: string;
+  mime_type: string | null;
+  validation_json: Record<string, unknown> | null;
+  rule_json: Record<string, unknown> | null;
 };
 
 function wantsJson(request: NextRequest) {
@@ -174,6 +186,129 @@ function buildValidationJson(contract: TemplateContract, input: {
   };
 }
 
+function hasDynamicTemplateV2Metadata(asset: ActiveTemplateAsset) {
+  const validation = asset.validation_json;
+  if (!validation || typeof validation !== 'object') return false;
+  const dynamic = validation.dynamicTemplateEngineV2;
+  return Boolean(dynamic && typeof dynamic === 'object' && (dynamic as { contract?: unknown }).contract);
+}
+
+function mergeDynamicTemplateV2Validation(input: {
+  current: Record<string, unknown> | null;
+  rendererMode: DynamicTemplateRendererMode;
+  rendererPolicy: DynamicRendererPolicy;
+  dynamicContractV2: DynamicTemplateContractV2 | null;
+  warning: string | null;
+}) {
+  return {
+    ...(input.current || {}),
+    dynamicTemplateEngineV2: {
+      rendererMode: input.rendererMode,
+      rendererPolicy: input.rendererPolicy,
+      diagnosticsWarning: input.warning,
+      contract: dynamicContractSummary(input.dynamicContractV2),
+      autoBackfilledAt: new Date().toISOString()
+    }
+  };
+}
+
+function mergeDynamicTemplateV2RuleJson(input: {
+  current: Record<string, unknown> | null;
+  rendererMode: DynamicTemplateRendererMode;
+  dynamicContractV2: DynamicTemplateContractV2 | null;
+  warning: string | null;
+}) {
+  return {
+    ...(input.current || {}),
+    dynamicTemplateEngineV2: {
+      rendererMode: input.rendererMode,
+      status: input.dynamicContractV2?.status || null,
+      confidence: input.dynamicContractV2?.confidence || null,
+      diagnosticsWarning: input.warning,
+      autoBackfilledAt: new Date().toISOString()
+    }
+  };
+}
+
+async function fileFromStoredBlob(blob: Blob, asset: ActiveTemplateAsset) {
+  const buffer = await blob.arrayBuffer();
+  return new File([buffer], asset.original_filename, {
+    type: asset.mime_type || blob.type || 'application/octet-stream',
+    lastModified: Date.now()
+  });
+}
+
+async function autoBackfillDynamicTemplateV2(input: {
+  session: SessionContext;
+  assets: ActiveTemplateAsset[];
+  rendererMode: DynamicTemplateRendererMode;
+  rendererPolicy: DynamicRendererPolicy;
+}) {
+  const warnings: string[] = [];
+  let backfilledCount = 0;
+  const candidates = input.assets
+    .filter((asset) => !hasDynamicTemplateV2Metadata(asset))
+    .slice(0, AUTO_V2_BACKFILL_LIMIT);
+
+  for (const asset of candidates) {
+    try {
+      const kind = documentKind({
+        templateKind: asset.template_kind,
+        letterType: asset.letter_type,
+        exhibitKind: asset.exhibit_kind
+      });
+      const download = await input.session.supabase.storage
+        .from(asset.storage_bucket || 'template-assets')
+        .download(asset.storage_path);
+
+      if (download.error || !download.data) {
+        warnings.push(`${asset.original_filename}: ${download.error?.message || 'storage download failed'}`);
+        continue;
+      }
+
+      const file = await fileFromStoredBlob(download.data, asset);
+      const dynamicV2 = await inspectDynamicContractV2Safely({
+        file,
+        kind,
+        round: asset.round_label,
+        rendererPolicy: input.rendererPolicy
+      });
+      const validationJson = mergeDynamicTemplateV2Validation({
+        current: asset.validation_json,
+        rendererMode: input.rendererMode,
+        rendererPolicy: input.rendererPolicy,
+        dynamicContractV2: dynamicV2.contract,
+        warning: dynamicV2.warning
+      });
+      const ruleJson = mergeDynamicTemplateV2RuleJson({
+        current: asset.rule_json,
+        rendererMode: input.rendererMode,
+        dynamicContractV2: dynamicV2.contract,
+        warning: dynamicV2.warning
+      });
+
+      const update = await input.session.supabase
+        .from('template_assets')
+        .update({ validation_json: validationJson, rule_json: ruleJson })
+        .eq('owner_id', input.session.user!.id)
+        .eq('id', asset.id);
+
+      if (update.error) {
+        warnings.push(`${asset.original_filename}: ${update.error.message}`);
+        continue;
+      }
+
+      asset.validation_json = validationJson;
+      asset.rule_json = ruleJson;
+      backfilledCount += 1;
+    } catch (error) {
+      warnings.push(`${asset.original_filename}: ${safeErrorMessage(error)}`);
+    }
+  }
+
+  return { assets: input.assets, backfilledCount, warnings };
+}
+
 async function findExistingAssets(session: SessionContext, input: {
   round: string;
   templateKind: string;
@@ -296,6 +431,10 @@ export async function GET(request: NextRequest) {
   }
 
   const round = request.nextUrl.searchParams.get('round');
+  const rendererMode = resolveDynamicTemplateRendererMode({
+    requestHeader: request.headers.get('x-dynamic-template-renderer-mode')
+  });
+  const rendererPolicy = dynamicRendererModePolicy(rendererMode);
 
   let query = session.supabase
     .from('template_assets')
@@ -312,7 +451,21 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ assets: data || [] });
+  const autoBackfill = await autoBackfillDynamicTemplateV2({
+    session,
+    assets: (data || []) as ActiveTemplateAsset[],
+    rendererMode,
+    rendererPolicy
+  });
+
+  return NextResponse.json({
+    assets: autoBackfill.assets,
+    dynamicTemplateEngineV2: {
+      rendererMode,
+      autoBackfilled: autoBackfill.backfilledCount,
+      warnings: autoBackfill.warnings
+    }
+  });
 }
 
 export async function POST(request: NextRequest) {
