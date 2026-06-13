@@ -4,7 +4,17 @@ export type ExhibitKind = 'FCRA' | 'AFFIDAVIT' | 'ATTACHMENT' | 'FTC';
 export type ActiveExhibitKind = ExhibitKind;
 export type ExhibitMode = 'STATIC_PDF' | 'GENERATED_DOCX';
 
-export type ExhibitAsset = {
+export type TemplateAssetProvenanceSource = 'LOCAL_BROWSER' | 'SUPABASE_TEMPLATE_ASSET' | 'UNKNOWN';
+
+export type TemplateAssetProvenanceMetadata = {
+  assetId?: string | null;
+  source?: TemplateAssetProvenanceSource;
+  versionNumber?: number | null;
+  contentHash?: string | null;
+  validationJson?: Record<string, unknown> | null;
+};
+
+export type ExhibitAsset = TemplateAssetProvenanceMetadata & {
   id: string;
   kind: ExhibitKind;
   mode: ExhibitMode;
@@ -145,7 +155,12 @@ async function assetFromStoredFile(round: string, kind: ExhibitKind, file: File,
     name: existing?.name || file.name,
     type: existing?.type || file.type || 'application/octet-stream',
     size: existing?.size || file.size,
-    contract
+    contract,
+    assetId: existing?.assetId,
+    source: existing?.source,
+    versionNumber: existing?.versionNumber,
+    contentHash: existing?.contentHash,
+    validationJson: existing?.validationJson
   };
 }
 
@@ -178,71 +193,41 @@ export async function recoverTemplateExhibitsFromFiles(round: string, values: Te
 
 export async function recoverAllTemplateExhibitsFromFiles(rounds: string[]) {
   const entries = await Promise.all(rounds.map(async (round) => [round, await recoverTemplateExhibitsFromFiles(round)] as const));
-  return Object.fromEntries(entries) as Record<string, TemplateExhibits>;
+  return Object.fromEntries(entries);
 }
 
 export async function saveTemplateExhibit(round: string, kind: ExhibitKind, file: File) {
   assertFileType(kind, file);
 
-  const contract = await inspectTemplateContract(file, kind as any);
-  const id = fileKey(round, kind);
   const db = await openDb();
-
   await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(file, id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+    const request = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(file, fileKey(round, kind));
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
   });
-
   db.close();
 
-  const next = loadTemplateExhibits(round);
-  next[kind] = {
-    id,
-    kind,
-    mode: exhibitModes[kind],
-    name: file.name,
-    type: file.type || 'application/octet-stream',
-    size: file.size,
-    contract
-  };
-
+  const current = loadTemplateExhibits(round);
+  const next = { ...current, [kind]: await assetFromStoredFile(round, kind, file, current[kind]) } as TemplateExhibits;
   saveTemplateMeta(round, next);
   return next;
 }
 
 export async function removeTemplateExhibit(round: string, kind: ExhibitKind) {
   const db = await openDb();
-
   await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).delete(fileKey(round, kind));
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+    const request = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).delete(fileKey(round, kind));
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
   });
-
   db.close();
 
-  const next = loadTemplateExhibits(round);
-  next[kind] = null;
+  const current = loadTemplateExhibits(round);
+  const next = { ...current, [kind]: null } as TemplateExhibits;
   saveTemplateMeta(round, next);
-
   return next;
 }
 
-export async function readTemplateExhibit(round: string, kind: ExhibitKind): Promise<File | null> {
+export async function readTemplateExhibit(round: string, kind: ExhibitKind) {
   return readStoredExhibit(round, kind);
-}
-
-export function configuredExhibits(exhibits: TemplateExhibits) {
-  return exhibitKinds.filter((kind) => Boolean(exhibits[kind]));
-}
-
-export function generatedExhibits(exhibits: TemplateExhibits) {
-  return exhibitKinds.filter((kind) => exhibitModes[kind] === 'GENERATED_DOCX' && Boolean(exhibits[kind]));
-}
-
-export function staticPdfExhibits(exhibits: TemplateExhibits) {
-  return exhibitKinds.filter((kind) => exhibitModes[kind] === 'STATIC_PDF' && Boolean(exhibits[kind]));
 }
