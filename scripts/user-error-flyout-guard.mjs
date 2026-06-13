@@ -14,7 +14,13 @@ function assertIncludes(content, needle, label) {
   checks.push({ ok: content.includes(needle), label });
 }
 
+function assertCount(content, needle, expected, label) {
+  const count = content.split(needle).length - 1;
+  checks.push({ ok: count === expected, label: `${label} (${count}/${expected})` });
+}
+
 if (existsSync('scripts/apply-user-error-flyout-wiring.mjs')) {
+  execSync('node scripts/apply-user-error-flyout-wiring.mjs', { stdio: 'inherit' });
   execSync('node scripts/apply-user-error-flyout-wiring.mjs', { stdio: 'inherit' });
 }
 
@@ -22,6 +28,7 @@ const classifier = assertFile('lib/user-facing-error.ts');
 const flyout = assertFile('components/UserErrorFlyout.tsx');
 const workspace = assertFile('components/LetterGeneratorWorkspaceV2.tsx');
 const safety = assertFile('scripts/phase14-local-safety-check.mjs');
+const patcher = assertFile('scripts/apply-user-error-flyout-wiring.mjs');
 
 for (const term of ['TEMPLATE', 'SOURCE_DATA', 'NETWORK', 'ACCOUNT', 'SYSTEM', 'explainWebsiteError']) {
   assertIncludes(classifier, term, `classifier handles ${term}`);
@@ -36,6 +43,10 @@ assertIncludes(workspace, 'activeError', 'workspace tracks active user-facing er
 assertIncludes(workspace, 'explainWebsiteError', 'workspace classifies error messages');
 assertIncludes(workspace, '<UserErrorFlyout issue={activeError}', 'workspace renders flyout');
 assertIncludes(safety, 'apply-user-error-flyout-wiring', 'local safety check applies flyout wiring before typecheck/build');
+assertIncludes(patcher, 'normalizeActiveErrorState', 'patcher normalizes duplicate active error state');
+assertIncludes(patcher, 'normalizeGenerateClear', 'patcher normalizes duplicate generate error reset');
+assertCount(workspace, 'const [activeError, setActiveError] = useState<UserFacingError | null>(null);', 1, 'workspace has exactly one activeError state line');
+assertCount(workspace, 'setActiveError(null);', 4, 'workspace has expected setActiveError reset calls');
 
 const failed = checks.filter((check) => !check.ok);
 
