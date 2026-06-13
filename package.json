@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/repair-letter-workspace-syntax.mjs && node scripts/repair-letter-workspace-contracts.mjs && node scripts/repair-letter-workspace-blob-boundaries.mjs && node scripts/repair-letter-workspace-header-chip.mjs && node scripts/repair-fast-template-upload.mjs && node scripts/repair-fast-template-asset-route.mjs",
+    "prebuild": "node scripts/repair-letter-workspace-syntax.mjs && node scripts/repair-letter-workspace-contracts.mjs && node scripts/repair-generation-blocked-reasons.mjs && node scripts/repair-letter-workspace-blob-boundaries.mjs && node scripts/repair-letter-workspace-header-chip.mjs && node scripts/repair-fast-template-upload.mjs && node scripts/repair-fast-template-asset-route.mjs",
     "build": "next build",
     "start": "next start",
     "ai:code": "node scripts/ai-coding-assistant.js",
@@ -12,7 +12,7 @@
     "ai:code:help": "node scripts/ai-coding-assistant.js --help",
     "ai:process": "node scripts/ai-code-processor.js",
     "ai:apply": "node scripts/apply-changes.js",
-    "pretypecheck": "node scripts/repair-letter-workspace-syntax.mjs && node scripts/repair-letter-workspace-contracts.mjs && node scripts/repair-letter-workspace-blob-boundaries.mjs && node scripts/repair-letter-workspace-header-chip.mjs && node scripts/repair-fast-template-upload.mjs && node scripts/repair-fast-template-asset-route.mjs",
+    "pretypecheck": "node scripts/repair-letter-workspace-syntax.mjs && node scripts/repair-letter-workspace-contracts.mjs && node scripts/repair-generation-blocked-reasons.mjs && node scripts/repair-letter-workspace-blob-boundaries.mjs && node scripts/repair-letter-workspace-header-chip.mjs && node scripts/repair-fast-template-upload.mjs && node scripts/repair-fast-template-asset-route.mjs",
     "typecheck": "tsc --noEmit",
     "quality:check": "npm run typecheck && npm run build",
     "xdisputer:guard": "node scripts/xdisputer-deploy-guard.mjs",
