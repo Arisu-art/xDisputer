@@ -14,6 +14,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 - `lib/supabase/template-registry.ts` models owner-scoped, round-scoped, versioned template assets and now exposes a latest-active slot resolver.
 - `app/api/template-assets/route.ts` now inspects uploaded template contracts, blocks `BLOCKED` contracts before storage, computes `content_hash`, stores `validation_json`, detects duplicate active uploads, and archives superseded versions instead of immediately deleting them.
 - `app/api/template-assets/manifest/route.ts` now resolves one latest active template per owner + round + slot and reports duplicate active slot diagnostics.
+- `lib/generation-manifest.ts` now supports source hash, source summary, template provenance, template validation state, template versions, content hashes, outputs, warnings, and packet order.
 
 ## Enhancement roadmap
 
@@ -26,7 +27,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 | 5 | Coded | Latest-active slot resolver | Manifest hydration now selects the latest active asset per owner + round + slot. |
 | 6 | Partially coded | Restore-window retention | Superseded versions are now archived instead of deleted; database cleanup policy is still pending. |
 | 7 | Coded | Preflight contract checks | Generation now blocks active templates with missing canonical fields or unknown required fields. |
-| 8 | Existing, enhance | Generation manifest | Record source hash, template versions, template hashes, routes, and output summary. |
+| 8 | Partially coded | Generation manifest | Builder records source hash and template provenance; workspace component still needs effective asset metadata wiring. |
 
 ## Production rules
 
@@ -53,6 +54,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 | New upload is invalid | Keep previous active version. | Coded because invalid upload is blocked before storage/insert. |
 | Multiple active rows exist for one slot | Manifest chooses the latest active version by slot freshness and reports duplicate diagnostics. | Coded. |
 | Old active template lacks contract metadata | Generation preflight warns and asks for re-upload/rescan before production use. | Coded. |
+| Generated output must be explainable later | Manifest builder records source and template proof fields. | Partially coded. |
 | Many old versions exist | Archive superseded versions; cleanup later through explicit policy. | App-level archive coded; storage cleanup policy pending. |
 
 ## Expected implementation outcome
@@ -70,4 +72,4 @@ canonical source packet
 
 ## Next coding step
 
-Enhance the generation manifest so every generated output records source hash, selected template asset identifiers, template versions, content hashes, contract validation status, routes, and packet summary. Database-level activation and cleanup policy remain the next Supabase hardening step.
+Finish workspace manifest wiring so generated manifests receive effective template metadata from Supabase-backed templates. Database-level activation and cleanup policy remain the next Supabase hardening step.
