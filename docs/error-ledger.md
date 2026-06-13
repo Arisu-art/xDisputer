@@ -159,26 +159,26 @@ npm run vercel:status
 npm run vercel:direct
 ```
 
-## E007 — Client/manager output limit accidentally reintroduced
+## E007 — Client/manager output cap accidentally reintroduced
 
 **Observed issue**
 
-UI or server code adds manager/client generation caps, client output limits, generation-count restrictions, or quota-blocked messaging.
+UI or server code adds manager/client generation caps, client output limits, generation-count restrictions, or usage-cap blocked messaging.
 
 **Root cause**
 
-Old SaaS quota assumptions were mixed into the current no-output-limit product rule.
+Old SaaS usage-cap assumptions were mixed into the current no-output-limit product rule.
 
 **Correct fix pattern**
 
 - Remove output-limit enforcement from client and manager generation paths.
-- Keep operational throttling internal only if required for infrastructure protection, and never render it as a client/account quota state unless explicitly requested.
+- Keep operational throttling internal only if required for infrastructure protection, and never render it as a client/account usage-cap state unless explicitly requested.
 - Search before shipping.
 
 **Verification**
 
 ```bash
-grep -R "quota\|generation limit\|output limit\|quota-blocked\|quota blocked" -n app components lib scripts docs || true
+grep -R "generation limit\|output limit\|usage-cap\|usage cap\|cap blocked" -n app components lib scripts docs || true
 npm run typecheck
 npm run build
 ```
