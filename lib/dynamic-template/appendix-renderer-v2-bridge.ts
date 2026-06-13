@@ -9,6 +9,18 @@ export type DynamicAppendixRendererV2BridgeResult = {
   engine: DynamicTemplateEngineV2Result;
 };
 
+type SupportedDynamicAppendixKind = 'AFFIDAVIT' | 'FTC';
+
+function assertSupportedAppendixKind(kind: string): asserts kind is SupportedDynamicAppendixKind {
+  if (kind !== 'AFFIDAVIT' && kind !== 'FTC') {
+    throw new Error(`Dynamic Template Engine v2 only supports editable Affidavit and FTC appendix DOCX templates. Received: ${kind}`);
+  }
+}
+
+function sourceItem(type: SourceItem['type'], displayText: string): SourceItem {
+  return { type, displayText };
+}
+
 function affidavitRoute(context: MappedAppendixContext): LetterRoute {
   const items: SourceItem[] = [];
 
@@ -25,9 +37,25 @@ function affidavitRoute(context: MappedAppendixContext): LetterRoute {
   };
 }
 
-function routeForAppendix(context: MappedAppendixContext): LetterRoute | null {
-  if (context.kind === 'AFFIDAVIT') return affidavitRoute(context);
-  return null;
+function ftcRoute(context: MappedAppendixContext): LetterRoute {
+  const items = context.source.ftcAccounts.map((account) => sourceItem('DISPUTE_ACCOUNT', [
+    `Account Name: ${account.accountName}`,
+    account.accountNumber ? `Account Number: ${account.accountNumber}` : '',
+    account.dateDiscovered ? `Date Discovered: ${account.dateDiscovered}` : '',
+    account.fraudulentAmount ? `Fraudulent Amount: ${account.fraudulentAmount}` : ''
+  ].filter(Boolean).join('\n')));
+
+  return {
+    bureau: context.bureau,
+    type: 'DISPUTE',
+    items,
+    reason: 'FTC dynamic template v2 affected-account route'
+  };
+}
+
+function routeForAppendix(context: MappedAppendixContext): LetterRoute {
+  assertSupportedAppendixKind(context.kind);
+  return context.kind === 'FTC' ? ftcRoute(context) : affidavitRoute(context);
 }
 
 export async function tryRenderDynamicAppendixTemplateV2(input: {
@@ -38,6 +66,8 @@ export async function tryRenderDynamicAppendixTemplateV2(input: {
   const rendererMode = resolveDynamicTemplateRendererMode({ explicitMode: input.rendererMode });
 
   if (!shouldUseDynamicDocxLayoutV2(rendererMode)) return null;
+
+  assertSupportedAppendixKind(input.context.kind);
 
   const engine = await renderDynamicDocxTemplateV2({
     template: input.template,
