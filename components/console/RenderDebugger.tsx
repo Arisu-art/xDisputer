@@ -16,9 +16,21 @@ type DebugSnapshot = {
   gridTemplateColumns: string;
 };
 
+type TemplateExecutionSnapshot = {
+  status: string;
+  round: string;
+  outputs: number;
+  warnings: number;
+  engines: string[];
+  missingSlots: string[];
+  generatedAt: string;
+  summary?: string;
+};
+
 declare global {
   interface Window {
     __xdisputerDebug?: DebugSnapshot;
+    __xdisputerTemplateExecution?: TemplateExecutionSnapshot;
   }
 }
 
@@ -94,6 +106,7 @@ export default function RenderDebugger() {
   const enabled = process.env.NODE_ENV !== 'production' || queryEnabled;
   const [open, setOpen] = useState(queryEnabled);
   const [snapshot, setSnapshot] = useState<DebugSnapshot | null>(null);
+  const [execution, setExecution] = useState<TemplateExecutionSnapshot | null>(null);
 
   useEffect(() => { if (queryEnabled) setOpen(true); }, [queryEnabled]);
 
@@ -116,12 +129,21 @@ export default function RenderDebugger() {
     return () => { cancelAnimationFrame(frame); observer?.disconnect(); window.removeEventListener('resize', sync); };
   }, [enabled, route]);
 
+  useEffect(() => {
+    if (!enabled || typeof window === 'undefined') return;
+    const syncExecution = () => setExecution(window.__xdisputerTemplateExecution || null);
+    syncExecution();
+    window.addEventListener('xdisputer:template-execution', syncExecution);
+    return () => window.removeEventListener('xdisputer:template-execution', syncExecution);
+  }, [enabled]);
+
   if (!enabled || !snapshot) return null;
   return <aside className="xdisputer-render-debugger" data-xdisputer-debugger={open ? 'open' : 'closed'}>
     <button type="button" className="xdisputer-render-debugger-toggle" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="xdisputer-render-debugger-panel">{open ? 'Hide UI debug' : 'Show UI debug'}</button>
     {open ? <section id="xdisputer-render-debugger-panel" className="xdisputer-render-debugger-panel" aria-live="polite">
-      <div className="xdisputer-render-debugger-heading"><strong>xDisputer render debugger</strong><small>window.__xdisputerDebug</small></div>
+      <div className="xdisputer-render-debugger-heading"><strong>xDisputer render debugger</strong><small>window.__xdisputerDebug + window.__xdisputerTemplateExecution</small></div>
       <dl><dt>Route</dt><dd>{snapshot.route}</dd><dt>Shell</dt><dd>{snapshot.renderedShell}</dd><dt>Header</dt><dd>{snapshot.renderedHeader}</dd><dt>Sidebar</dt><dd>{snapshot.renderedSidebar}</dd><dt>Account menu</dt><dd>{snapshot.renderedAccountMenu}</dd><dt>Role / mode</dt><dd>{snapshot.role} / {snapshot.mode}</dd><dt>Ratio</dt><dd>{snapshot.activeLayoutRatio}</dd><dt>Grid columns</dt><dd>{snapshot.gridTemplateColumns}</dd></dl>
+      {execution ? <div className="xdisputer-render-debugger-execution"><strong>Template execution</strong><dl><dt>Status</dt><dd>{execution.status}</dd><dt>Round</dt><dd>{execution.round}</dd><dt>Outputs</dt><dd>{execution.outputs}</dd><dt>Warnings</dt><dd>{execution.warnings}</dd><dt>Engines</dt><dd>{execution.engines.join(', ') || 'none'}</dd><dt>Missing slots</dt><dd>{execution.missingSlots.join(', ') || 'none'}</dd><dt>Generated</dt><dd>{execution.generatedAt}</dd><dt>Summary</dt><dd>{execution.summary || 'No summary'}</dd></dl></div> : null}
       <div className="xdisputer-render-debugger-css"><strong>Loaded CSS files</strong><ol>{snapshot.loadedCssFiles.map((file) => <li key={file}>{file}</li>)}</ol></div>
     </section> : null}
   </aside>;
