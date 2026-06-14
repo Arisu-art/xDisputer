@@ -21,7 +21,7 @@ function assertContains(path, text) {
   console.log(`✅ ${path} contains ${text}`);
 }
 
-console.log('\n=== xDisputer deploy guard ===');
+console.log('\n=== xDisputer repo guard: Codespaces + Supabase mode ===');
 
 if (existsSync('scripts/repair-letter-workspace-syntax.mjs')) {
   run('node scripts/repair-letter-workspace-syntax.mjs');
@@ -55,9 +55,11 @@ assertContains('lib/readiness-checklist-control.ts', 'READINESS_CHECKLIST_DISABL
 assertContains('components/GenerationPreflightChecklist.tsx', 'if (READINESS_CHECKLIST_DISABLED) return null');
 assertContains('lib/preflight-validation.ts', 'DISABLED_PREFLIGHT_RESULT');
 
+run('node scripts/apply-manager-workspace-nav-wiring.mjs');
+run('node scripts/manager-visible-switch-contract-guard.mjs');
 run('node scripts/readiness-checklist-disabled-guard.mjs');
 run('npm run dynamic-template:v2:regression');
 run('npm run typecheck');
 run('npm run build');
 
-console.log('\n✅ Deploy guard passed. Repo is ready to commit, push, and verify in Vercel.');
+console.log('\n✅ Repo guard passed. Codespaces and Supabase source checks are synchronized.');
