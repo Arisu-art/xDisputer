@@ -34,16 +34,27 @@ function replaceRequired(search, replacement, label) {
   source = source.replace(search, replacement);
 }
 
-function replaceRegexRequired(pattern, replacement, label) {
+function replaceRegexRequired(pattern, replacement, label, alreadyPresent) {
+  if (alreadyPresent && source.includes(alreadyPresent)) return;
   if (pattern.test(source)) {
     source = source.replace(pattern, replacement);
     return;
   }
-  if (!source.includes(replacement)) fail(`Missing regex anchor for ${label}`);
+  fail(`Missing regex anchor for ${label}`);
 }
 
 function normalizeDuplicateState() {
   source = source.replace(/(?:\s*const \[managerTemplateScope, setManagerTemplateScope\] = useState<ManagerTemplateScopeUi \| null>\(null\);\n){2,}/g, '  const [managerTemplateScope, setManagerTemplateScope] = useState<ManagerTemplateScopeUi | null>(null);\n');
+}
+
+function replaceFunctionBodyRequired(name, signaturePattern, replacement, label) {
+  if (source.includes(replacement)) return;
+  const singleLine = new RegExp(`  function ${name}\\(${signaturePattern}\\) \\{[^\\n]*\\}\\n`, 'm');
+  if (singleLine.test(source)) {
+    source = source.replace(singleLine, `${replacement}\n`);
+    return;
+  }
+  fail(`Missing function anchor for ${label}`);
 }
 
 ensureImport(
@@ -80,25 +91,29 @@ replaceRequired(
   'missingLetters effectiveRefs'
 );
 
-replaceRequired(
-  "  function refBlob(type: LetterType) { const slot = refs.find((item) => item.type === type); return slot ? readReferenceFile(slot.id) : Promise.resolve(null); }",
+replaceFunctionBodyRequired(
+  'refBlob',
+  'type: LetterType',
   "  function refBlob(type: LetterType) { if (!canUseLocalTemplateFallback(managerTemplateScope || undefined)) return Promise.resolve(null); const slot = refs.find((item) => item.type === type); return slot ? readReferenceFile(slot.id) : Promise.resolve(null); }",
   'refBlob local fallback gating'
 );
-replaceRequired(
-  "  function exhibitBlob(kind: ExhibitKind) { return readTemplateExhibit(round, kind); }",
+replaceFunctionBodyRequired(
+  'exhibitBlob',
+  'kind: ExhibitKind',
   "  function exhibitBlob(kind: ExhibitKind) { return canUseLocalTemplateFallback(managerTemplateScope || undefined) ? readTemplateExhibit(round, kind) : Promise.resolve(null); }",
   'exhibitBlob local fallback gating'
 );
 replaceRegexRequired(
   /  async function assetBlob\(kind: ExhibitKind\) \{[\s\S]*?\n  \}\n  async function letterBlob/m,
   "  async function assetBlob(kind: ExhibitKind) {\n    return resolveManagerTemplateFile({ round, assets: registryAssets as ManagerTemplateFileAsset[], exhibitKind: kind, localBlob: await exhibitBlob(kind), allowLocalFallback: canUseLocalTemplateFallback(managerTemplateScope || undefined) });\n  }\n  async function letterBlob",
-  'assetBlob manager resolver'
+  'assetBlob manager resolver',
+  'resolveManagerTemplateFile({ round, assets: registryAssets as ManagerTemplateFileAsset[], exhibitKind: kind'
 );
 replaceRegexRequired(
   /  async function letterBlob\(type: LetterType\) \{[\s\S]*?\n  \}\n  async function affidavit/m,
   "  async function letterBlob(type: LetterType) {\n    return resolveManagerTemplateFile({ round, assets: registryAssets as ManagerTemplateFileAsset[], letterType: type, localBlob: await refBlob(type), allowLocalFallback: canUseLocalTemplateFallback(managerTemplateScope || undefined) });\n  }\n  async function affidavit",
-  'letterBlob manager resolver'
+  'letterBlob manager resolver',
+  'resolveManagerTemplateFile({ round, assets: registryAssets as ManagerTemplateFileAsset[], letterType: type'
 );
 replaceRequired(
   "        references: refs,\n        templates,",
