@@ -7,28 +7,24 @@ function run(command) {
 }
 
 function assertFile(path) {
-  if (!existsSync(path)) {
-    throw new Error(`Missing required file: ${path}`);
-  }
+  if (!existsSync(path)) throw new Error(`Missing required file: ${path}`);
   console.log(`✅ ${path}`);
 }
 
 function assertContains(path, text) {
   const file = readFileSync(path, 'utf8');
-  if (!file.includes(text)) {
-    throw new Error(`Missing required code in ${path}: ${text}`);
-  }
+  if (!file.includes(text)) throw new Error(`Missing required code in ${path}: ${text}`);
   console.log(`✅ ${path} contains ${text}`);
 }
 
 console.log('\n=== xDisputer repo guard: Codespaces + Supabase mode ===');
 
-if (existsSync('scripts/repair-letter-workspace-syntax.mjs')) {
-  run('node scripts/repair-letter-workspace-syntax.mjs');
-}
-
 assertFile('components/console/ConsoleShell.tsx');
+assertFile('components/console/ConsoleHeader.tsx');
+assertFile('components/console/AccountMenu.tsx');
+assertFile('components/console/RenderDebugger.tsx');
 assertFile('app/console-shell-system.css');
+assertFile('app/console-debug-overlay.css');
 assertFile('scripts/console-shell-contract-guard.mjs');
 assertFile('docs/ui-shell-roadmap-tracker.md');
 assertFile('lib/round-template-policy.ts');
@@ -49,12 +45,11 @@ assertFile('app/system/runtime/page.tsx');
 assertFile('app/system/templates/page.tsx');
 
 assertContains('components/console/ConsoleShell.tsx', 'data-console-shell="true"');
-assertContains('components/console/ConsoleShell.tsx', 'data-console-header-grid="true"');
+assertContains('components/console/ConsoleShell.tsx', '<ConsoleHeader');
+assertContains('components/console/ConsoleShell.tsx', '<AccountMenu');
+assertContains('components/console/RenderDebugger.tsx', 'window.__xdisputerDebug');
 assertContains('app/account-menu-ratio-system.css', "@import './console-shell-system.css';");
 assertContains('components/ManagerConsoleShell.tsx', '<ConsoleShell');
-assertContains('app/master/MasterConsoleHome.tsx', '<ConsoleShell');
-assertContains('app/master/accounts/page.tsx', '<ConsoleShell');
-assertContains('app/master/workspaces/page.tsx', '<ConsoleShell');
 assertContains('components/LetterGeneratorWorkspaceV2.tsx', '/api/template-assets?round=');
 assertContains('components/LetterGeneratorWorkspaceV2.tsx', '/api/template-assets/file?');
 assertContains('components/LetterGeneratorWorkspaceV2.tsx', 'generation-manifest.json');
@@ -66,9 +61,8 @@ assertContains('lib/readiness-checklist-control.ts', 'READINESS_CHECKLIST_DISABL
 assertContains('components/GenerationPreflightChecklist.tsx', 'if (READINESS_CHECKLIST_DISABLED) return null');
 assertContains('lib/preflight-validation.ts', 'DISABLED_PREFLIGHT_RESULT');
 
-run('node scripts/apply-manager-workspace-nav-wiring.mjs');
-run('node scripts/console-shell-contract-guard.mjs');
-run('node scripts/manager-visible-switch-contract-guard.mjs');
+run('node scripts/phase14-local-safety-check.mjs');
+run('npm run ui-source:guard');
 run('node scripts/readiness-checklist-disabled-guard.mjs');
 run('npm run dynamic-template:v2:regression');
 run('npm run typecheck');
