@@ -1,3 +1,5 @@
+@import './console-shell-system.css';
+
 /* Account menu ratio override — final source of truth for manager/master console header split.
    Applies to /admin, /manager-workspace, and master console pages that render data-console-header-grid. */
 
