@@ -22,3 +22,10 @@ pnpm-debug.log*
 .idea/
 tsconfig.tsbuildinfo
 .local-backups/
+
+# Accidental root artifacts from malformed terminal commands
+/FETCH_HEAD
+/letter-generator@1.0.0
+/next
+/node
+/tsc
