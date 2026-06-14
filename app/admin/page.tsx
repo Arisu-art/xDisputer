@@ -45,6 +45,7 @@ function SnapshotFooter({ count, total, href }: { count: number; total: number; 
 
 function managerOperationsNav(activePanel: ManagerPanel) {
   return [
+    { href: '/manager-workspace', label: 'myco' },
     { href: '/admin', label: 'Monitoring', active: activePanel === 'monitoring' },
     { href: '/admin/access', label: 'Access control' },
     { href: '/admin?panel=intake', label: 'Client intake', active: activePanel === 'intake' },
