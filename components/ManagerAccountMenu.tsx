@@ -27,7 +27,7 @@ export default function ManagerAccountMenu({ email, accountLabel, switchTarget, 
   const initial = useMemo(() => initialFromEmail(email), [email]);
   const displayName = useMemo(() => displayNameFromEmail(email), [email]);
 
-  return <div className="manager-header-account-dock" data-manager-account-menu="true" data-manager-account-layout="header-75-25-avatar-only">
+  return <div className="manager-header-account-dock" data-manager-account-menu="true" data-manager-account-layout="header-75-25-avatar-only" data-manager-account-state={open ? 'open' : 'closed'}>
     <button className="manager-header-account-avatar" type="button" aria-haspopup="dialog" aria-expanded={open} aria-label="Open account and settings menu" onClick={() => setOpen((value) => !value)}>
       {initial}
     </button>
