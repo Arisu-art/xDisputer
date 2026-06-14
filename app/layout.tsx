@@ -67,6 +67,7 @@ import './production-ui-lock.css';
 import './professional-console-layout.css';
 import './global-depth-system.css';
 import './account-menu-system.css';
+import './account-menu-ratio-system.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 
 export const metadata = {
