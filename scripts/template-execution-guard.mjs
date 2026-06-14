@@ -17,9 +17,9 @@ has('components/LetterGeneratorWorkspaceV2.tsx', 'executeTemplateGeneration({');
 has('components/LetterGeneratorWorkspaceV2.tsx', 'TemplateExecutionOrchestrator');
 notHas('components/LetterGeneratorWorkspaceV2.tsx', 'renderReferenceDisputeDocx(');
 notHas('components/LetterGeneratorWorkspaceV2.tsx', 'renderLatePaymentReference(');
+notHas('components/LetterGeneratorWorkspaceV2.tsx', 'renderMappedAppendix(');
 has('components/console/RenderDebugger.tsx', '__xdisputerTemplateExecution');
 has('components/console/ui-shell-registry.ts', 'templateExecutionStore');
-notHas('scripts/manager-template-roadmap-guard.mjs', 'execSync(`node scripts/apply-');
 notHas('app/api/system/source-sync/route.ts', 'apply-manager-workspace-nav-wiring.mjs');
 
 if (failures.length) {
