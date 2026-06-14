@@ -22,24 +22,15 @@ function displayNameFromEmail(email?: string | null) {
   return clean.split('@')[0].replace(/[._-]+/g, ' ');
 }
 
-export default function ManagerAccountMenu({ email, accountLabel, mode, switchTarget, switchTargetLabel }: Props) {
+export default function ManagerAccountMenu({ email, accountLabel, switchTarget, switchTargetLabel }: Props) {
   const [open, setOpen] = useState(false);
   const initial = useMemo(() => initialFromEmail(email), [email]);
   const displayName = useMemo(() => displayNameFromEmail(email), [email]);
-  const activeModeLabel = mode === 'workspace' ? 'Manager workspace' : 'Manager operations';
 
-  return <div className="manager-top-account-dock" data-manager-account-menu="true" data-manager-account-layout="header-75-25">
-    <div className="manager-top-account-left" aria-hidden="true">
-      <span className="manager-top-account-dot" />
-      <span>{activeModeLabel}</span>
-    </div>
-    <div className="manager-top-account-actions">
-      <Link className="manager-top-icon-button" href="/admin/access" aria-label="Open account access">⚙</Link>
-      <Link className="manager-top-icon-button" href={switchTarget} data-manager-canonical-switch="true" data-manager-switch-visible-slot="top-account-dock" data-manager-switch-target={switchTarget} data-manager-switch-target-label={switchTargetLabel} aria-label={`Switch mode to ${switchTargetLabel}`}>↔</Link>
-      <button className="manager-top-account-avatar" type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        {initial}
-      </button>
-    </div>
+  return <div className="manager-header-account-dock" data-manager-account-menu="true" data-manager-account-layout="header-75-25-avatar-only">
+    <button className="manager-header-account-avatar" type="button" aria-haspopup="dialog" aria-expanded={open} aria-label="Open account and settings menu" onClick={() => setOpen((value) => !value)}>
+      {initial}
+    </button>
 
     {open && <div className="manager-account-popover" role="dialog" aria-label="Account and settings menu">
       <div className="manager-account-popover-header">
@@ -74,32 +65,41 @@ export default function ManagerAccountMenu({ email, accountLabel, mode, switchTa
     </div>}
 
     <style jsx>{`
-      .manager-top-account-dock {
+      .manager-header-account-dock {
         position: fixed;
-        top: 18px;
+        top: 16px;
         right: 24px;
         z-index: 2147482000;
-        width: clamp(300px, 25vw, 420px);
-        min-height: 58px;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        width: clamp(220px, 25vw, 360px);
+        min-height: 72px;
+        display: flex;
         align-items: center;
-        gap: 14px;
-        padding: 8px 10px 8px 16px;
-        border: 1px solid rgba(148, 163, 184, .28);
-        border-left: 4px solid rgba(124, 58, 237, .42);
-        border-radius: 24px;
-        background: rgba(255, 255, 255, .9);
+        justify-content: flex-end;
+        padding: 10px 14px;
+        border: 1px solid rgba(148, 163, 184, .26);
+        border-left: 4px solid rgba(124, 58, 237, .38);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, .82);
         box-shadow: 0 18px 48px rgba(15, 23, 42, .10);
         backdrop-filter: blur(18px);
       }
-      .manager-top-account-left { min-width: 0; display: flex; align-items: center; gap: 9px; color: #475569; font-size: 12px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
-      .manager-top-account-dot { width: 9px; height: 9px; flex: none; border-radius: 999px; background: #22c55e; box-shadow: 0 0 0 5px rgba(34, 197, 94, .12); }
-      .manager-top-account-actions { display: flex; align-items: center; gap: 8px; }
-      .manager-top-icon-button { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 999px; color: #334155; background: #f8fafc; border: 1px solid #e2e8f0; text-decoration: none; font-weight: 900; box-shadow: inset 0 1px 0 rgba(255,255,255,.8); }
-      .manager-top-icon-button:hover { background: #eef2ff; color: #4f46e5; }
-      .manager-top-account-avatar { width: 44px; height: 44px; display: grid; place-items: center; border: 4px solid rgba(124, 58, 237, .22); border-radius: 999px; color: #fff; background: #765343; font-size: 20px; font-weight: 850; text-transform: lowercase; cursor: pointer; box-shadow: 0 15px 30px rgba(15,23,42,.16); }
-      .manager-account-popover { position: absolute; top: 74px; right: 0; width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 104px); overflow: auto; padding: 18px; border-radius: 30px; color: #f8fafc; background: #202124; box-shadow: 0 32px 90px rgba(0,0,0,.38); border: 1px solid rgba(255,255,255,.08); }
+      .manager-header-account-avatar {
+        width: 54px;
+        height: 54px;
+        display: grid;
+        place-items: center;
+        border: 5px solid rgba(124, 58, 237, .25);
+        border-radius: 999px;
+        color: #fff;
+        background: #765343;
+        font-size: 23px;
+        font-weight: 850;
+        text-transform: lowercase;
+        cursor: pointer;
+        box-shadow: 0 16px 32px rgba(15,23,42,.18);
+      }
+      .manager-header-account-avatar:hover { transform: translateY(-1px); box-shadow: 0 20px 38px rgba(15,23,42,.22); }
+      .manager-account-popover { position: absolute; top: 86px; right: 0; width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 104px); overflow: auto; padding: 18px; border-radius: 30px; color: #f8fafc; background: #202124; box-shadow: 0 32px 90px rgba(0,0,0,.38); border: 1px solid rgba(255,255,255,.08); }
       .manager-account-popover-header { min-height: 46px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 0 4px 16px; border-bottom: 1px solid rgba(255,255,255,.08); }
       .manager-account-popover-header p { margin: 0; color: #f8fafc; font-size: 15px; font-weight: 820; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .manager-account-popover-header strong { display: block; margin-top: 4px; color: #a7b0be; font-size: 12px; font-weight: 740; }
@@ -121,8 +121,8 @@ export default function ManagerAccountMenu({ email, accountLabel, mode, switchTa
       .manager-account-signout { margin-top: 12px; padding: 8px; border-radius: 22px; background: #151515; }
       .manager-account-signout button { width: 100%; min-height: 52px; border: 0; border-radius: 16px; color: #f3f4f6; background: #1f1f1f; font-size: 16px; font-weight: 850; cursor: pointer; }
       .manager-account-signout button:hover { background: #2a2a2a; }
-      @media (max-width: 1100px) { .manager-top-account-dock { width: 280px; } .manager-top-account-left span:not(.manager-top-account-dot) { display: none; } }
-      @media (max-width: 760px) { .manager-top-account-dock { top: 10px; right: 10px; width: auto; grid-template-columns: auto; padding: 6px; border-left-width: 1px; } .manager-top-account-left, .manager-top-icon-button { display: none; } .manager-account-popover { width: calc(100vw - 20px); right: -2px; } .manager-account-identity-card, .manager-account-primary-grid, .manager-account-route-list a { grid-template-columns: 1fr; } .manager-account-avatar-large { margin: 0 auto; } }
+      @media (max-width: 1100px) { .manager-header-account-dock { width: 116px; min-height: 66px; padding: 7px 10px; } .manager-header-account-avatar { width: 50px; height: 50px; } }
+      @media (max-width: 760px) { .manager-header-account-dock { top: 10px; right: 10px; width: auto; min-height: auto; padding: 6px; border-left-width: 1px; } .manager-account-popover { width: calc(100vw - 20px); right: -2px; } .manager-account-identity-card, .manager-account-primary-grid, .manager-account-route-list a { grid-template-columns: 1fr; } .manager-account-avatar-large { margin: 0 auto; } }
     `}</style>
   </div>;
 }
