@@ -1,0 +1,55 @@
+name: Source CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: source-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-contract:
+    name: Source contract and build verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'anon-key-placeholder' }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'service-role-placeholder' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply deterministic source wiring
+        run: node scripts/apply-manager-workspace-nav-wiring.mjs
+
+      - name: Fail if wiring changed tracked files
+        run: |
+          if ! git diff --quiet -- components/ManagerConsoleShell.tsx app/admin/page.tsx app/admin/access/page.tsx components/AccessAuditView.tsx components/GenerationReportView.tsx; then
+            echo 'Prebuild wiring modified tracked files. Commit the generated source so local, GitHub, and Vercel use the same code.'
+            git diff -- components/ManagerConsoleShell.tsx app/admin/page.tsx app/admin/access/page.tsx components/AccessAuditView.tsx components/GenerationReportView.tsx
+            exit 1
+          fi
+
+      - name: Run manager UI contract guard
+        run: node scripts/manager-visible-switch-contract-guard.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
