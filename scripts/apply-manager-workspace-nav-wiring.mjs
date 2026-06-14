@@ -49,7 +49,6 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
   const visibleNavItems = navItems.filter((item) => item.kind !== 'workspace-switch');
 
   return <main className={\`admin-monitor-page native-console \${workspaceMode ? 'manager-template-workspace' : 'manager-ops-console'}\`} data-manager-switch-contract={MANAGER_SWITCH_CONTRACT_VERSION} data-manager-console-mode={mode}>
-    <ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />
     <aside className="admin-monitor-sidebar native-console-sidebar">
       <div className="admin-monitor-brand"><span>xD</span><div><strong>xDisputer</strong><small>{workspaceMode ? 'Manager workspace' : 'Manager console'}</small></div></div>
       <div className="admin-sidebar-section-title">{workspaceMode ? 'Workspace' : 'Operations'}</div>
@@ -57,7 +56,10 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
         {visibleNavItems.map((item) => <a key={item.href} className={item.active ? 'active' : ''} href={item.href}>{item.label}</a>)}
       </nav>
     </aside>
-    <section className="admin-monitor-main native-console-main">{children}</section>
+    <section className="admin-monitor-main native-console-main" data-console-header-grid="true">
+      <ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />
+      {children}
+    </section>
   </main>;
 }
 `;
@@ -67,12 +69,14 @@ function shellHasTopAccountContract(source) {
   const required = [
     "import ManagerAccountMenu from './ManagerAccountMenu';",
     '<ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />',
+    'data-console-header-grid="true"',
     'function switchHref',
     'function switchLabel',
     "navItems.filter((item) => item.kind !== 'workspace-switch')",
     'data-manager-shell-nav="true"'
   ];
   return required.every((token) => source.includes(token))
+    && source.indexOf('<aside className="admin-monitor-sidebar native-console-sidebar">') < source.indexOf('<section className="admin-monitor-main native-console-main" data-console-header-grid="true">')
     && !source.includes('WorkspaceSwitchAnchor')
     && !source.includes('manager-workspace-nav-switch')
     && !source.includes('top-visible-switch-mode')
@@ -90,7 +94,7 @@ function wireManagerConsoleShell() {
   const before = readFileSync(path, 'utf8');
   const source = shellHasTopAccountContract(before) ? before : canonicalManagerConsoleShell();
   if (!shellHasTopAccountContract(source)) throw new Error('Top account menu shell contract could not be generated.');
-  writeIfChanged(path, before, source, 'manager shell with top account menu only');
+  writeIfChanged(path, before, source, 'manager shell with header-flow account menu');
 }
 
 function wireAdminPage() {
