@@ -9,7 +9,6 @@ import type { ManagerTemplateScopeUi } from '../lib/manager-template-ui';
 import { resolveTemplateAuthority, summarizeTemplateProvenance, summarizeTemplateQuality } from '../lib/manager-template-authority';
 
 type PacketFocus = LetterType;
-type NodeId = 'DISPUTE_LETTER' | 'LATE_LETTER' | ExhibitKind | null;
 type StatusTone = 'ready' | 'required' | 'neutral';
 type TemplateActionKind = 'upload-letter' | 'remove-letter' | 'upload-exhibit' | 'remove-exhibit';
 
@@ -44,7 +43,6 @@ function apiErrorMessage(error: unknown, fallback: string) { return error instan
 function actionKey(kind: TemplateActionKind, slot: string) { return `${kind}:${slot}`; }
 
 export default function TemplatePacketConfigurator({ round, slots, supportingReady, focusedPacket = 'DISPUTE', embedded = false, canManageTemplates = false, managerTemplateScope = null, managedExhibits, onUploadLetter, onRemoveLetter, onExhibitsChange, onTemplateMutation, onMessage }: Props) {
-  const [activeNode, setActiveNode] = useState<NodeId>(null);
   const [exhibits, setExhibits] = useState<TemplateExhibits>(emptyExhibits);
   const [pendingActionKey, setPendingActionKey] = useState<string | null>(null);
   const dispute = slots.find((slot) => slot.type === 'DISPUTE');
@@ -56,78 +54,44 @@ export default function TemplatePacketConfigurator({ round, slots, supportingRea
 
   useEffect(() => {
     let cancelled = false;
-    setActiveNode(null);
-
-    if (hasManagedExhibits(managedExhibits)) {
-      setExhibits(managedExhibits!);
-      return () => { cancelled = true; };
-    }
-
-    if (!mayManageTemplates) {
-      setExhibits(emptyExhibits());
-      return () => { cancelled = true; };
-    }
-
-    void recoverTemplateExhibitsFromFiles(round)
-      .then((saved) => {
-        if (!cancelled) {
-          setExhibits(saved);
-          void onExhibitsChange(saved);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) onMessage('Template recovery could not be completed. Reopen Templates or upload the missing file again.');
-      });
-
+    if (hasManagedExhibits(managedExhibits)) { setExhibits(managedExhibits!); return () => { cancelled = true; }; }
+    if (!mayManageTemplates) { setExhibits(emptyExhibits()); return () => { cancelled = true; }; }
+    void recoverTemplateExhibitsFromFiles(round).then((saved) => { if (!cancelled) { setExhibits(saved); void onExhibitsChange(saved); } }).catch(() => { if (!cancelled) onMessage('Template recovery could not be completed. Reopen Templates or upload the missing file again.'); });
     return () => { cancelled = true; };
   }, [round, mayManageTemplates, managedExhibits]);
 
-  useEffect(() => setActiveNode(null), [focusedPacket]);
-
-  async function withTemplateAction(key: string, task: () => Promise<void>) {
-    if (pendingActionKey) return;
-    setPendingActionKey(key);
-    try {
-      await task();
-    } finally {
-      setPendingActionKey(null);
-    }
-  }
-
+  async function withTemplateAction(key: string, task: () => Promise<void>) { if (pendingActionKey) return; setPendingActionKey(key); try { await task(); } finally { setPendingActionKey(null); } }
   async function syncLetterToSupabase(slot: LetterReference, file: File) { const formData = new FormData(); formData.set('round', round); formData.set('templateKind', 'LETTER'); formData.set('letterType', slot.type); formData.set('file', file); const response = await fetch('/api/template-assets', { method: 'POST', headers: { accept: 'application/json', 'x-template-upload': 'workspace' }, body: formData }); const payload = await response.json().catch(() => null); if (!response.ok || payload?.status === 'error') throw new Error(payload?.message || `${slot.name} could not be saved to Supabase.`); return payload?.message || `${slot.name} saved to Supabase.`; }
   async function deleteLetterFromSupabase(slot: LetterReference) { const response = await fetch('/api/template-assets', { method: 'DELETE', headers: { accept: 'application/json', 'content-type': 'application/json', 'x-template-upload': 'workspace' }, body: JSON.stringify({ round, templateKind: 'LETTER', letterType: slot.type }) }); const payload = await response.json().catch(() => null); if (!response.ok || payload?.status === 'error') throw new Error(payload?.message || `${slot.name} could not be removed from Supabase.`); return payload?.message || `${slot.name} removed from Supabase.`; }
   async function syncExhibitToSupabase(kind: ExhibitKind, file: File) { const formData = new FormData(); formData.set('round', round); formData.set('templateKind', 'EXHIBIT'); formData.set('exhibitKind', kind); formData.set('file', file); const response = await fetch('/api/template-assets', { method: 'POST', headers: { accept: 'application/json', 'x-template-upload': 'workspace' }, body: formData }); const payload = await response.json().catch(() => null); if (!response.ok || payload?.status === 'error') throw new Error(payload?.message || 'Template could not be saved to Supabase.'); return payload?.message || `${exhibitTitles[kind]} saved to Supabase.`; }
   async function deleteExhibitFromSupabase(kind: ExhibitKind) { const response = await fetch('/api/template-assets', { method: 'DELETE', headers: { accept: 'application/json', 'content-type': 'application/json', 'x-template-upload': 'workspace' }, body: JSON.stringify({ round, templateKind: 'EXHIBIT', exhibitKind: kind }) }); const payload = await response.json().catch(() => null); if (!response.ok || payload?.status === 'error') throw new Error(payload?.message || 'Template could not be removed from Supabase.'); return payload?.message || `${exhibitTitles[kind]} removed from Supabase.`; }
-
-  async function uploadLetter(slot: LetterReference, file: File) { if (!mayManageTemplates) { onMessage(readOnlyReason); return; } await withTemplateAction(actionKey('upload-letter', slot.type), async () => { try { const syncMessage = await syncLetterToSupabase(slot, file); await onUploadLetter(slot, file); await onTemplateMutation?.(); onMessage(syncMessage); setActiveNode(null); } catch (error) { onMessage(apiErrorMessage(error, `${slot.name} could not be saved.`)); } }); }
-  async function removeLetter(slot: LetterReference) { if (!mayManageTemplates) { onMessage(readOnlyReason); return; } await withTemplateAction(actionKey('remove-letter', slot.type), async () => { try { const syncMessage = await deleteLetterFromSupabase(slot); await onRemoveLetter(slot); await onTemplateMutation?.(); onMessage(syncMessage); setActiveNode(null); } catch (error) { onMessage(apiErrorMessage(error, `${slot.name} could not be removed.`)); } }); }
-  async function uploadExhibit(kind: ExhibitKind, file: File) { if (!mayManageTemplates) { onMessage(readOnlyReason); return; } await withTemplateAction(actionKey('upload-exhibit', kind), async () => { try { const syncMessage = await syncExhibitToSupabase(kind, file); const next = await saveTemplateExhibit(round, kind, file); setExhibits(next); await onExhibitsChange(next); await onTemplateMutation?.(); const contract = next[kind]?.contract; onMessage(`${syncMessage}${contract?.mode === 'PLACEHOLDERS' ? ` ${contract.tags.length} placeholder tag(s) mapped to Source Data.` : contract?.mode === 'LEGACY_HIGHLIGHTED' ? ' Highlighted fields will be mapped from Source Data.' : ''}`); setActiveNode(null); } catch (error) { onMessage(apiErrorMessage(error, 'File could not be saved.')); } }); }
-  async function removeExhibit(kind: ExhibitKind) { if (!mayManageTemplates) { onMessage(readOnlyReason); return; } await withTemplateAction(actionKey('remove-exhibit', kind), async () => { try { const syncMessage = await deleteExhibitFromSupabase(kind); const next = await removeTemplateExhibit(round, kind); setExhibits(next); await onExhibitsChange(next); await onTemplateMutation?.(); onMessage(syncMessage); setActiveNode(null); } catch (error) { onMessage(apiErrorMessage(error, 'File could not be removed.')); } }); }
+  async function uploadLetter(slot: LetterReference, file: File) { if (!mayManageTemplates) { onMessage(readOnlyReason); return; } await withTemplateAction(actionKey('upload-letter', slot.type), async () => { try { const syncMessage = await syncLetterToSupabase(slot, file); await onUploadLetter(slot, file); await onTemplateMutation?.(); onMessage(syncMessage); } catch (error) { onMessage(apiErrorMessage(error, `${slot.name} could not be saved.`)); } }); }
+  async function removeLetter(slot: LetterReference) { if (!mayManageTemplates) { onMessage(readOnlyReason); return; } await withTemplateAction(actionKey('remove-letter', slot.type), async () => { try { const syncMessage = await deleteLetterFromSupabase(slot); await onRemoveLetter(slot); await onTemplateMutation?.(); onMessage(syncMessage); } catch (error) { onMessage(apiErrorMessage(error, `${slot.name} could not be removed.`)); } }); }
+  async function uploadExhibit(kind: ExhibitKind, file: File) { if (!mayManageTemplates) { onMessage(readOnlyReason); return; } await withTemplateAction(actionKey('upload-exhibit', kind), async () => { try { const syncMessage = await syncExhibitToSupabase(kind, file); const next = await saveTemplateExhibit(round, kind, file); setExhibits(next); await onExhibitsChange(next); await onTemplateMutation?.(); const contract = next[kind]?.contract; onMessage(`${syncMessage}${contract?.mode === 'PLACEHOLDERS' ? ` ${contract.tags.length} placeholder tag(s) mapped to Source Data.` : contract?.mode === 'LEGACY_HIGHLIGHTED' ? ' Highlighted fields will be mapped from Source Data.' : ''}`); } catch (error) { onMessage(apiErrorMessage(error, 'File could not be saved.')); } }); }
+  async function removeExhibit(kind: ExhibitKind) { if (!mayManageTemplates) { onMessage(readOnlyReason); return; } await withTemplateAction(actionKey('remove-exhibit', kind), async () => { try { const syncMessage = await deleteExhibitFromSupabase(kind); const next = await removeTemplateExhibit(round, kind); setExhibits(next); await onExhibitsChange(next); await onTemplateMutation?.(); onMessage(syncMessage); } catch (error) { onMessage(apiErrorMessage(error, 'File could not be removed.')); } }); }
 
   function LockedActions() { return <div className="contextual-actions studio-actions readonly-template-actions"><span className="packet-status neutral">Manager controlled</span></div>; }
   function PendingActions({ label }: { label: string }) { return <div className="contextual-actions studio-actions readonly-template-actions"><span className="packet-status neutral">{label}</span></div>; }
-  function LetterActions({ slot, node }: { slot: LetterReference; node: NodeId }) {
+  function LetterActions({ slot }: { slot: LetterReference }) {
     if (!mayManageTemplates) return <LockedActions />;
-    const active = activeNode === node;
     const uploadKey = actionKey('upload-letter', slot.type);
     const removeKey = actionKey('remove-letter', slot.type);
     if (pendingActionKey === uploadKey) return <PendingActions label="Uploading…" />;
     if (pendingActionKey === removeKey) return <PendingActions label="Removing…" />;
-    return <div className={`contextual-actions studio-actions ${active ? 'visible' : ''}`}><button className="reveal-action" type="button" disabled={actionInFlight} aria-expanded={active} onClick={() => setActiveNode(active ? null : node)}>{active ? 'Close' : slot.file ? 'Replace' : 'Upload'}</button><div className="contextual-action-region" aria-hidden={!active}><div><label><span>Select DOCX</span><input type="file" accept=".docx" disabled={actionInFlight} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadLetter(slot, file); event.target.value = ''; }} /></label>{slot.file && <button type="button" className="remove-node" disabled={actionInFlight} onClick={() => void removeLetter(slot)}>Remove</button>}</div></div></div>;
+    return <div className="contextual-actions studio-actions manager-template-direct-actions"><label className="manager-upload-action"><span>{slot.file ? 'Replace DOCX' : 'Upload DOCX'}</span><input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={actionInFlight} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadLetter(slot, file); event.target.value = ''; }} /></label>{slot.file && <button type="button" className="remove-node" disabled={actionInFlight} onClick={() => void removeLetter(slot)}>Remove</button>}</div>;
   }
   function ExhibitActions({ kind }: { kind: ExhibitKind }) {
     if (!mayManageTemplates) return <LockedActions />;
-    const active = activeNode === kind;
     const uploadKey = actionKey('upload-exhibit', kind);
     const removeKey = actionKey('remove-exhibit', kind);
     if (pendingActionKey === uploadKey) return <PendingActions label="Uploading…" />;
     if (pendingActionKey === removeKey) return <PendingActions label="Removing…" />;
     const fileFormat = exhibitModes[kind] === 'GENERATED_DOCX' ? 'DOCX' : 'PDF';
-    return <div className={`contextual-actions studio-actions ${active ? 'visible' : ''}`}><button className="reveal-action" type="button" disabled={actionInFlight} aria-expanded={active} onClick={() => setActiveNode(active ? null : kind)}>{active ? 'Close' : exhibits[kind] ? 'Replace' : 'Upload'}</button><div className="contextual-action-region" aria-hidden={!active}><div><label><span>Select {fileFormat}</span><input type="file" accept={exhibitAccept[kind]} disabled={actionInFlight} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadExhibit(kind, file); event.target.value = ''; }} /></label>{exhibits[kind] && <button type="button" className="remove-node" disabled={actionInFlight} onClick={() => void removeExhibit(kind)}>Remove</button>}</div></div></div>;
+    return <div className="contextual-actions studio-actions manager-template-direct-actions"><label className="manager-upload-action"><span>{exhibits[kind] ? `Replace ${fileFormat}` : `Upload ${fileFormat}`}</span><input type="file" accept={exhibitAccept[kind]} disabled={actionInFlight} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadExhibit(kind, file); event.target.value = ''; }} /></label>{exhibits[kind] && <button type="button" className="remove-node" disabled={actionInFlight} onClick={() => void removeExhibit(kind)}>Remove</button>}</div>;
   }
   function Card({ number, title, meta, tone, status, fileFormat, quality, children, className = '' }: { number: string; title: string; meta: string; tone?: StatusTone; status: string; fileFormat: string; quality?: ReturnType<typeof summarizeTemplateQuality>; children?: ReactNode; className?: string }) { return <article className={`studio-component-card ${tone === 'ready' ? 'is-ready' : ''} ${className}`} data-template-quality={quality?.tone || tone || 'neutral'}><span className="studio-sequence">{number}</span><div className="studio-component-copy"><div className="studio-component-title"><h4>{title}</h4><span className="studio-format">{fileFormat}</span></div><p>{meta}</p>{quality && <p className={`template-quality-summary ${quality.tone}`}>{quality.label}: {quality.detail}</p>}</div><Badge tone={tone}>{status}</Badge>{children}</article>; }
   if (focusedPacket === 'DISPUTE' && !dispute) return <section className="panel template-config-empty">No Dispute Letter reference slot is available for {round}.</section>;
   if (focusedPacket === 'LATE_PAYMENT' && !late) return <section className="panel template-config-empty">No Late Payment Letter reference slot is available for {round}.</section>;
 
-  return <section className={`template-studio template-studio-operational progressive-surface focused-template-configurator ${embedded ? 'embedded-template-configurator' : ''}`} data-template-authority-mode={authority.mode}><div className="panel template-manager-policy-inline"><p className="eyebrow">{authority.eyebrow}</p><strong>{authority.title}</strong><p>{authority.description}</p><div className="template-selected-badges"><span>{authority.statusBadge}</span><span>{authority.actionLabel}</span></div></div>{focusedPacket === 'DISPUTE' && dispute && <div className="template-focused-workflow">{!embedded && <header className="template-section-heading template-operational-heading"><div className="template-title-block"><p className="eyebrow">Final PDF contract</p><h3>Dispute Packet</h3><span>{packetOrderText('DISPUTE')}</span></div><div className="template-info-tags"><Tag>Required positions</Tag><Tag>Order locked</Tag></div></header>}<div className="studio-component-grid primary-visible-grid"><Card number="01" title="Dispute Letter" meta={letterMeta(dispute)} quality={summarizeTemplateQuality(dispute)} tone={dispute.file ? 'ready' : 'required'} status={dispute.file ? 'Ready' : 'Required'} fileFormat="Editable DOCX"><LetterActions slot={dispute} node="DISPUTE_LETTER" /></Card><Card number="02" title="Supporting Documents" meta="Client evidence is uploaded in Source Data and merged into every final packet." tone={supportingReady ? 'ready' : 'required'} status={supportingReady ? 'Ready' : 'Required per client'} fileFormat="Evidence PDF" />{activeExhibits.map((kind, index) => <Card key={kind} number={String(index + 3).padStart(2, '0')} title={exhibitTitles[kind]} meta={exhibitMeta(kind, exhibits[kind])} quality={summarizeTemplateQuality(exhibits[kind] || {})} tone={exhibits[kind] ? 'ready' : 'required'} status={exhibits[kind] ? 'Ready' : 'Required for final PDF'} fileFormat={format(kind)}><ExhibitActions kind={kind} /></Card>)}</div></div>}{focusedPacket === 'LATE_PAYMENT' && late && <div className="template-focused-workflow late-payment-focused"><div className="studio-component-grid primary-visible-grid compact-template-grid"><Card number="01" title="Late Payment Letter" meta={letterMeta(late)} quality={summarizeTemplateQuality(late)} tone={late.file ? 'ready' : 'required'} status={late.file ? 'Ready' : 'Required when route exists'} fileFormat="Editable DOCX"><LetterActions slot={late} node="LATE_LETTER" /></Card></div></div>}</section>;
+  return <section className={`template-studio template-studio-operational progressive-surface focused-template-configurator ${embedded ? 'embedded-template-configurator' : ''}`} data-template-authority-mode={authority.mode}>{focusedPacket === 'DISPUTE' && dispute && <div className="template-focused-workflow">{!embedded && <header className="template-section-heading template-operational-heading"><div className="template-title-block"><p className="eyebrow">Final PDF contract</p><h3>Dispute Packet</h3><span>{packetOrderText('DISPUTE')}</span></div><div className="template-info-tags"><Tag>Required positions</Tag><Tag>Order locked</Tag></div></header>}<div className="studio-component-grid primary-visible-grid"><Card number="01" title="Dispute Letter" meta={letterMeta(dispute)} quality={summarizeTemplateQuality(dispute)} tone={dispute.file ? 'ready' : 'required'} status={dispute.file ? 'Ready' : 'Required'} fileFormat="Editable DOCX"><LetterActions slot={dispute} /></Card><Card number="02" title="Supporting Documents" meta="Client evidence is uploaded in Source Data and merged into every final packet." tone={supportingReady ? 'ready' : 'required'} status={supportingReady ? 'Ready' : 'Required per client'} fileFormat="Evidence PDF" />{activeExhibits.map((kind, index) => <Card key={kind} number={String(index + 3).padStart(2, '0')} title={exhibitTitles[kind]} meta={exhibitMeta(kind, exhibits[kind])} quality={summarizeTemplateQuality(exhibits[kind] || {})} tone={exhibits[kind] ? 'ready' : 'required'} status={exhibits[kind] ? 'Ready' : 'Required for final PDF'} fileFormat={format(kind)}><ExhibitActions kind={kind} /></Card>)}</div></div>}{focusedPacket === 'LATE_PAYMENT' && late && <div className="template-focused-workflow late-payment-focused"><div className="studio-component-grid primary-visible-grid compact-template-grid"><Card number="01" title="Late Payment Letter" meta={letterMeta(late)} quality={summarizeTemplateQuality(late)} tone={late.file ? 'ready' : 'required'} status={late.file ? 'Ready' : 'Required when route exists'} fileFormat="Editable DOCX"><LetterActions slot={late} /></Card></div></div>}</section>;
 }
