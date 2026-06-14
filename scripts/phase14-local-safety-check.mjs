@@ -88,6 +88,7 @@ function assertNoKnownSourceTypos() {
 cleanVolatileGeneratedArtifacts();
 runSelfHealingScript('scripts/apply-user-error-flyout-wiring.mjs', 'user-error flyout wiring');
 runSelfHealingScript('scripts/apply-manager-template-storage-wiring.mjs', 'manager template storage wiring');
+runSelfHealingScript('scripts/apply-manager-template-ui-wiring.mjs', 'manager template UI wiring');
 assertNoKnownSourceTypos();
 
 let unmerged = '';
