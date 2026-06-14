@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getSessionContext, type SessionContext } from '../../../../lib/saas/session';
+import { getSessionContext } from '../../../../lib/saas/session';
 import { workspaceAccessErrorResponse } from '../../../../lib/saas/access-entitlement';
 import { managerTemplateScopePayload, resolveManagerTemplateScope, ManagerTemplateScopeError } from '../../../../lib/manager-template-scope';
 import { downloadManagerTemplateObject } from '../../../../lib/supabase/template-storage-service';
@@ -20,49 +20,6 @@ function privateTemplateCacheHeaders(input: { etag: string; filename: string; mi
   };
 }
 
-function isMissingRpc(message: string) {
-  return message.includes('Could not find the function') || message.includes('does not exist') || message.includes('schema cache');
-}
-
-async function readLimitRows(session: SessionContext) {
-  const daily = await session.supabase.rpc('access_list_daily_entitlement_limits_v1', {
-    profile_ids: [session.user!.id]
-  });
-
-  if (!daily.error || !isMissingRpc(daily.error.message)) return daily;
-
-  return session.supabase.rpc('access_list_entitlement_limits_v1', {
-    profile_ids: [session.user!.id]
-  });
-}
-
-async function outputLimitError(session: SessionContext) {
-  if (!session.user || !session.isClient) return null;
-
-  const { data, error } = await readLimitRows(session);
-
-  if (error) {
-    if (isMissingRpc(error.message)) return null;
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const row = Array.isArray(data) ? data[0] as {
-    output_remaining_today?: number | null;
-    output_remaining_this_month?: number | null;
-    effective_output_limit?: number | null;
-  } | undefined : undefined;
-  const remaining = row?.output_remaining_today ?? row?.output_remaining_this_month;
-
-  if (row && typeof remaining === 'number' && remaining <= 0) {
-    return NextResponse.json({
-      error: 'Output limit reached',
-      message: `This client has reached the current daily output limit of ${row.effective_output_limit ?? 'the assigned'} successful outputs.`
-    }, { status: 403 });
-  }
-
-  return null;
-}
-
 function managerScopeError(error: unknown) {
   if (error instanceof ManagerTemplateScopeError) {
     return NextResponse.json({ error: error.message, code: error.code, category: 'MANAGER_TEMPLATE' }, { status: error.code === 'NO_AUTH' ? 401 : 403 });
@@ -77,9 +34,6 @@ export async function GET(request: NextRequest) {
 
   const session = await getSessionContext();
   if (!session.user) return NextResponse.json({ error: 'No authenticated user.' }, { status: 401 });
-
-  const limitError = await outputLimitError(session);
-  if (limitError) return limitError;
 
   const round = request.nextUrl.searchParams.get('round') || '';
   const templateKind = request.nextUrl.searchParams.get('templateKind') || '';
@@ -122,7 +76,7 @@ export async function GET(request: NextRequest) {
       error: 'Manager template is missing.',
       message: 'Your assigned manager has not uploaded the required active template for this round and document slot.',
       category: 'MANAGER_TEMPLATE',
-      ...managerTemplateScopePayload(scope)
+      managerTemplateScope: managerTemplateScopePayload(scope)
     }, { status: 404 });
   }
 
