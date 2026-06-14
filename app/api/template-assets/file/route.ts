@@ -1,16 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSessionContext, type SessionContext } from '../../../../lib/saas/session';
 import { workspaceAccessErrorResponse } from '../../../../lib/saas/access-entitlement';
+import { managerTemplateScopePayload, resolveManagerTemplateScope, ManagerTemplateScopeError } from '../../../../lib/manager-template-scope';
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
 const allowedExhibitKinds = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
 
-function privateTemplateCacheHeaders(input: { etag: string; filename: string; mimeType: string | null }) {
+function privateTemplateCacheHeaders(input: { etag: string; filename: string; mimeType: string | null; managerUserId: string }) {
   return {
     'Content-Type': input.mimeType || 'application/octet-stream',
     'Content-Disposition': `attachment; filename="${input.filename.replace(/"/g, '')}"`,
     'x-template-file-name': input.filename,
+    'x-template-source': 'MANAGER_TEMPLATE_ASSET',
+    'x-template-manager-user-id': input.managerUserId,
     'ETag': input.etag,
     'Cache-Control': 'private, max-age=60, stale-while-revalidate=300'
   };
@@ -59,6 +62,14 @@ async function outputLimitError(session: SessionContext) {
   return null;
 }
 
+function managerScopeError(error: unknown) {
+  if (error instanceof ManagerTemplateScopeError) {
+    return NextResponse.json({ error: error.message, code: error.code, category: 'MANAGER_TEMPLATE' }, { status: error.code === 'NO_AUTH' ? 401 : 403 });
+  }
+
+  return NextResponse.json({ error: 'Could not resolve manager template scope.', category: 'MANAGER_TEMPLATE' }, { status: 500 });
+}
+
 export async function GET(request: NextRequest) {
   const accessError = await workspaceAccessErrorResponse();
   if (accessError) return accessError;
@@ -76,7 +87,22 @@ export async function GET(request: NextRequest) {
 
   if (!allowedRounds.includes(round)) return NextResponse.json({ error: 'Invalid round.' }, { status: 400 });
 
-  let query = session.supabase.from('template_assets').select('*').eq('owner_id', session.user.id).eq('round_label', round).eq('template_kind', templateKind).eq('is_active', true).order('version_number', { ascending: false }).limit(1);
+  let scope;
+  try {
+    scope = await resolveManagerTemplateScope(session);
+  } catch (error) {
+    return managerScopeError(error);
+  }
+
+  let query = session.supabase
+    .from('template_assets')
+    .select('*')
+    .eq('manager_user_id', scope.managerUserId)
+    .eq('round_label', round)
+    .eq('template_kind', templateKind)
+    .eq('is_active', true)
+    .order('version_number', { ascending: false })
+    .limit(1);
 
   if (templateKind === 'LETTER') {
     if (!allowedLetterTypes.includes(letterType)) return NextResponse.json({ error: 'Invalid letter type.' }, { status: 400 });
@@ -90,10 +116,17 @@ export async function GET(request: NextRequest) {
 
   const { data: asset, error } = await query.maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!asset) return NextResponse.json({ error: 'No active template found.' }, { status: 404 });
+  if (!asset) {
+    return NextResponse.json({
+      error: 'Manager template is missing.',
+      message: 'Your assigned manager has not uploaded the required active template for this round and document slot.',
+      category: 'MANAGER_TEMPLATE',
+      ...managerTemplateScopePayload(scope)
+    }, { status: 404 });
+  }
 
   const etag = `"template-${asset.id}-${asset.version_number}-${asset.updated_at}"`;
-  const headers = privateTemplateCacheHeaders({ etag, filename: asset.original_filename, mimeType: asset.mime_type });
+  const headers = privateTemplateCacheHeaders({ etag, filename: asset.original_filename, mimeType: asset.mime_type, managerUserId: scope.managerUserId });
 
   if (request.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers });
 
