@@ -15,6 +15,7 @@ type Props = {
 export default function ManagerConsoleShell({ mode, email, accountLabel, navItems, children }: Props) {
   const workspaceMode = mode === 'workspace';
   const switchTarget = workspaceMode ? '/admin' : '/manager-workspace';
+  const switchLabel = workspaceMode ? 'Operations console' : 'Manager workspace';
   const hasExplicitSwitch = navItems.some((item) => item.kind === 'workspace-switch');
   return <main className={`admin-monitor-page native-console ${workspaceMode ? 'manager-template-workspace' : 'manager-ops-console'}`} data-manager-switch-contract={MANAGER_SWITCH_CONTRACT_VERSION} data-manager-console-mode={mode}>
     <aside className="admin-monitor-sidebar native-console-sidebar">
@@ -26,7 +27,9 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
           : <a key={item.href} className={item.active ? 'active' : ''} href={item.href}>{item.label}</a>)}
         {!hasExplicitSwitch && <ManagerWorkspaceSwitch target={switchTarget} reverse={workspaceMode} variant="nav" />}
       </nav>
+      <a className="manager-workspace-visible-fallback" href={switchTarget} data-manager-switch-fallback="true"><strong>Switch mode</strong><span>{switchLabel}</span></a>
       <div className="admin-monitor-account"><strong>{email || 'Manager account'}</strong><small>{accountLabel}</small><form action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form></div>
+      <style>{`.manager-workspace-visible-fallback{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-top:1rem;padding:.85rem 1rem;border-radius:16px;color:#eff6ff;text-decoration:none;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 14px 32px rgba(37,99,235,.22);font-weight:800}.manager-workspace-visible-fallback strong{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}.manager-workspace-visible-fallback span{font-size:.86rem}.manager-workspace-visible-fallback::after{content:'→';font-weight:900}`}</style>
     </aside>
     <section className="admin-monitor-main native-console-main">{children}</section>
   </main>;
