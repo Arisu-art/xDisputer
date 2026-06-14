@@ -65,6 +65,7 @@ import './admin-monitor.css';
 import './control-dashboard-lists.css';
 import './production-ui-lock.css';
 import './professional-console-layout.css';
+import './global-depth-system.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 
 export const metadata = {
