@@ -21,6 +21,10 @@ export default async function ManagerWorkspacePage() {
       { href: switchTarget, label: 'Switch mode', kind: 'workspace-switch' as const }
     ]}
   >
+    <span id="template-library" />
+    <span id="template-health" />
+    <span id="template-workflow" />
+    <span id="template-upload" />
     <ManagerTemplateWorkspaceClient />
   </ManagerConsoleShell>;
 }
