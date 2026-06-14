@@ -19,6 +19,15 @@ function removeImport(source, line) {
   return source.replace(`${line}\n`, '').replace(`\n${line}`, '');
 }
 
+function wireVisibleSwitchStylesheet() {
+  const path = 'app/layout.tsx';
+  if (!existsSync(path) || !existsSync('app/manager-switch-visible.css')) return;
+  const before = readFileSync(path, 'utf8');
+  let source = before;
+  source = ensureImport(source, "import './professional-console-layout.css';", "import './manager-switch-visible.css';");
+  writeIfChanged(path, before, source, 'manager switch visibility stylesheet import');
+}
+
 function wireAdminPage() {
   const path = 'app/admin/page.tsx';
   if (!existsSync(path)) return;
@@ -81,6 +90,7 @@ function wireReportView() {
   writeIfChanged(path, before, source, 'manager workspace switch on reports view');
 }
 
+wireVisibleSwitchStylesheet();
 wireAdminPage();
 wireAdminAccessPage();
 wireAuditView();
