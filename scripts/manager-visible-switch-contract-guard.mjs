@@ -11,10 +11,8 @@ const accountMenu = read('components/ManagerAccountMenu.tsx');
 const admin = read('app/admin/page.tsx');
 const workspace = read('app/manager-workspace/page.tsx');
 
-has(shell, "import ManagerAccountMenu from './ManagerAccountMenu';", 'shell imports Gmail-style top account menu');
+has(shell, "import ManagerAccountMenu from './ManagerAccountMenu';", 'shell imports top account menu');
 has(shell, '<ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />', 'shell mounts top account menu');
-has(shell, 'function switchHref', 'shell uses direct switch href helper');
-has(shell, 'function switchLabel', 'shell uses direct switch label helper');
 has(shell, "navItems.filter((item) => item.kind !== 'workspace-switch')", 'shell removes duplicate workspace-switch nav items');
 has(shell, 'data-manager-shell-nav="true"', 'shell keeps standard sidebar nav renderer');
 notHas(shell, 'data-manager-switch-visible-slot="plain-nav-button"', 'old sidebar switch nav button removed');
@@ -28,18 +26,25 @@ notHas(shell, 'action="/auth/sign-out" method="post"><button type="submit">Sign 
 
 has(accountMenu, "'use client';", 'account menu is client-side interactive');
 has(accountMenu, 'data-manager-account-menu="true"', 'account menu exposes stable marker');
-has(accountMenu, 'data-manager-account-layout="header-75-25"', 'account menu exposes 75/25 header account layout marker');
-has(accountMenu, 'width: clamp(300px, 25vw, 420px)', 'account menu uses right-side 25 percent dock sizing');
-has(accountMenu, 'border-left: 4px solid', 'account dock has separate account border');
+has(accountMenu, 'data-manager-account-layout="header-75-25-avatar-only"', 'account menu uses avatar-only 75/25 header layout marker');
+has(accountMenu, 'manager-header-account-dock', 'account menu uses merged header account dock');
+has(accountMenu, 'width: clamp(220px, 25vw, 360px)', 'account menu uses right-side 25 percent dock sizing');
+has(accountMenu, 'justify-content: flex-end', 'account dock only exposes avatar on the right side');
+has(accountMenu, 'manager-header-account-avatar', 'account menu exposes only the circle in the closed header');
 has(accountMenu, 'manager-account-popover', 'account menu has popover panel');
 has(accountMenu, 'manager-account-identity-card', 'account popover has professional identity card');
 has(accountMenu, 'manager-account-primary-grid', 'account popover has primary action grid');
 has(accountMenu, 'Manage access', 'account menu includes account management shortcut');
 has(accountMenu, 'data-manager-canonical-switch="true"', 'account menu owns canonical switch marker');
-has(accountMenu, 'data-manager-switch-visible-slot="top-account-dock"', 'account top dock includes switch shortcut');
+has(accountMenu, 'data-manager-switch-visible-slot="account-popover"', 'switch action lives inside opened account popover');
 has(accountMenu, 'Switch mode', 'account menu includes switch mode action');
 has(accountMenu, 'action="/auth/sign-out"', 'account menu owns sign out action');
 has(accountMenu, 'position: fixed', 'account menu is mounted in upper-right');
+notHas(accountMenu, 'manager-top-account-left', 'old dock text area removed');
+notHas(accountMenu, 'manager-top-icon-button', 'old header settings/switch icons removed');
+notHas(accountMenu, 'manager-top-account-actions', 'old multi-icon header action group removed');
+notHas(accountMenu, '⚙', 'settings icon removed from closed header');
+notHas(accountMenu, '↔</Link>', 'switch icon removed from closed header');
 
 has(admin, "{ href: '/manager-workspace', label: 'Switch mode', kind: 'workspace-switch' as const }", '/admin keeps switch nav contract for account menu target');
 has(workspace, "kind: 'workspace-switch' as const", '/manager-workspace keeps reverse switch nav contract for account menu target');
@@ -47,7 +52,7 @@ has(workspace, "kind: 'workspace-switch' as const", '/manager-workspace keeps re
 checks.forEach((check) => console.log(`${check.ok ? '✅' : '❌'} ${check.label}`));
 const failed = checks.filter((check) => !check.ok);
 if (failed.length) {
-  console.error(`\nManager visible switch/account contract guard failed: ${failed.length} check(s) failed.`);
+  console.error(`\nManager account header contract guard failed: ${failed.length} check(s) failed.`);
   process.exit(1);
 }
-console.log(`\nManager visible switch/account contract guard passed: ${checks.length} check(s).`);
+console.log(`\nManager account header contract guard passed: ${checks.length} check(s).`);
