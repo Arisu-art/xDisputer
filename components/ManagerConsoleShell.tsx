@@ -27,7 +27,6 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
   const visibleNavItems = navItems.filter((item) => item.kind !== 'workspace-switch');
 
   return <main className={`admin-monitor-page native-console ${workspaceMode ? 'manager-template-workspace' : 'manager-ops-console'}`} data-manager-switch-contract={MANAGER_SWITCH_CONTRACT_VERSION} data-manager-console-mode={mode}>
-    <ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />
     <aside className="admin-monitor-sidebar native-console-sidebar">
       <div className="admin-monitor-brand"><span>xD</span><div><strong>xDisputer</strong><small>{workspaceMode ? 'Manager workspace' : 'Manager console'}</small></div></div>
       <div className="admin-sidebar-section-title">{workspaceMode ? 'Workspace' : 'Operations'}</div>
@@ -35,6 +34,9 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
         {visibleNavItems.map((item) => <a key={item.href} className={item.active ? 'active' : ''} href={item.href}>{item.label}</a>)}
       </nav>
     </aside>
-    <section className="admin-monitor-main native-console-main">{children}</section>
+    <section className="admin-monitor-main native-console-main" data-console-header-grid="true">
+      <ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />
+      {children}
+    </section>
   </main>;
 }
