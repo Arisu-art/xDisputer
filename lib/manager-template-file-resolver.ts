@@ -39,6 +39,6 @@ export async function resolveManagerTemplateFile(input: { round: Round; assets: 
   return null;
 }
 
-export function canUseLocalTemplateFallback(input: { canManageTemplates?: boolean | null }) {
-  return Boolean(input.canManageTemplates);
+export function canUseLocalTemplateFallback(input?: { canManageTemplates?: boolean | null } | null) {
+  return Boolean(input?.canManageTemplates);
 }
