@@ -3,12 +3,47 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const path = 'components/LetterGeneratorWorkspaceV2.tsx';
 if (!existsSync(path)) process.exit(0);
+
 const before = readFileSync(path, 'utf8');
 let source = before;
+const failures = [];
+
+function fail(message) {
+  failures.push(message);
+}
+
+function assert(condition, message) {
+  if (!condition) fail(message);
+}
 
 function ensureImport(anchor, line) {
   if (source.includes(line)) return;
+  if (!source.includes(anchor)) {
+    fail(`Missing import anchor: ${anchor}`);
+    return;
+  }
   source = source.replace(anchor, `${anchor}\n${line}`);
+}
+
+function replaceRequired(search, replacement, label) {
+  if (source.includes(replacement)) return;
+  if (!source.includes(search)) {
+    fail(`Missing replacement anchor for ${label}`);
+    return;
+  }
+  source = source.replace(search, replacement);
+}
+
+function replaceRegexRequired(pattern, replacement, label) {
+  if (pattern.test(source)) {
+    source = source.replace(pattern, replacement);
+    return;
+  }
+  if (!source.includes(replacement)) fail(`Missing regex anchor for ${label}`);
+}
+
+function normalizeDuplicateState() {
+  source = source.replace(/(?:\s*const \[managerTemplateScope, setManagerTemplateScope\] = useState<ManagerTemplateScopeUi \| null>\(null\);\n){2,}/g, '  const [managerTemplateScope, setManagerTemplateScope] = useState<ManagerTemplateScopeUi | null>(null);\n');
 }
 
 ensureImport(
@@ -20,51 +55,77 @@ ensureImport(
   "import { canUseLocalTemplateFallback, resolveManagerTemplateFile, type ManagerTemplateFileAsset } from '../lib/manager-template-file-resolver';"
 );
 
-source = source.replace(
+replaceRequired(
   "  const [registryAssets, setRegistryAssets] = useState<RegistryTemplateAsset[]>([]);",
-  "  const [registryAssets, setRegistryAssets] = useState<RegistryTemplateAsset[]>([]);\n  const [managerTemplateScope, setManagerTemplateScope] = useState<ManagerTemplateScopeUi | null>(null);"
+  "  const [registryAssets, setRegistryAssets] = useState<RegistryTemplateAsset[]>([]);\n  const [managerTemplateScope, setManagerTemplateScope] = useState<ManagerTemplateScopeUi | null>(null);",
+  'managerTemplateScope state'
 );
-source = source.replace(/(?:\s*const \[managerTemplateScope, setManagerTemplateScope\] = useState<ManagerTemplateScopeUi \| null>\(null\);\n){2,}/g, '  const [managerTemplateScope, setManagerTemplateScope] = useState<ManagerTemplateScopeUi | null>(null);\n');
+normalizeDuplicateState();
 
-source = source.replace(
+replaceRequired(
   "        if (!cancelled) setRegistryAssets(Array.isArray(payload.assets) ? payload.assets : []);",
-  "        if (!cancelled) {\n          setRegistryAssets(Array.isArray(payload.assets) ? payload.assets : []);\n          setManagerTemplateScope(payload.managerTemplateScope || null);\n        }"
+  "        if (!cancelled) {\n          setRegistryAssets(Array.isArray(payload.assets) ? payload.assets : []);\n          setManagerTemplateScope(payload.managerTemplateScope || null);\n        }",
+  'registry payload manager scope capture'
 );
-source = source.replace(
+replaceRequired(
   "        if (!cancelled) setRegistryAssets([]);",
-  "        if (!cancelled) {\n          setRegistryAssets([]);\n          setManagerTemplateScope(null);\n        }"
+  "        if (!cancelled) {\n          setRegistryAssets([]);\n          setManagerTemplateScope(null);\n        }",
+  'registry failure manager scope reset'
 );
 
 source = source.replace(/source: 'SUPABASE_TEMPLATE_ASSET'/g, "source: 'MANAGER_TEMPLATE_ASSET'");
-source = source.replace(
+replaceRequired(
   "  const missingLetters = Array.from(new Set(routes.map((route) => route.type))).filter((type) => !refs.find((item) => item.type === type)?.file);",
-  "  const missingLetters = Array.from(new Set(routes.map((route) => route.type))).filter((type) => !effectiveRefs.find((item) => item.type === type)?.file);"
+  "  const missingLetters = Array.from(new Set(routes.map((route) => route.type))).filter((type) => !effectiveRefs.find((item) => item.type === type)?.file);",
+  'missingLetters effectiveRefs'
 );
 
-source = source.replace(
+replaceRequired(
   "  function refBlob(type: LetterType) { const slot = refs.find((item) => item.type === type); return slot ? readReferenceFile(slot.id) : Promise.resolve(null); }",
-  "  function refBlob(type: LetterType) { if (!canUseLocalTemplateFallback(managerTemplateScope || undefined)) return Promise.resolve(null); const slot = refs.find((item) => item.type === type); return slot ? readReferenceFile(slot.id) : Promise.resolve(null); }"
+  "  function refBlob(type: LetterType) { if (!canUseLocalTemplateFallback(managerTemplateScope || undefined)) return Promise.resolve(null); const slot = refs.find((item) => item.type === type); return slot ? readReferenceFile(slot.id) : Promise.resolve(null); }",
+  'refBlob local fallback gating'
 );
-source = source.replace(
+replaceRequired(
   "  function exhibitBlob(kind: ExhibitKind) { return readTemplateExhibit(round, kind); }",
-  "  function exhibitBlob(kind: ExhibitKind) { return canUseLocalTemplateFallback(managerTemplateScope || undefined) ? readTemplateExhibit(round, kind) : Promise.resolve(null); }"
+  "  function exhibitBlob(kind: ExhibitKind) { return canUseLocalTemplateFallback(managerTemplateScope || undefined) ? readTemplateExhibit(round, kind) : Promise.resolve(null); }",
+  'exhibitBlob local fallback gating'
 );
-source = source.replace(
+replaceRegexRequired(
   /  async function assetBlob\(kind: ExhibitKind\) \{[\s\S]*?\n  \}\n  async function letterBlob/m,
-  "  async function assetBlob(kind: ExhibitKind) {\n    return resolveManagerTemplateFile({ round, assets: registryAssets as ManagerTemplateFileAsset[], exhibitKind: kind, localBlob: await exhibitBlob(kind), allowLocalFallback: canUseLocalTemplateFallback(managerTemplateScope || undefined) });\n  }\n  async function letterBlob"
+  "  async function assetBlob(kind: ExhibitKind) {\n    return resolveManagerTemplateFile({ round, assets: registryAssets as ManagerTemplateFileAsset[], exhibitKind: kind, localBlob: await exhibitBlob(kind), allowLocalFallback: canUseLocalTemplateFallback(managerTemplateScope || undefined) });\n  }\n  async function letterBlob",
+  'assetBlob manager resolver'
 );
-source = source.replace(
+replaceRegexRequired(
   /  async function letterBlob\(type: LetterType\) \{[\s\S]*?\n  \}\n  async function affidavit/m,
-  "  async function letterBlob(type: LetterType) {\n    return resolveManagerTemplateFile({ round, assets: registryAssets as ManagerTemplateFileAsset[], letterType: type, localBlob: await refBlob(type), allowLocalFallback: canUseLocalTemplateFallback(managerTemplateScope || undefined) });\n  }\n  async function affidavit"
+  "  async function letterBlob(type: LetterType) {\n    return resolveManagerTemplateFile({ round, assets: registryAssets as ManagerTemplateFileAsset[], letterType: type, localBlob: await refBlob(type), allowLocalFallback: canUseLocalTemplateFallback(managerTemplateScope || undefined) });\n  }\n  async function affidavit",
+  'letterBlob manager resolver'
 );
-source = source.replace(
+replaceRequired(
   "        references: refs,\n        templates,",
-  "        references: effectiveRefs,\n        templates: effectiveTemplates,"
+  "        references: effectiveRefs,\n        templates: effectiveTemplates,",
+  'generation manifest effective template inputs'
 );
-source = source.replace(
+replaceRequired(
   "<TemplateProgressiveWorkspace round={round} slots={refs} supportingReady={evidence.supporting.length > 0}",
-  "<TemplateProgressiveWorkspace round={round} slots={effectiveRefs} supportingReady={evidence.supporting.length > 0} managerTemplateScope={managerTemplateScope} managedExhibits={effectiveTemplates}"
+  "<TemplateProgressiveWorkspace round={round} slots={effectiveRefs} supportingReady={evidence.supporting.length > 0} managerTemplateScope={managerTemplateScope} managedExhibits={effectiveTemplates}",
+  'TemplateProgressiveWorkspace manager props'
 );
+
+assert(source.includes("import type { ManagerTemplateScopeUi } from '../lib/manager-template-ui';"), 'manager scope import not present after wiring');
+assert(source.includes("import { canUseLocalTemplateFallback, resolveManagerTemplateFile, type ManagerTemplateFileAsset } from '../lib/manager-template-file-resolver';"), 'manager resolver import not present after wiring');
+assert(source.includes('const [managerTemplateScope, setManagerTemplateScope] = useState<ManagerTemplateScopeUi | null>(null);'), 'managerTemplateScope state not present after wiring');
+assert(source.includes('setManagerTemplateScope(payload.managerTemplateScope || null);'), 'manager scope payload capture not present after wiring');
+assert(source.includes("source: 'MANAGER_TEMPLATE_ASSET'"), 'manager template source not present after wiring');
+assert(!source.includes("source: 'SUPABASE_TEMPLATE_ASSET'"), 'old SUPABASE_TEMPLATE_ASSET source remains after wiring');
+assert(source.includes('!effectiveRefs.find((item) => item.type === type)?.file'), 'missingLetters still does not use effectiveRefs');
+assert(source.includes('resolveManagerTemplateFile({ round, assets: registryAssets as ManagerTemplateFileAsset[]'), 'manager resolver call not present after wiring');
+assert(source.includes('managerTemplateScope={managerTemplateScope} managedExhibits={effectiveTemplates}'), 'TemplateProgressiveWorkspace manager props not present after wiring');
+
+if (failures.length) {
+  console.error('\nManager template generation wiring failed.');
+  failures.forEach((failure) => console.error(`- ${failure}`));
+  process.exit(1);
+}
 
 if (source !== before) {
   writeFileSync(path, source);
