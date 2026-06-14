@@ -21,10 +21,10 @@
     "xdisputer:guard": "node scripts/xdisputer-deploy-guard.mjs",
     "dynamic-template:v2:regression": "node scripts/dynamic-template-v2-regression.mjs",
     "safe:sync": "bash scripts/safe-sync-guard.sh",
-    "init:connections": "bash scripts/init-xdisputer-connections.sh",
+    "init:connections": "npm run connections:doctor",
     "connections:doctor": "node scripts/check-env-contract.mjs",
-    "active:sync": "bash scripts/xdisputer-active-sync-v2.sh",
-    "active:sync:db": "bash scripts/xdisputer-active-sync-v2.sh --sync-db --verify"
+    "active:sync": "npm run connections:doctor",
+    "active:sync:db": "npm run connections:doctor"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
