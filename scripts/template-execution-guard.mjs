@@ -21,6 +21,11 @@ notHas('components/LetterGeneratorWorkspaceV2.tsx', 'renderMappedAppendix(');
 has('components/console/RenderDebugger.tsx', '__xdisputerTemplateExecution');
 has('components/console/ui-shell-registry.ts', 'templateExecutionStore');
 notHas('app/api/system/source-sync/route.ts', 'apply-manager-workspace-nav-wiring.mjs');
+notHas('scripts/manager-template-roadmap-guard.mjs', 'scripts/apply-manager-template-generation-wiring.mjs');
+notHas('scripts/manager-template-roadmap-guard.mjs', 'execSync(`node ${script}`');
+has('scripts/manager-template-roadmap-guard.mjs', 'Verification-only mode');
+has('supabase/migrations/20260615093000_mcoder_deployment_gate_events.sql', 'deployment_request_events');
+has('supabase/migrations/20260615093000_mcoder_deployment_gate_events.sql', 'list_deployment_requests_service');
 
 if (failures.length) {
   console.error('\nTemplate execution guard failed.');
