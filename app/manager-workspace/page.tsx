@@ -14,9 +14,10 @@ export default async function ManagerWorkspacePage() {
     email={session.user.email}
     accountLabel="Manager template authority"
     navItems={[
-      { href: '/manager-workspace', label: 'Template library', active: true },
-      { href: '/admin/access', label: 'Assigned clients' },
-      { href: '/workspace', label: 'Client workspace view' },
+      { href: '/manager-workspace#template-library', label: 'Template library', active: true },
+      { href: '/manager-workspace#template-workflow', label: 'Packet setup' },
+      { href: '/manager-workspace#template-upload', label: 'Upload defaults' },
+      { href: '/manager-workspace#template-health', label: 'Template health' },
       { href: switchTarget, label: 'Switch mode', kind: 'workspace-switch' as const }
     ]}
   >
