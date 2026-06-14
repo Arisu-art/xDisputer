@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { MANAGER_SWITCH_CONTRACT_VERSION } from '../lib/manager-runtime-source-sync';
+import ManagerSwitchAccountChrome from './ManagerSwitchAccountChrome';
 
 type NavItem = { href: string; label: string; active?: boolean; kind?: 'link' | 'workspace-switch' };
 
@@ -34,6 +35,7 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
   const accountSwitchTarget = explicitSwitch?.href || switchTarget;
 
   return <main className={`admin-monitor-page native-console ${workspaceMode ? 'manager-template-workspace' : 'manager-ops-console'}`} data-manager-switch-contract={MANAGER_SWITCH_CONTRACT_VERSION} data-manager-console-mode={mode}>
+    <ManagerSwitchAccountChrome />
     <aside className="admin-monitor-sidebar native-console-sidebar">
       <div className="admin-monitor-brand"><span>xD</span><div><strong>xDisputer</strong><small>{workspaceMode ? 'Manager workspace' : 'Manager console'}</small></div></div>
       <div className="admin-sidebar-section-title">{workspaceMode ? 'Workspace' : 'Operations'}</div>
