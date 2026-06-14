@@ -1,7 +1,7 @@
 import { normalizeRole, type UserRole } from '../supabase/roles';
 
 export const publicRoutes = ['/', '/login', '/signup'] as const;
-export const protectedRoutes = ['/app', '/master', '/admin', '/workspace', '/client', '/client/workspace'] as const;
+export const protectedRoutes = ['/app', '/master', '/admin', '/manager-workspace', '/workspace', '/client', '/client/workspace'] as const;
 
 export function isSafeInternalPath(value: string | null | undefined) {
   return Boolean(value && value.startsWith('/') && !value.startsWith('//'));
@@ -33,7 +33,7 @@ export function routeForSignedInUser(role: UserRole | null | undefined, requeste
     return '/admin';
   }
 
-  if (normalizedRole === 'client' && (next === '/master' || next.startsWith('/master/') || next === '/admin' || next.startsWith('/admin/'))) {
+  if (normalizedRole === 'client' && (next === '/master' || next.startsWith('/master/') || next === '/admin' || next.startsWith('/admin/') || next === '/manager-workspace' || next.startsWith('/manager-workspace/'))) {
     return '/workspace';
   }
 
