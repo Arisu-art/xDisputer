@@ -21,8 +21,8 @@ Keep every console surface on the same header-shell model:
 | Phase 1 — Global shell contract | Implemented | `components/console/ConsoleShell.tsx` | `scripts/console-shell-contract-guard.mjs` |
 | Phase 2 — Global layout tokens | Implemented | `app/console-shell-system.css` | `scripts/console-shell-contract-guard.mjs` |
 | Phase 3 — Shared avatar account dock | Implemented | `components/ManagerAccountMenu.tsx` + `app/account-menu-ratio-system.css` | `scripts/manager-visible-switch-contract-guard.mjs` |
-| Phase 4 — Remaining master secondary pages | Pending | `/master/reports`, `/master/audit`, `/master/system`, `/master/recovery` | pending |
-| Phase 5 — Remaining manager secondary pages | Pending | `/admin/access`, reports, audit if they bypass `ManagerConsoleShell` | pending |
+| Phase 4 — Remaining master secondary pages | Implemented | `/master/reports`, `/master/audit`, `/master/system`, `/master/recovery` | `scripts/console-shell-contract-guard.mjs` |
+| Phase 5 — Remaining manager secondary pages | Implemented | `/admin/access`, `/admin/clients`, `/admin/reports`, `/admin/audit` | `scripts/console-shell-contract-guard.mjs` |
 
 ## Implemented surfaces
 
@@ -30,9 +30,17 @@ Keep every console surface on the same header-shell model:
 | --- | --- | --- | --- | --- | --- |
 | Manager operations `/admin` | Implemented | `components/ManagerConsoleShell.tsx` → `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
 | Manager workspace `/manager-workspace` | Implemented | `components/ManagerConsoleShell.tsx` → `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
+| Manager access `/admin/access` | Implemented | `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
+| Manager clients `/admin/clients` | Implemented | `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
+| Manager reports `/admin/reports` | Implemented | `components/GenerationReportView.tsx` → `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
+| Manager audit `/admin/audit` | Implemented | `components/AccessAuditView.tsx` → `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
 | Master home `/master` | Implemented | `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
 | Master accounts `/master/accounts` | Implemented | `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
 | Master workspaces `/master/workspaces` | Implemented | `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
+| Master reports `/master/reports` | Implemented | `components/GenerationReportView.tsx` → `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
+| Master audit `/master/audit` | Implemented | `components/AccessAuditView.tsx` → `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
+| Master system `/master/system` | Implemented | `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
+| Master recovery `/master/recovery` | Implemented | `components/console/ConsoleShell.tsx` | Implemented | Implemented | Implemented |
 
 ## Guarded contract
 
@@ -54,6 +62,7 @@ They check:
 - account popover opens from the same header position
 - template summary chips are removed
 - old sidebar account footer is removed
+- legacy manager switch components are removed from migrated report and audit views
 
 ## Verification command
 
@@ -71,6 +80,14 @@ Then inspect:
 
 - `/admin`
 - `/manager-workspace`
+- `/admin/access`
+- `/admin/clients`
+- `/admin/reports`
+- `/admin/audit`
 - `/master`
 - `/master/accounts`
 - `/master/workspaces`
+- `/master/reports`
+- `/master/audit`
+- `/master/system`
+- `/master/recovery`
