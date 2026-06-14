@@ -31,6 +31,7 @@ notHas(shell, 'action="/auth/sign-out" method="post"><button type="submit">Sign 
 has(accountMenu, "'use client';", 'account menu is client-side interactive');
 has(accountMenu, 'data-manager-account-menu="true"', 'account menu exposes stable marker');
 has(accountMenu, 'data-manager-account-layout="header-75-25-avatar-only"', 'account menu uses avatar-only 75/25 header layout marker');
+has(accountMenu, 'data-manager-account-state={open ? \'open\' : \'closed\'}', 'account menu exposes open/closed state for anchored overlay');
 has(accountMenu, 'manager-header-account-dock', 'account menu uses merged header account dock');
 has(accountMenu, 'manager-header-account-avatar', 'account menu exposes only the circle in the closed header');
 has(accountMenu, 'manager-account-popover', 'account menu has popover panel');
@@ -49,13 +50,14 @@ notHas(accountMenu, '↔</Link>', 'switch icon removed from closed header');
 notHas(accountMenu, 'manager-account-primary-grid', 'old two-column primary grid removed');
 notHas(accountMenu, 'manager-account-route-list', 'old duplicated route list removed');
 
-has(accountCss, 'grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr)', 'account CSS uses real 75/25 header grid');
+has(accountCss, '--account-dock-width: clamp(88px, 7.2vw, 112px)', 'account CSS uses compact avatar header column');
 has(accountCss, 'position: relative !important', 'account dock is header-flow relative, not frozen fixed');
-has(accountCss, 'top: auto !important', 'account dock overrides old fixed top positioning');
-has(accountCss, 'right: auto !important', 'account dock overrides old fixed right positioning');
-has(accountCss, 'width: 100% !important', 'account dock fills the 25 percent header column');
-has(accountCss, 'justify-content: flex-end', 'account CSS exposes only avatar on the right side');
-has(accountCss, 'border-left: 1px solid rgba(129, 140, 154, .36)', 'account CSS uses neutral separator border');
+has(accountCss, 'overflow: visible !important', 'account dock allows anchored overlay expansion');
+has(accountCss, '[data-manager-account-state="open"]', 'account CSS raises open dock above page content');
+has(accountCss, 'top: 0;', 'account popover opens from same header position');
+has(accountCss, 'transform-origin: top right', 'account popover expands from avatar dock corner');
+has(accountCss, 'accountPopoverExpandIn', 'account popover uses anchored open animation');
+notHas(accountCss, 'top: calc(100% + 12px)', 'account popover no longer drops below header dock');
 notHas(accountCss, 'position: fixed', 'account CSS no longer freezes the avatar dock');
 notHas(accountCss, 'rgba(124, 58, 237, .36)', 'violet account dock border removed');
 notHas(accountCss, 'border-left: 4px solid rgba(124', 'thick violet left border removed');
