@@ -10,9 +10,10 @@ export default async function ManagerWorkspacePage() {
   const switchTarget = session.isMaster ? '/master' : '/admin';
 
   return <ManagerConsoleShell
+    role={session.isMaster ? 'master' : 'manager'}
     mode="workspace"
     email={session.user.email}
-    accountLabel="Manager template authority"
+    accountLabel={session.isMaster ? 'Master template authority' : 'Manager template authority'}
     navItems={[
       { href: '/manager-workspace#template-library', label: 'Template library', active: true },
       { href: '/manager-workspace#template-workflow', label: 'Packet setup' },
