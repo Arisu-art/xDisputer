@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import TemplateProgressiveWorkspace from './TemplateProgressiveWorkspace';
-import ManagerTemplateLibraryStatus from './ManagerTemplateLibraryStatus';
 import { defaultReferences, type LetterReference, type Round } from '../lib/reference-store';
 import { exhibitModes, exhibitTitles, type ExhibitAsset, type ExhibitKind, type TemplateExhibits } from '../lib/template-exhibits';
+import { summarizeTemplateQuality } from '../lib/manager-template-authority';
 import type { ManagerTemplateScopeUi } from '../lib/manager-template-ui';
 
 type TemplateAsset = {
@@ -53,6 +53,8 @@ function workflowMessage(round: Round, loading: boolean, scope: ManagerTemplateS
   return message || 'This account can review manager templates, but cannot upload or replace active defaults.';
 }
 
+function shortHash(value?: string | null) { return value ? value.slice(0, 10) : '—'; }
+
 export default function ManagerTemplateWorkspaceClient() {
   const [round, setRound] = useState<Round>('1st Round');
   const [assets, setAssets] = useState<TemplateAsset[]>([]);
@@ -88,6 +90,10 @@ export default function ManagerTemplateWorkspaceClient() {
   const exhibits = useMemo(() => assetsToExhibits(assets), [assets]);
   const status = workflowStatus(loading, managerTemplateScope, loadError);
   const statusMessage = workflowMessage(round, loading, managerTemplateScope, loadError, message);
+  const warningCount = assets.filter((asset) => summarizeTemplateQuality({ file: asset.original_filename, validationJson: asset.validation_json }).tone === 'warning').length;
+  const latestVersion = assets.reduce((max, asset) => Math.max(max, asset.version_number || 0), 0);
+  const letterCount = assets.filter((asset) => asset.template_kind === 'LETTER').length;
+  const exhibitCount = assets.filter((asset) => asset.template_kind === 'EXHIBIT').length;
 
   async function handleUploadLetter(slot: LetterReference, file: File) {
     setAssets((current) => current.map((asset) => asset.template_kind === 'LETTER' && asset.letter_type === slot.type ? { ...asset, original_filename: file.name, file_size: file.size } : asset));
@@ -98,15 +104,21 @@ export default function ManagerTemplateWorkspaceClient() {
   async function handleTemplateMutation() { await loadAssets(round); }
 
   return <section className="manager-template-client-flow manager-workspace-body-shell" data-manager-workspace-body-shell="compact" data-manager-template-scope-state={managerTemplateScope?.canManageTemplates ? 'verified-upload' : loading ? 'loading' : 'locked'}>
-    <section className="admin-monitor-card manager-template-workflow-status compact-workspace-command" aria-label="Manager template workspace status">
-      <div>
+    <section className="admin-monitor-card manager-template-workflow-status compact-workspace-command merged-template-command" aria-label="Manager template workspace status">
+      <div className="merged-template-command-copy">
         <p className="eyebrow">Template library</p>
         <strong>{status}</strong>
         <span>{statusMessage}</span>
       </div>
-      <span className="admin-status-badge active">{round}</span>
+      <div className="merged-template-command-metrics" aria-label="Active manager template metrics">
+        <span><b>{loading ? '…' : assets.length}</b><small>active</small></span>
+        <span><b>{letterCount}/{exhibitCount}</b><small>letters/exhibits</small></span>
+        <span><b>{latestVersion || '—'}</b><small>latest</small></span>
+        <span><b>{warningCount}</b><small>review</small></span>
+        <span><b>{shortHash(assets[0]?.content_hash)}</b><small>proof</small></span>
+        <span className="admin-status-badge active"><b>{round}</b><small>round</small></span>
+      </div>
     </section>
-    <ManagerTemplateLibraryStatus round={round} assets={assets} loading={loading} />
     <TemplateProgressiveWorkspace round={round} slots={slots} supportingReady={false} managerTemplateScope={managerTemplateScope} managedExhibits={exhibits} onSelectRound={(next) => { setRound(next); setMessage(`${next} selected for manager default template setup.`); }} onUploadLetter={handleUploadLetter} onRemoveLetter={handleRemoveLetter} onExhibitsChange={handleExhibitsHydrated} onTemplateMutation={handleTemplateMutation} onMessage={setMessage} onUseRoundForSourceData={() => setMessage(`${round} manager defaults are selected. Upload/replace templates here; clients will generate from the active versions.`)} />
   </section>;
 }
