@@ -9,6 +9,7 @@ import { templateStoragePath, type TemplateKind } from '../../../lib/supabase/te
 import { workspaceAccessErrorResponse } from '../../../lib/saas/access-entitlement';
 import { inspectDynamicTemplateContractV2, dynamicTemplateContractV2Summary, type DynamicTemplateContractV2 } from '../../../lib/dynamic-template/contract-v2';
 import { dynamicRendererModePolicy, resolveDynamicTemplateRendererMode, type DynamicTemplateRendererMode } from '../../../lib/dynamic-template/renderer-mode';
+import { assertCanManageManagerTemplates, managerTemplateScopePayload, resolveManagerTemplateScope, ManagerTemplateScopeError } from '../../../lib/manager-template-scope';
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
@@ -56,6 +57,13 @@ function respond(request: NextRequest, status: 'ok' | 'error', message: string, 
   target.searchParams.set('message', message.slice(0, 220));
 
   return NextResponse.redirect(target, 303);
+}
+
+function managerScopeFailure(request: NextRequest, error: ManagerTemplateScopeError) {
+  return respond(request, 'error', error.message, error.code === 'NO_AUTH' ? 401 : 403, {
+    code: error.code,
+    category: 'MANAGER_TEMPLATE'
+  });
 }
 
 function documentKind(input: {
@@ -156,6 +164,8 @@ function buildValidationJson(contract: TemplateContract, input: {
   rendererPolicy: DynamicRendererPolicy;
   dynamicContractV2: DynamicTemplateContractV2 | null;
   dynamicContractV2Warning: string | null;
+  managerUserId: string;
+  uploadedByUserId: string;
 }) {
   return {
     status: contract.validation.status,
@@ -170,6 +180,9 @@ function buildValidationJson(contract: TemplateContract, input: {
     whatIfs: contract.validation.whatIfs,
     aliasesUsed: contract.validation.aliasesUsed,
     contentHash: input.contentHash,
+    templateScope: 'MANAGER_TEMPLATE_ASSET',
+    managerUserId: input.managerUserId,
+    uploadedByUserId: input.uploadedByUserId,
     slot: {
       round: input.round,
       templateKind: input.templateKind,
@@ -240,6 +253,7 @@ async function fileFromStoredBlob(blob: Blob, asset: ActiveTemplateAsset) {
 
 async function autoBackfillDynamicTemplateV2(input: {
   session: SessionContext;
+  managerUserId: string;
   assets: ActiveTemplateAsset[];
   rendererMode: DynamicTemplateRendererMode;
   rendererPolicy: DynamicRendererPolicy;
@@ -290,7 +304,7 @@ async function autoBackfillDynamicTemplateV2(input: {
       const update = await input.session.supabase
         .from('template_assets')
         .update({ validation_json: validationJson, rule_json: ruleJson })
-        .eq('owner_id', input.session.user!.id)
+        .eq('manager_user_id', input.managerUserId)
         .eq('id', asset.id);
 
       if (update.error) {
@@ -309,7 +323,7 @@ async function autoBackfillDynamicTemplateV2(input: {
   return { assets: input.assets, backfilledCount, warnings };
 }
 
-async function findExistingAssets(session: SessionContext, input: {
+async function findExistingAssets(session: SessionContext, managerUserId: string, input: {
   round: string;
   templateKind: string;
   letterType: string | null;
@@ -318,7 +332,7 @@ async function findExistingAssets(session: SessionContext, input: {
   let query = session.supabase
     .from('template_assets')
     .select('id, storage_bucket, storage_path, version_number, is_active, content_hash')
-    .eq('owner_id', session.user!.id)
+    .eq('manager_user_id', managerUserId)
     .eq('round_label', input.round)
     .eq('template_kind', input.templateKind)
     .order('version_number', { ascending: false });
@@ -329,14 +343,14 @@ async function findExistingAssets(session: SessionContext, input: {
   return query;
 }
 
-async function archiveAssetRecords(session: SessionContext, assets: Array<{ id: string }>) {
+async function archiveAssetRecords(session: SessionContext, managerUserId: string, assets: Array<{ id: string }>) {
   if (!assets.length) return { archived: 0, warning: null as string | null };
 
   const ids = assets.map((asset) => asset.id);
   const update = await session.supabase
     .from('template_assets')
     .update({ is_active: false, archived_at: new Date().toISOString() })
-    .eq('owner_id', session.user!.id)
+    .eq('manager_user_id', managerUserId)
     .in('id', ids);
 
   if (update.error) {
@@ -346,11 +360,11 @@ async function archiveAssetRecords(session: SessionContext, assets: Array<{ id: 
   return { archived: assets.length, warning: null };
 }
 
-async function activateInsertedTemplateAsset(session: SessionContext, input: {
+async function activateInsertedTemplateAsset(session: SessionContext, managerUserId: string, input: {
   assetId: string;
   existingAssets: ExistingTemplateAsset[];
 }) {
-  const activation = await session.supabase.rpc('app_activate_template_asset_v1', {
+  const activation = await session.supabase.rpc('app_activate_manager_template_asset_v1', {
     asset_id_input: input.assetId
   });
 
@@ -359,31 +373,31 @@ async function activateInsertedTemplateAsset(session: SessionContext, input: {
     return {
       archived: Number(row?.archived_count || 0),
       warning: null as string | null,
-      mode: 'rpc' as const
+      mode: 'manager-rpc' as const
     };
   }
 
   if (!isMissingRpcError(activation.error.message)) {
-    return { archived: 0, warning: activation.error.message, mode: 'rpc' as const };
+    return { archived: 0, warning: activation.error.message, mode: 'manager-rpc' as const };
   }
 
   const activeAssets = input.existingAssets.filter((asset) => asset.is_active);
-  const archive = await archiveAssetRecords(session, activeAssets);
+  const archive = await archiveAssetRecords(session, managerUserId, activeAssets);
 
-  if (archive.warning) return { archived: archive.archived, warning: archive.warning, mode: 'fallback' as const };
+  if (archive.warning) return { archived: archive.archived, warning: archive.warning, mode: 'manager-fallback' as const };
 
   const activate = await session.supabase
     .from('template_assets')
     .update({ is_active: true, archived_at: null })
-    .eq('owner_id', session.user!.id)
+    .eq('manager_user_id', managerUserId)
     .eq('id', input.assetId);
 
-  if (activate.error) return { archived: archive.archived, warning: activate.error.message, mode: 'fallback' as const };
+  if (activate.error) return { archived: archive.archived, warning: activate.error.message, mode: 'manager-fallback' as const };
 
-  return { archived: archive.archived, warning: null, mode: 'fallback' as const };
+  return { archived: archive.archived, warning: null, mode: 'manager-fallback' as const };
 }
 
-async function deleteAssetRecordsAndFiles(session: SessionContext, assets: Array<{
+async function deleteAssetRecordsAndFiles(session: SessionContext, managerUserId: string, assets: Array<{
   id: string;
   storage_bucket: string;
   storage_path: string;
@@ -410,7 +424,7 @@ async function deleteAssetRecordsAndFiles(session: SessionContext, assets: Array
   const tableDelete = await session.supabase
     .from('template_assets')
     .delete()
-    .eq('owner_id', session.user!.id)
+    .eq('manager_user_id', managerUserId)
     .in('id', ids);
 
   if (tableDelete.error) {
@@ -430,6 +444,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'No authenticated user.' }, { status: 401 });
   }
 
+  const scope = await resolveManagerTemplateScope(session);
   const round = request.nextUrl.searchParams.get('round');
   const rendererMode = resolveDynamicTemplateRendererMode({
     requestHeader: request.headers.get('x-dynamic-template-renderer-mode')
@@ -439,7 +454,7 @@ export async function GET(request: NextRequest) {
   let query = session.supabase
     .from('template_assets')
     .select('*')
-    .eq('owner_id', session.user.id)
+    .eq('manager_user_id', scope.managerUserId)
     .eq('is_active', true)
     .order('created_at', { ascending: false });
 
@@ -453,6 +468,7 @@ export async function GET(request: NextRequest) {
 
   const autoBackfill = await autoBackfillDynamicTemplateV2({
     session,
+    managerUserId: scope.managerUserId,
     assets: (data || []) as ActiveTemplateAsset[],
     rendererMode,
     rendererPolicy
@@ -460,6 +476,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     assets: autoBackfill.assets,
+    managerTemplateScope: managerTemplateScopePayload(scope),
     dynamicTemplateEngineV2: {
       rendererMode,
       autoBackfilled: autoBackfill.backfilledCount,
@@ -481,6 +498,9 @@ export async function POST(request: NextRequest) {
     if (!session.user) {
       return respond(request, 'error', 'No authenticated user.', 401);
     }
+
+    const scope = await resolveManagerTemplateScope(session);
+    assertCanManageManagerTemplates(scope);
 
     const rendererMode = resolveDynamicTemplateRendererMode({
       requestHeader: request.headers.get('x-dynamic-template-renderer-mode')
@@ -535,7 +555,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const existing = await findExistingAssets(session, {
+    const existing = await findExistingAssets(session, scope.managerUserId, {
       round,
       templateKind,
       letterType: resolvedLetterType,
@@ -551,12 +571,13 @@ export async function POST(request: NextRequest) {
       return respond(
         request,
         'ok',
-        `${round} ${targetType} template is already active with the same file content.`,
+        `${round} ${targetType} manager template is already active with the same file content.`,
         200,
         {
           assetId: activeSameContent.id,
           duplicate: true,
           contentHash,
+          managerTemplateScope: managerTemplateScopePayload(scope),
           validation: contract.validation,
           dynamicTemplateEngineV2: {
             rendererMode,
@@ -577,11 +598,13 @@ export async function POST(request: NextRequest) {
       rendererMode,
       rendererPolicy,
       dynamicContractV2: dynamicV2.contract,
-      dynamicContractV2Warning: dynamicV2.warning
+      dynamicContractV2Warning: dynamicV2.warning,
+      managerUserId: scope.managerUserId,
+      uploadedByUserId: session.user.id
     });
 
     const storagePath = templateStoragePath({
-      userId: session.user.id,
+      managerUserId: scope.managerUserId,
       round,
       kind: resolvedTemplateKind,
       type: targetType,
@@ -602,7 +625,10 @@ export async function POST(request: NextRequest) {
     const insert = await session.supabase
       .from('template_assets')
       .insert({
-        owner_id: session.user.id,
+        owner_id: scope.managerUserId,
+        manager_user_id: scope.managerUserId,
+        uploaded_by_user_id: session.user.id,
+        template_scope: 'MANAGER',
         round_label: round,
         template_kind: templateKind,
         letter_type: resolvedLetterType,
@@ -620,9 +646,12 @@ export async function POST(request: NextRequest) {
           templateKind,
           letterType: resolvedLetterType,
           exhibitKind: resolvedExhibitKind,
+          templateScope: 'MANAGER_TEMPLATE_ASSET',
+          managerUserId: scope.managerUserId,
+          uploadedByUserId: session.user.id,
           contractStatus: contract.validation.status,
           contractConfidence: contract.validation.confidence,
-          activationPolicy: 'insert-inactive-activate-template-asset-rpc',
+          activationPolicy: 'insert-inactive-activate-manager-template-asset-rpc',
           dynamicTemplateEngineV2: {
             rendererMode,
             status: dynamicV2.contract?.status || null,
@@ -644,7 +673,7 @@ export async function POST(request: NextRequest) {
 
     insertedAssetId = insert.data.id;
 
-    const activation = await activateInsertedTemplateAsset(session, {
+    const activation = await activateInsertedTemplateAsset(session, scope.managerUserId, {
       assetId: insert.data.id,
       existingAssets
     });
@@ -654,7 +683,7 @@ export async function POST(request: NextRequest) {
       await session.supabase
         .from('template_assets')
         .delete()
-        .eq('owner_id', session.user.id)
+        .eq('manager_user_id', scope.managerUserId)
         .eq('id', insert.data.id);
       return respond(request, 'error', activation.warning, 500);
     }
@@ -665,13 +694,14 @@ export async function POST(request: NextRequest) {
     return respond(
       request,
       'ok',
-      `${round} ${targetType} template saved as active version. ${activation.archived} previous active version(s) archived.`,
+      `${round} ${targetType} manager template saved as active version. ${activation.archived} previous active version(s) archived.`,
       200,
       {
         assetId: insert.data.id,
         archivedVersions: activation.archived,
         activationMode: activation.mode,
         contentHash,
+        managerTemplateScope: managerTemplateScopePayload(scope),
         validation: contract.validation,
         dynamicTemplateEngineV2: {
           rendererMode,
@@ -690,13 +720,13 @@ export async function POST(request: NextRequest) {
         await session.supabase
           .from('template_assets')
           .delete()
-          .eq('owner_id', session.user.id)
           .eq('id', insertedAssetId);
       }
     } catch {
       // Best effort cleanup only.
     }
 
+    if (error instanceof ManagerTemplateScopeError) return managerScopeFailure(request, error);
     return respond(request, 'error', error instanceof Error ? error.message : 'Template upload failed.', 500);
   }
 }
@@ -712,6 +742,9 @@ export async function DELETE(request: NextRequest) {
       return respond(request, 'error', 'No authenticated user.', 401);
     }
 
+    const scope = await resolveManagerTemplateScope(session);
+    assertCanManageManagerTemplates(scope);
+
     const body = await request.json().catch(() => ({}));
 
     const round = String(body?.round || request.nextUrl.searchParams.get('round') || '').trim();
@@ -726,7 +759,7 @@ export async function DELETE(request: NextRequest) {
     const resolvedLetterType = resolvedTemplateKind === 'LETTER' ? letterType : null;
     const resolvedExhibitKind = resolvedTemplateKind === 'EXHIBIT' ? exhibitKind : null;
 
-    const existing = await findExistingAssets(session, {
+    const existing = await findExistingAssets(session, scope.managerUserId, {
       round,
       templateKind,
       letterType: resolvedLetterType,
@@ -735,16 +768,18 @@ export async function DELETE(request: NextRequest) {
 
     if (existing.error) return respond(request, 'error', existing.error.message, 500);
 
-    const cleanup = await deleteAssetRecordsAndFiles(session, existing.data || []);
+    const cleanup = await deleteAssetRecordsAndFiles(session, scope.managerUserId, existing.data || []);
 
     if (cleanup.warning) {
       return respond(request, 'error', cleanup.warning, 500);
     }
 
-    return respond(request, 'ok', `${round} ${resolvedLetterType || resolvedExhibitKind} template removed from Supabase.`, 200, {
-      deleted: cleanup.deleted
+    return respond(request, 'ok', `${round} ${resolvedLetterType || resolvedExhibitKind} manager template removed from Supabase.`, 200, {
+      deleted: cleanup.deleted,
+      managerTemplateScope: managerTemplateScopePayload(scope)
     });
   } catch (error) {
+    if (error instanceof ManagerTemplateScopeError) return managerScopeFailure(request, error);
     return respond(request, 'error', error instanceof Error ? error.message : 'Template removal failed.', 500);
   }
 }
