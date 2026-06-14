@@ -1,6 +1,6 @@
 # xDisputer root-cause error ledger
 
-_Last updated: 2026-06-13_
+_Last updated: 2026-06-14_
 
 Use this ledger before patching. The rule is: identify the first failing layer, apply the narrowest durable fix, then verify with the matching command.
 
@@ -90,7 +90,9 @@ notify pgrst, 'reload schema';
 
 **Observed error**
 
+```text
 Shell remains at a continuation prompt after a pasted script.
+```
 
 **Root cause**
 
@@ -181,4 +183,60 @@ Old SaaS usage-cap assumptions were mixed into the current no-output-limit produ
 grep -R "generation limit\|output limit\|usage-cap\|usage cap\|cap blocked" -n app components lib scripts docs || true
 npm run typecheck
 npm run build
+```
+
+## E008 — Local index blocks active sync and hides new npm scripts
+
+**Observed error**
+
+```text
+error: cannot pull with rebase: Your index contains uncommitted changes.
+error: Please commit or stash them.
+npm error Missing script: "active:sync"
+```
+
+**Root cause**
+
+The local Codespace had staged or uncommitted files before pulling `origin/main`. Because the pull/rebase stopped, the local `package.json` stayed behind the remote commit that added `active:sync`. Accidental root artifacts such as `FETCH_HEAD`, `next`, `node`, `tsc`, or `letter-generator@1.0.0` can also appear when a malformed terminal command writes command/package names into the repository root.
+
+**Correct fix pattern**
+
+- Do not run `npm install` or `npm run active:sync` until the local tree is reconciled with `origin/main`.
+- Preserve local work with stash mode, or reset generated/noise changes with hard mode only after creating a patch backup.
+- Pull `origin/main` using fast-forward after the index is clean.
+- Run `npm ci`, not `npm install`, after the repository is current.
+
+**Recovery**
+
+```bash
+# Preserve local changes and then sync.
+git fetch origin main --prune
+git stash push -u -m "manual recovery before active sync"
+git checkout main
+git pull --ff-only origin main
+npm ci
+npm run connections:doctor
+npm run active:sync -- --reset-local --verify
+```
+
+```bash
+# Reset local noise after patch backup.
+mkdir -p .local-backups/manual-sync-recovery
+git diff > .local-backups/manual-sync-recovery/worktree.patch || true
+git diff --cached > .local-backups/manual-sync-recovery/index.patch || true
+git fetch origin main --prune
+git checkout main
+git reset --hard origin/main
+rm -f FETCH_HEAD letter-generator@1.0.0 next node tsc
+npm ci
+npm run connections:doctor
+npm run active:sync -- --reset-local --verify
+```
+
+**Verification**
+
+```bash
+git status --short
+npm run | grep -E "active:sync|connections:doctor"
+npm run connections:doctor
 ```
