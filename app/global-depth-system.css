@@ -1,20 +1,20 @@
 /* Global depth system — applies the neutral floating-canvas effect across client, manager, and master surfaces. */
 :root {
-  --bg: #e8edf4;
+  --bg: #dfe5ee;
   --surface: #ffffff;
-  --surface-subtle: #f5f7fb;
+  --surface-subtle: #f1f4f8;
   --surface-raised: #ffffff;
-  --surface-hover: #eef3f8;
-  --line: #d6dfeb;
-  --line-strong: #c3cede;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .05);
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, .04), 0 16px 42px rgba(15, 23, 42, .075);
-  --shadow-hover: 0 4px 10px rgba(15, 23, 42, .07), 0 24px 58px rgba(15, 23, 42, .12);
-  --shadow-floating: 0 24px 72px rgba(15, 23, 42, .14);
-  --global-canvas-bg: #e8edf4;
-  --global-canvas-bg-deep: #dfe6ef;
-  --global-float-border: rgba(148, 163, 184, .28);
-  --global-float-highlight: rgba(255, 255, 255, .78);
+  --surface-hover: #e9eef5;
+  --line: #cdd7e5;
+  --line-strong: #b9c5d6;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .06);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, .045), 0 18px 46px rgba(15, 23, 42, .085);
+  --shadow-hover: 0 5px 12px rgba(15, 23, 42, .08), 0 28px 64px rgba(15, 23, 42, .13);
+  --shadow-floating: 0 28px 78px rgba(15, 23, 42, .15);
+  --global-canvas-bg: #dfe5ee;
+  --global-canvas-bg-deep: #d2dbe7;
+  --global-float-border: rgba(129, 140, 154, .32);
+  --global-float-highlight: rgba(255, 255, 255, .76);
 }
 
 html {
@@ -24,9 +24,9 @@ html {
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 16% 8%, rgba(255, 255, 255, .92) 0, rgba(255, 255, 255, 0) 28rem),
-    radial-gradient(circle at 86% 12%, rgba(226, 232, 240, .92) 0, rgba(226, 232, 240, 0) 26rem),
-    linear-gradient(135deg, #f0f4f8 0%, var(--global-canvas-bg) 45%, var(--global-canvas-bg-deep) 100%) !important;
+    radial-gradient(circle at 16% 8%, rgba(255, 255, 255, .86) 0, rgba(255, 255, 255, 0) 28rem),
+    radial-gradient(circle at 86% 12%, rgba(203, 213, 225, .78) 0, rgba(203, 213, 225, 0) 26rem),
+    linear-gradient(135deg, #e8edf4 0%, var(--global-canvas-bg) 45%, var(--global-canvas-bg-deep) 100%) !important;
   background-attachment: fixed;
 }
 
@@ -37,8 +37,8 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(255,255,255,.34), rgba(255,255,255,0) 28%, rgba(15,23,42,.035) 100%),
-    radial-gradient(circle at 50% -12%, rgba(255,255,255,.65), rgba(255,255,255,0) 38rem);
+    linear-gradient(90deg, rgba(255,255,255,.28), rgba(255,255,255,0) 28%, rgba(15,23,42,.045) 100%),
+    radial-gradient(circle at 50% -12%, rgba(255,255,255,.56), rgba(255,255,255,0) 38rem);
 }
 
 .app-shell,
@@ -91,7 +91,7 @@ body::before {
 .final-packet-card,
 .table-flyout-card,
 .account-entitlement-card {
-  background: rgba(255, 255, 255, .88) !important;
+  background: rgba(255, 255, 255, .90) !important;
   border-color: var(--global-float-border) !important;
   box-shadow: var(--shadow-card) !important;
   backdrop-filter: blur(14px);
@@ -147,7 +147,7 @@ body::before {
 .sidebar,
 .saas-sidebar,
 .workspace-sidebar {
-  box-shadow: 14px 0 42px rgba(15, 23, 42, .075) !important;
+  box-shadow: 14px 0 42px rgba(15, 23, 42, .085) !important;
 }
 
 input,
