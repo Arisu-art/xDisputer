@@ -82,10 +82,9 @@ export default function ManagerTemplateWorkspaceClient() {
 
   async function handleUploadLetter(slot: LetterReference, file: File) {
     setAssets((current) => current.map((asset) => asset.template_kind === 'LETTER' && asset.letter_type === slot.type ? { ...asset, original_filename: file.name, file_size: file.size } : asset));
-    await loadAssets(round);
   }
 
-  async function handleRemoveLetter() { await loadAssets(round); }
+  async function handleRemoveLetter() { /* TemplatePacketConfigurator refreshes through onTemplateMutation after delete. */ }
   async function handleExhibitsHydrated() { /* Hydration does not reload Supabase assets. */ }
   async function handleTemplateMutation() { await loadAssets(round); }
 
