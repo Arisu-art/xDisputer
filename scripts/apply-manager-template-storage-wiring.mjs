@@ -16,6 +16,20 @@ function ensureImport(source, anchor, importLine) {
   return source.replace(anchor, `${anchor}\n${importLine}`);
 }
 
+function normalizeTemplateStoragePayload(source) {
+  const duplicateGet = "managerTemplateScope: managerTemplateScopePayload(scope), templateStorage: { mode: managerTemplateStorageMode() }, dynamicTemplateEngineV2: { rendererMode, autoBackfilled: autoBackfill.backfilledCount, warnings: autoBackfill.warnings }, templateStorage: { mode: managerTemplateStorageMode() }";
+  const canonicalGet = "managerTemplateScope: managerTemplateScopePayload(scope), templateStorage: { mode: managerTemplateStorageMode() }, dynamicTemplateEngineV2: { rendererMode, autoBackfilled: autoBackfill.backfilledCount, warnings: autoBackfill.warnings }";
+  source = source.replaceAll(duplicateGet, canonicalGet);
+
+  source = source.replace(
+    "managerTemplateScope: managerTemplateScopePayload(scope), dynamicTemplateEngineV2",
+    "managerTemplateScope: managerTemplateScopePayload(scope), templateStorage: { mode: managerTemplateStorageMode() }, dynamicTemplateEngineV2"
+  );
+
+  source = source.replaceAll(duplicateGet, canonicalGet);
+  return source;
+}
+
 function patchTemplateAssetsRoute() {
   const path = 'app/api/template-assets/route.ts';
   if (!existsSync(path)) return;
@@ -49,10 +63,7 @@ function patchTemplateAssetsRoute() {
     "removeManagerTemplateObjects({ sessionSupabase: session.supabase, bucket, paths })"
   );
 
-  source = source.replace(
-    /dynamicTemplateEngineV2: \{ rendererMode, autoBackfilled: autoBackfill\.backfilledCount, warnings: autoBackfill\.warnings \}/g,
-    "dynamicTemplateEngineV2: { rendererMode, autoBackfilled: autoBackfill.backfilledCount, warnings: autoBackfill.warnings }, templateStorage: { mode: managerTemplateStorageMode() }"
-  );
+  source = normalizeTemplateStoragePayload(source);
 
   source = source.replace(
     /managerTemplateScope: managerTemplateScopePayload\(scope\), validation: contract\.validation/g,
@@ -60,14 +71,11 @@ function patchTemplateAssetsRoute() {
   );
 
   source = source.replace(
-    /managerTemplateScope: managerTemplateScopePayload\(scope\), dynamicTemplateEngineV2/g,
-    "managerTemplateScope: managerTemplateScopePayload(scope), templateStorage: { mode: managerTemplateStorageMode() }, dynamicTemplateEngineV2"
-  );
-
-  source = source.replace(
     /managerTemplateScope: managerTemplateScopePayload\(scope\) \}\);/g,
     "managerTemplateScope: managerTemplateScopePayload(scope), templateStorage: { mode: managerTemplateStorageMode() } });"
   );
+
+  source = normalizeTemplateStoragePayload(source);
 
   writeIfChanged(path, before, source);
 }
@@ -83,6 +91,11 @@ function patchTemplateFileRoute() {
     source,
     "import { managerTemplateScopePayload, resolveManagerTemplateScope, ManagerTemplateScopeError } from '../../../../lib/manager-template-scope';",
     "import { downloadManagerTemplateObject } from '../../../../lib/supabase/template-storage-service';"
+  );
+
+  source = source.replace(
+    "function privateTemplateCacheHeaders(input: { etag: string; filename: string; mimeType: string | null; managerUserId: string }) {",
+    "function privateTemplateCacheHeaders(input: { etag: string; filename: string; mimeType: string | null; managerUserId: string }): Record<string, string> {"
   );
 
   source = source.replace(
