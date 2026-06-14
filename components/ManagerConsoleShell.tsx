@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { MANAGER_SWITCH_CONTRACT_VERSION } from '../lib/manager-runtime-source-sync';
 import ManagerSwitchAccountChrome from './ManagerSwitchAccountChrome';
 
@@ -12,6 +12,32 @@ type Props = {
   children: ReactNode;
 };
 
+const accountSwitchStyle: CSSProperties = {
+  width: '100%',
+  minHeight: 54,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  margin: '12px 0 10px',
+  padding: '12px 13px',
+  borderRadius: 16,
+  color: '#eff6ff',
+  textDecoration: 'none',
+  background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+  boxShadow: '0 14px 30px rgba(37, 99, 235, .30)',
+  boxSizing: 'border-box',
+  visibility: 'visible',
+  opacity: 1,
+  pointerEvents: 'auto'
+};
+
+const switchCopyStyle: CSSProperties = {
+  display: 'grid',
+  gap: 2,
+  minWidth: 0,
+  flex: 1
+};
+
 function switchCopyForTarget(href: string, reverse: boolean) {
   if (href.startsWith('/master')) return 'Master console';
   if (href.startsWith('/admin')) return 'Operations console';
@@ -21,9 +47,9 @@ function switchCopyForTarget(href: string, reverse: boolean) {
 
 function WorkspaceSwitchAnchor({ href, reverse }: { href: string; reverse: boolean }) {
   const targetCopy = switchCopyForTarget(href, reverse);
-  return <a className="manager-workspace-nav-switch account-switch-mode" href={href} data-manager-canonical-switch="true" data-manager-switch-target={href} data-manager-switch-target-label={targetCopy}>
-    <span className="manager-workspace-switch-copy"><strong>Switch mode</strong><small>{targetCopy}</small></span>
-    <span className="manager-workspace-switch-arrow" aria-hidden="true">→</span>
+  return <a className="manager-workspace-nav-switch account-switch-mode" style={accountSwitchStyle} href={href} data-manager-canonical-switch="true" data-manager-switch-target={href} data-manager-switch-target-label={targetCopy}>
+    <span className="manager-workspace-switch-copy" style={switchCopyStyle}><strong style={{ fontSize: 12, lineHeight: 1.1, letterSpacing: '.02em', textTransform: 'uppercase' }}>Switch mode</strong><small style={{ color: 'rgba(239,246,255,.9)', fontSize: 11, lineHeight: 1.2 }}>{targetCopy}</small></span>
+    <span className="manager-workspace-switch-arrow" style={{ color: 'rgba(239,246,255,.95)', fontWeight: 900 }} aria-hidden="true">→</span>
   </a>;
 }
 
