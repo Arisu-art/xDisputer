@@ -36,7 +36,8 @@ has(switchComponent, 'manager-workspace-switch-button', 'switch button component
 has(switchComponent, 'managerSwitchPulse', 'switch pulse animation exists');
 has(switchComponent, 'managerSwitchShine', 'switch shine animation exists');
 has(routes, '/manager-workspace', 'manager workspace route is protected');
-has(admin, '<ManagerWorkspaceSwitch />', '/admin sidebar directly renders switch until all ops pages move to shell');
+has(admin, 'ManagerConsoleShell', '/admin uses shared manager shell');
+has(admin, 'mode="operations"', '/admin shell is operations mode');
 has(access, '<ManagerWorkspaceSwitch />', '/admin/access sidebar directly renders switch');
 has(audit, "{scope === 'manager' && <ManagerWorkspaceSwitch />}", '/admin/audit sidebar renders switch');
 has(reports, "{scope === 'manager' && <ManagerWorkspaceSwitch />}", '/admin/reports sidebar renders switch');
