@@ -21,8 +21,8 @@ function ensureImport(source, anchor, line) {
 
 function canonicalManagerConsoleShell() {
   return `import type { ReactNode } from 'react';
+import ConsoleShell from './console/ConsoleShell';
 import { MANAGER_SWITCH_CONTRACT_VERSION } from '../lib/manager-runtime-source-sync';
-import ManagerAccountMenu from './ManagerAccountMenu';
 
 type NavItem = { href: string; label: string; active?: boolean; kind?: 'link' | 'workspace-switch' };
 
@@ -44,47 +44,44 @@ function switchLabel(mode: Props['mode']) {
 
 export default function ManagerConsoleShell({ mode, email, accountLabel, navItems, children }: Props) {
   const workspaceMode = mode === 'workspace';
-  const switchTarget = switchHref(mode);
-  const switchTargetLabel = switchLabel(mode);
-  const visibleNavItems = navItems.filter((item) => item.kind !== 'workspace-switch');
-
-  return <main className={\`admin-monitor-page native-console \${workspaceMode ? 'manager-template-workspace' : 'manager-ops-console'}\`} data-manager-switch-contract={MANAGER_SWITCH_CONTRACT_VERSION} data-manager-console-mode={mode}>
-    <aside className="admin-monitor-sidebar native-console-sidebar">
-      <div className="admin-monitor-brand"><span>xD</span><div><strong>xDisputer</strong><small>{workspaceMode ? 'Manager workspace' : 'Manager console'}</small></div></div>
-      <div className="admin-sidebar-section-title">{workspaceMode ? 'Workspace' : 'Operations'}</div>
-      <nav aria-label={workspaceMode ? 'Manager workspace navigation' : 'Manager operations navigation'} data-manager-shell-nav="true" data-manager-switch-contract={MANAGER_SWITCH_CONTRACT_VERSION}>
-        {visibleNavItems.map((item) => <a key={item.href} className={item.active ? 'active' : ''} href={item.href}>{item.label}</a>)}
-      </nav>
-    </aside>
-    <section className="admin-monitor-main native-console-main" data-console-header-grid="true">
-      <ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />
-      {children}
-    </section>
-  </main>;
+  return <ConsoleShell
+    role="manager"
+    mode={mode}
+    email={email}
+    accountLabel={accountLabel}
+    brandSubtitle={workspaceMode ? 'Manager workspace' : 'Manager console'}
+    sidebarSectionTitle={workspaceMode ? 'Workspace' : 'Operations'}
+    navItems={navItems}
+    switchTarget={switchHref(mode)}
+    switchTargetLabel={switchLabel(mode)}
+    navAriaLabel={workspaceMode ? 'Manager workspace navigation' : 'Manager operations navigation'}
+    navContract={MANAGER_SWITCH_CONTRACT_VERSION}
+  >
+    {children}
+  </ConsoleShell>;
 }
 `;
 }
 
-function shellHasTopAccountContract(source) {
+function shellHasGlobalConsoleContract(source) {
   const required = [
-    "import ManagerAccountMenu from './ManagerAccountMenu';",
-    '<ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />',
-    'data-console-header-grid="true"',
-    'function switchHref',
-    'function switchLabel',
-    "navItems.filter((item) => item.kind !== 'workspace-switch')",
-    'data-manager-shell-nav="true"'
+    "import ConsoleShell from './console/ConsoleShell';",
+    '<ConsoleShell',
+    'role="manager"',
+    'navContract={MANAGER_SWITCH_CONTRACT_VERSION}',
+    'switchTarget={switchHref(mode)}',
+    'switchTargetLabel={switchLabel(mode)}'
   ];
   return required.every((token) => source.includes(token))
-    && source.indexOf('<aside className="admin-monitor-sidebar native-console-sidebar">') < source.indexOf('<section className="admin-monitor-main native-console-main" data-console-header-grid="true">')
+    && !source.includes('<aside className="admin-monitor-sidebar')
+    && !source.includes('<section className="admin-monitor-main')
+    && !source.includes('ManagerAccountMenu')
     && !source.includes('WorkspaceSwitchAnchor')
     && !source.includes('manager-workspace-nav-switch')
     && !source.includes('top-visible-switch-mode')
     && !source.includes('switchLinkStyle')
     && !source.includes('accountSwitchTarget')
     && !source.includes('data-manager-switch-visible-slot="plain-nav-button"')
-    && !source.includes('>\n          Switch mode\n        </a>')
-    && !source.includes('action="/auth/sign-out" method="post"><button type="submit">Sign out</button>')
     && !source.includes('className="admin-monitor-account"');
 }
 
@@ -92,9 +89,9 @@ function wireManagerConsoleShell() {
   const path = 'components/ManagerConsoleShell.tsx';
   if (!existsSync(path)) return;
   const before = readFileSync(path, 'utf8');
-  const source = shellHasTopAccountContract(before) ? before : canonicalManagerConsoleShell();
-  if (!shellHasTopAccountContract(source)) throw new Error('Top account menu shell contract could not be generated.');
-  writeIfChanged(path, before, source, 'manager shell with header-flow account menu');
+  const source = shellHasGlobalConsoleContract(before) ? before : canonicalManagerConsoleShell();
+  if (!shellHasGlobalConsoleContract(source)) throw new Error('Global ConsoleShell manager contract could not be generated.');
+  writeIfChanged(path, before, source, 'manager shell delegated to global ConsoleShell');
 }
 
 function wireAdminPage() {
