@@ -9,10 +9,7 @@ function notHas(source, term, label) { checks.push({ ok: !source.includes(term),
 function count(source, term, expected, label) { const actual = source.split(term).length - 1; checks.push({ ok: actual === expected, label: `${label} (${actual}/${expected})` }); }
 
 for (const script of ['scripts/apply-manager-template-generation-wiring.mjs', 'scripts/apply-manager-template-workspace-state-wiring.mjs']) {
-  if (existsSync(script)) {
-    execSync(`node ${script}`, { stdio: 'inherit' });
-    execSync(`node ${script}`, { stdio: 'inherit' });
-  }
+  if (existsSync(script)) { execSync(`node ${script}`, { stdio: 'inherit' }); execSync(`node ${script}`, { stdio: 'inherit' }); }
 }
 
 const managerPage = read('app/manager-workspace/page.tsx');
@@ -33,7 +30,8 @@ notHas(managerPage, 'encType="multipart/form-data"', 'manager workspace has no r
 
 has(managerClient, 'TemplateProgressiveWorkspace', 'manager upload flow reuses progressive client template workflow');
 has(managerClient, 'MANAGER_TEMPLATE_ASSET', 'manager upload flow uses manager template source');
-has(managerClient, 'ManagerTemplateLibraryStatus', 'manager upload flow shows active template library status');
+has(managerClient, 'merged-template-command', 'manager upload flow merges template status and metrics into one command card');
+notHas(managerClient, 'ManagerTemplateLibraryStatus', 'manager upload flow does not render standalone duplicate status summary');
 has(managerClient, 'managerTemplateScope={managerTemplateScope}', 'manager client passes only verified template scope');
 notHas(managerClient, 'canManageTemplates: true', 'manager client has no fake writable fallback scope');
 has(managerClient, 'handleExhibitsHydrated', 'manager client separates hydration from mutation refresh');
@@ -46,6 +44,10 @@ has(packet, 'resolveTemplateAuthority', 'packet configurator uses authority mode
 has(packet, 'Manager controlled', 'packet configurator renders locked manager-controlled client actions');
 has(packet, 'pendingActionKey', 'packet configurator tracks per-slot pending actions');
 has(packet, 'disabled={actionInFlight}', 'packet configurator disables repeated actions while upload/remove is pending');
+has(packet, 'manager-upload-action', 'packet configurator exposes always-visible upload inputs');
+has(packet, 'type="file"', 'packet configurator keeps real file inputs in the visible action row');
+notHas(packet, 'contextual-action-region', 'packet configurator no longer hides upload behind reveal-only region');
+notHas(packet, 'template-manager-policy-inline', 'packet configurator does not render duplicate authority banner');
 has(packet, 'onTemplateMutation?.()', 'packet configurator refreshes parent only after upload/remove mutation');
 has(packet, 'data-template-authority-mode={authority.mode}', 'packet configurator exposes authority mode');
 has(packet, 'summarizeTemplateQuality', 'packet configurator renders template quality summaries');
@@ -53,6 +55,7 @@ count(packet, 'const readOnlyReason = managerTemplateLockMessage(managerTemplate
 
 has(progressive, 'data-template-authority-mode', 'progressive template UX exposes authority mode');
 has(progressive, 'onTemplateMutation?', 'progressive template UX wires mutation callback');
+notHas(progressive, 'template-manager-policy-banner', 'progressive template UX does not render duplicate authority banner');
 has(authority, "'CLIENT_READONLY'", 'authority model defines client read-only mode');
 has(authority, "'MANAGER_EDIT'", 'authority model defines manager edit mode');
 has(shell, 'data-manager-canonical-switch="true"', 'shared manager shell owns canonical switch mode');
@@ -68,8 +71,5 @@ has(pkg, 'apply-manager-template-workspace-state-wiring.mjs', 'dev/typecheck/bui
 
 checks.forEach((check) => console.log(`${check.ok ? '✅' : '❌'} ${check.label}`));
 const failed = checks.filter((check) => !check.ok);
-if (failed.length) {
-  console.error(`\nManager template roadmap guard failed: ${failed.length} check(s) failed.`);
-  process.exit(1);
-}
+if (failed.length) { console.error(`\nManager template roadmap guard failed: ${failed.length} check(s) failed.`); process.exit(1); }
 console.log(`\nManager template roadmap guard passed: ${checks.length} check(s).`);
