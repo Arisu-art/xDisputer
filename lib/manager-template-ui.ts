@@ -1,3 +1,5 @@
+import { resolveTemplateAuthority } from './manager-template-authority';
+
 export type ManagerTemplateScopeUi = {
   templateScope: 'MANAGER_TEMPLATE_ASSET';
   managerUserId: string;
@@ -8,15 +10,15 @@ export type ManagerTemplateScopeUi = {
 };
 
 export function managerTemplateAuthorityLabel(scope: ManagerTemplateScopeUi | null | undefined) {
-  if (!scope) return 'Loading manager template policy';
-  if (scope.canManageTemplates) return 'Manager template library';
-  return 'Managed by assigned manager';
+  return resolveTemplateAuthority(scope).eyebrow;
 }
 
 export function managerTemplateActionLabel(scope: ManagerTemplateScopeUi | null | undefined) {
-  if (!scope) return 'Template policy is loading.';
-  if (scope.canManageTemplates) return 'You can upload, replace, and remove manager default templates.';
-  return 'Template upload is locked. This client uses the default templates uploaded by the assigned manager.';
+  return resolveTemplateAuthority(scope).actionLabel;
+}
+
+export function managerTemplateStatusLabel(scope: ManagerTemplateScopeUi | null | undefined) {
+  return resolveTemplateAuthority(scope).statusBadge;
 }
 
 export function canUseLocalBrowserTemplateFallback(scope: ManagerTemplateScopeUi | null | undefined) {
