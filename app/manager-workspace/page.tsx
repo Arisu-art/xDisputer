@@ -14,8 +14,8 @@ export default async function ManagerWorkspacePage() {
     navItems={[
       { href: '/manager-workspace', label: 'Template library', active: true },
       { href: '/admin/access', label: 'Assigned clients' },
-      { href: '/admin', label: 'Operations console' },
-      { href: '/workspace', label: 'Client workspace view' }
+      { href: '/workspace', label: 'Client workspace view' },
+      { href: '/admin', label: 'Switch mode', kind: 'workspace-switch' as const }
     ]}
   >
     <ManagerTemplateWorkspaceClient />
