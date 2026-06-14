@@ -1,11 +1,13 @@
 import ConsoleNavLink from './ConsoleNavLink';
-import ManagerWorkspaceSwitch from './ManagerWorkspaceSwitch';
+import ConsoleShell from './console/ConsoleShell';
+import type { ConsoleNavItem } from './console/ConsoleShell';
 import type { GenerationReportFilters, GenerationReportRow, GenerationReportSummary } from '../lib/saas/generation-reports';
 
 type Scope = 'master' | 'manager';
 
 type Props = {
   scope: Scope;
+  accountEmail?: string | null;
   action: string;
   exportHref: string;
   filters: GenerationReportFilters;
@@ -41,24 +43,24 @@ function statusLabel(value: string | null | undefined) {
   return value || 'Unknown';
 }
 
-function ReportNavigation({ scope }: { scope: Scope }) {
-  if (scope === 'master') {
-    return <nav aria-label="Master reports navigation">
-      <ConsoleNavLink href="/master">Monitoring</ConsoleNavLink>
-      <ConsoleNavLink href="/master/accounts">Accounts</ConsoleNavLink>
-      <ConsoleNavLink className="active" href="/master/reports">Reports</ConsoleNavLink>
-      <ConsoleNavLink href="/master/audit">Audit</ConsoleNavLink>
-      <ConsoleNavLink href="/master/system">System</ConsoleNavLink>
-    </nav>;
-  }
-
-  return <nav aria-label="Manager reports navigation">
-    <ConsoleNavLink href="/admin">Monitoring</ConsoleNavLink>
-    <ConsoleNavLink href="/admin/access">Access</ConsoleNavLink>
-    <ConsoleNavLink href="/admin?panel=intake">Intake</ConsoleNavLink>
-    <ConsoleNavLink className="active" href="/admin/reports">Reports</ConsoleNavLink>
-    <ConsoleNavLink href="/admin/audit">Audit</ConsoleNavLink>
-  </nav>;
+function reportNavItems(scope: Scope): ConsoleNavItem[] {
+  if (scope === 'master') return [
+    { href: '/master', label: 'Monitoring' },
+    { href: '/master/accounts', label: 'Accounts' },
+    { href: '/master/workspaces', label: 'Workspaces' },
+    { href: '/master/reports', label: 'Reports', active: true },
+    { href: '/master/audit', label: 'Audit log' },
+    { href: '/master/system', label: 'System health' },
+    { href: '/master/recovery', label: 'Recovery ledger' }
+  ];
+  return [
+    { href: '/admin', label: 'Monitoring' },
+    { href: '/admin/access', label: 'Access control' },
+    { href: '/admin?panel=intake', label: 'Client intake' },
+    { href: '/admin/reports', label: 'Reports', active: true },
+    { href: '/admin/audit', label: 'Audit log' },
+    { href: '/manager-workspace', label: 'Switch mode', kind: 'workspace-switch' }
+  ];
 }
 
 function ReportFilters({ action, exportHref, filters, activeCount }: Pick<Props, 'action' | 'exportHref' | 'filters' | 'activeCount'>) {
@@ -101,7 +103,6 @@ function ReportFilters({ action, exportHref, filters, activeCount }: Pick<Props,
 
 function ReportHeroMetrics({ summary }: { summary: GenerationReportSummary }) {
   const successful = summary.generated + summary.downloaded;
-
   return <aside className="report-side-summary" aria-label="Generation report summary">
     <div className="report-side-summary-top">
       <article><span>Runs</span><strong>{summary.total}</strong><small>{summary.downloaded} downloaded</small></article>
@@ -124,10 +125,7 @@ function ActivityStream({ rows, scope }: { rows: GenerationReportRow[]; scope: S
     </div>
     {rows.length ? <div className="minimal-activity-list report-dataset-scroll" role="list" tabIndex={0} aria-label="Scrollable generation report activity">
       {rows.map((row) => <article key={row.run_id} className="minimal-activity-row" role="listitem">
-        <div>
-          <strong>{row.client_name || row.owner_email || 'Client activity'}</strong>
-          <span>{row.round_label || 'Round not set'} · {formatDate(row.created_at)}</span>
-        </div>
+        <div><strong>{row.client_name || row.owner_email || 'Client activity'}</strong><span>{row.round_label || 'Round not set'} · {formatDate(row.created_at)}</span></div>
         {scope === 'master' && <small>{row.manager_email || 'No manager'}</small>}
         <em className={`admin-status-badge ${row.output_status || 'unknown'}`}>{statusLabel(row.output_status)}</em>
       </article>)}
@@ -135,23 +133,14 @@ function ActivityStream({ rows, scope }: { rows: GenerationReportRow[]; scope: S
   </section>;
 }
 
-export default function GenerationReportView({ scope, action, exportHref, filters, activeCount, rows, summary, title, eyebrow, description, errorMessage }: Props) {
-  return <main className={`admin-monitor-page native-console ${scope === 'master' ? 'master-ops-console' : 'manager-ops-console'}`}>
-    <aside className="admin-monitor-sidebar native-console-sidebar">
-      <div className="admin-monitor-brand"><span>xD</span><div><strong>xDisputer</strong><small>{scope === 'master' ? 'Master reports' : 'Manager reports'}</small></div></div>
-      <div className="admin-sidebar-section-title">Operations</div>
-      <ReportNavigation scope={scope} />{scope === 'manager' && <ManagerWorkspaceSwitch />}
-    </aside>
-
-    <section className="admin-monitor-main native-console-main">
-      <header className="admin-monitor-header native-command-hero master-compact-hero minimal-report-hero compact-report-hero compact-report-hero-slim">
-        <div className="compact-report-hero-copy"><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div>
-        {!errorMessage && <ReportHeroMetrics summary={summary} />}
-      </header>
-
-      <ReportFilters action={action} exportHref={exportHref} filters={filters} activeCount={activeCount} />
-
-      {errorMessage ? <section className="admin-monitor-card"><div className="admin-monitor-empty">Could not load generation report: {errorMessage}</div></section> : <ActivityStream rows={rows} scope={scope} />}
-    </section>
-  </main>;
+export default function GenerationReportView({ scope, accountEmail, action, exportHref, filters, activeCount, rows, summary, title, eyebrow, description, errorMessage }: Props) {
+  const isMaster = scope === 'master';
+  return <ConsoleShell role={scope} mode="operations" email={accountEmail} accountLabel={isMaster ? 'Master account' : 'Manager account'} brandSubtitle={isMaster ? 'Master reports' : 'Manager reports'} sidebarSectionTitle="Operations" navItems={reportNavItems(scope)} switchTarget={isMaster ? '/admin' : '/manager-workspace'} switchTargetLabel={isMaster ? 'Manager console' : 'Manager workspace'} navAriaLabel={isMaster ? 'Master reports navigation' : 'Manager reports navigation'} activeNavUsesConsoleLink>
+    <header className="admin-monitor-header native-command-hero master-compact-hero minimal-report-hero compact-report-hero compact-report-hero-slim">
+      <div className="compact-report-hero-copy"><p>{eyebrow}</p><h1>{title}</h1><span>{description}</span></div>
+      {!errorMessage && <ReportHeroMetrics summary={summary} />}
+    </header>
+    <ReportFilters action={action} exportHref={exportHref} filters={filters} activeCount={activeCount} />
+    {errorMessage ? <section className="admin-monitor-card"><div className="admin-monitor-empty">Could not load generation report: {errorMessage}</div></section> : <ActivityStream rows={rows} scope={scope} />}
+  </ConsoleShell>;
 }
