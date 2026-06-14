@@ -5,7 +5,6 @@ import { execSync } from 'node:child_process';
 const checks = [];
 function read(path) { const ok = existsSync(path); checks.push({ ok, label: `file exists: ${path}` }); return ok ? readFileSync(path, 'utf8') : ''; }
 function has(source, term, label) { checks.push({ ok: source.includes(term), label }); }
-function count(source, term, expected, label) { const actual = source.split(term).length - 1; checks.push({ ok: actual === expected, label: `${label} (${actual}/${expected})` }); }
 
 if (existsSync('scripts/apply-manager-workspace-nav-wiring.mjs')) {
   execSync('node scripts/apply-manager-workspace-nav-wiring.mjs', { stdio: 'inherit' });
@@ -13,25 +12,29 @@ if (existsSync('scripts/apply-manager-workspace-nav-wiring.mjs')) {
 }
 
 const page = read('app/manager-workspace/page.tsx');
+const clientFlow = read('components/ManagerTemplateWorkspaceClient.tsx');
+const switchComponent = read('components/ManagerWorkspaceSwitch.tsx');
 const routes = read('lib/saas/routes.ts');
-const nav = read('app/admin/page.tsx');
-const css = read('app/globals.css');
+const admin = read('app/admin/page.tsx');
+const access = read('app/admin/access/page.tsx');
+const audit = read('components/AccessAuditView.tsx');
+const reports = read('components/GenerationReportView.tsx');
 const pkg = read('package.json');
 
-has(page, 'Manager workspace', 'manager workspace page has environment label');
-has(page, 'Upload manager defaults', 'manager workspace has upload area');
-has(page, '/api/template-assets', 'manager workspace uploads through manager template API');
-has(page, 'TemplateUploadCard', 'manager workspace has per-round upload cards');
-has(page, 'managerTemplateSlotKey', 'manager workspace shows template slot keys');
+has(page, 'ManagerTemplateWorkspaceClient', 'manager workspace uses client-like template workflow component');
+has(page, '<ManagerWorkspaceSwitch target="/admin" reverse />', 'manager workspace has reverse switch to operations');
+has(clientFlow, 'TemplateProgressiveWorkspace', 'manager upload UX reuses client workspace progressive template workflow');
+has(clientFlow, '/api/template-assets?round=', 'manager upload workflow loads manager-scoped template API');
+has(clientFlow, 'MANAGER_TEMPLATE_ASSET', 'manager upload workflow uses manager template source');
+has(switchComponent, 'manager-workspace-switch-button', 'switch button component exists');
+has(switchComponent, 'managerSwitchPulse', 'switch pulse animation exists');
+has(switchComponent, 'managerSwitchShine', 'switch shine animation exists');
 has(routes, '/manager-workspace', 'manager workspace route is protected');
-has(nav, 'manager-workspace-switch-card', 'operations sidebar has bottom switch card');
-has(nav, 'Switch mode', 'operations sidebar switch has visible label');
-has(nav, 'Manager workspace</small>', 'operations sidebar switch describes target environment');
-count(nav, 'manager-workspace-switch-card', 1, 'operations sidebar has one switch card');
-has(css, 'managerSwitchPulse', 'switch has pulse animation');
-has(css, 'managerSwitchShine', 'switch has shine animation');
-has(css, 'manager-workspace-switch-button', 'switch button styling exists');
-has(pkg, 'apply-manager-workspace-nav-wiring.mjs', 'predev applies manager workspace switch wiring');
+has(admin, '<ManagerWorkspaceSwitch />', '/admin sidebar directly renders switch');
+has(access, '<ManagerWorkspaceSwitch />', '/admin/access sidebar directly renders switch');
+has(audit, "{scope === 'manager' && <ManagerWorkspaceSwitch />}", '/admin/audit sidebar renders switch');
+has(reports, "{scope === 'manager' && <ManagerWorkspaceSwitch />}", '/admin/reports sidebar renders switch');
+has(pkg, 'apply-manager-workspace-nav-wiring.mjs', 'predev applies manager workspace nav wiring');
 
 checks.forEach((check) => console.log(`${check.ok ? '✅' : '❌'} ${check.label}`));
 const failed = checks.filter((check) => !check.ok);
