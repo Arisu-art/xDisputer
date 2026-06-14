@@ -1,6 +1,6 @@
 # UI Shell Roadmap Tracker
 
-Active mode: GitHub repo + Codespaces + Supabase only. Deployment integrations are not part of the current validation path.
+Active mode: GitHub repo + Codespaces + Supabase. Deployment remains disabled by default unless an approved MCoder deployment request is consumed by the approved workflow.
 
 ## Current objective
 
@@ -11,6 +11,8 @@ Keep every console surface on the same header-shell model and stop source/UI dri
 - `ConsoleHeader` is the single reusable route-level header contract
 - `AccountMenu` is the single role-aware avatar/account dock owner
 - `RenderDebugger` exposes the actual rendered shell, header, account menu, CSS list, and ratio at runtime
+- `deployment_requests` and the MCoder gate must approve a deployment before the deploy workflow can run
+- route smoke checks must prove the rendered UI contains the shell markers and can capture screenshots
 - old sidebar account footer and sign-out duplicates are removed
 - compact template summary chips remain removed
 
@@ -18,19 +20,19 @@ Keep every console surface on the same header-shell model and stop source/UI dri
 
 | Phase | Status | Source of truth | Guard |
 | --- | --- | --- | --- |
-| Phase A — Disable auto-rewrite UI scripts | Implemented | `package.json` + `scripts/phase14-local-safety-check.mjs` | `scripts/console-shell-contract-guard.mjs` |
+| Phase A — Disable auto-rewrite UI scripts | Implemented | `package.json` + `scripts/phase14-local-safety-check.mjs` | `scripts/no-autowrite-ui-guard.mjs` |
 | Phase B — Single ConsoleShell ownership | Implemented | `components/console/ConsoleShell.tsx` | `scripts/console-shell-contract-guard.mjs` |
 | Phase C — Single ConsoleHeader | Implemented | `components/console/ConsoleHeader.tsx` | `scripts/console-shell-contract-guard.mjs` |
 | Phase D — Single AccountMenu | Implemented | `components/console/AccountMenu.tsx` | `scripts/console-shell-contract-guard.mjs` |
 | Phase E — Render debugger overlay | Implemented | `components/console/RenderDebugger.tsx` | `scripts/console-shell-contract-guard.mjs` |
-| Phase F — M-coder deployment gate | Pending | planned `scripts/mcoder-deployment-gate.mjs` | pending |
-| Phase G — Route screenshot smoke audit | Pending | planned Playwright or DOM smoke runner | pending |
+| Phase F — M-coder deployment gate | Implemented | `supabase/migrations/20260615080000_mcoder_deployment_gate.sql` + `scripts/mcoder-deployment-gate.mjs` + `.github/workflows/deploy-approved.yml` | `scripts/console-shell-contract-guard.mjs` |
+| Phase G — Route screenshot smoke audit | Implemented | `playwright.config.ts` + `tests/ui-shell-smoke.spec.ts` | `npm run ui-shell:smoke` |
 
 ## Legacy shell roadmap
 
 | Phase | Status | Source of truth | Guard |
 | --- | --- | --- | --- |
-| Phase 0 — Shell surface inventory | Implemented | This tracker | `scripts/console-shell-contract-guard.mjs` |
+| Phase 0 — Shell surface inventory | Implemented | This tracker | `scripts/ui-shell-registry-guard.mjs` |
 | Phase 1 — Global shell contract | Implemented | `components/console/ConsoleShell.tsx` | `scripts/console-shell-contract-guard.mjs` |
 | Phase 2 — Global layout tokens | Implemented | `app/console-shell-system.css` | `scripts/console-shell-contract-guard.mjs` |
 | Phase 3 — Shared avatar account dock | Implemented | `components/console/AccountMenu.tsx` + `app/account-menu-ratio-system.css` | `scripts/manager-visible-switch-contract-guard.mjs` |
@@ -67,6 +69,7 @@ npm run ui-source:guard
 They check:
 
 - dev/typecheck/build no longer run legacy UI auto-rewrite scripts
+- the UI registry lists every shell route owner
 - `ConsoleShell` owns sidebar/main/header grid placement
 - `ConsoleShell` owns `ConsoleHeader` placement
 - `ConsoleShell` owns the shared role-aware `AccountMenu`
@@ -77,12 +80,30 @@ They check:
 - final ratio override stylesheet is imported through the active account menu CSS chain
 - template summary chips are removed
 - old sidebar account footer is removed
+- MCoder deployment gate files exist and are wired
+- route smoke audit files exist and are wired
 
 ## Verification command
 
 ```bash
 npm run xdisputer:guard
 ```
+
+## MCoder approval flow
+
+Create a request:
+
+```bash
+npm run mcoder:request -- --group ui-shell --sha "$(git rev-parse HEAD)" --ref "$(git rev-parse --abbrev-ref HEAD)" --environment production --requested-by "developer@example.com" --summary '{"change":"ui shell stabilization"}'
+```
+
+Approve it:
+
+```bash
+npm run mcoder:approve -- --request-id "<deployment_request_id>" --reviewed-by "mcoder@example.com" --comment "Approved after guard and smoke audit"
+```
+
+Then manually run the GitHub workflow `Deploy approved build` with the request id and environment.
 
 ## Manual runtime test
 
@@ -102,4 +123,12 @@ Then check DevTools:
 
 ```js
 window.__xdisputerDebug
+```
+
+## Screenshot smoke audit
+
+Create a Playwright authenticated storage-state file and point `E2E_AUTH_STATE` to it, then run:
+
+```bash
+npm run ui-shell:smoke
 ```
