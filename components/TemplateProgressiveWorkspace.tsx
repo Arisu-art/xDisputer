@@ -22,6 +22,7 @@ type Props = {
   onExhibitsChange: (next: TemplateExhibits) => void | Promise<void>;
   onTemplateMutation?: () => void | Promise<void>;
   onMessage: (message: string) => void;
+  onUseRoundForSourceData?: () => void;
 };
 function positionCount(packet: LetterType) { return `${packetPositionCount(packet)} positions`; }
 function packetTitle(packet: LetterType) { return packet === 'DISPUTE' ? 'Dispute Packet' : 'Late Payment Packet'; }
