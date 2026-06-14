@@ -19,8 +19,8 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
       <div className="admin-sidebar-section-title">{workspaceMode ? 'Workspace' : 'Operations'}</div>
       <nav aria-label={workspaceMode ? 'Manager workspace navigation' : 'Manager operations navigation'}>
         {navItems.map((item) => <a key={item.href} className={item.active ? 'active' : ''} href={item.href}>{item.label}</a>)}
+        <ManagerWorkspaceSwitch target={workspaceMode ? '/admin' : '/manager-workspace'} reverse={workspaceMode} variant="nav" />
       </nav>
-      <ManagerWorkspaceSwitch target={workspaceMode ? '/admin' : '/manager-workspace'} reverse={workspaceMode} />
       <div className="admin-monitor-account"><strong>{email || 'Manager account'}</strong><small>{accountLabel}</small><form action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form></div>
     </aside>
     <section className="admin-monitor-main native-console-main">{children}</section>
