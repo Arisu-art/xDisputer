@@ -26,6 +26,9 @@ assigned manager template
 | Phase 6 — Orchestrator wiring | Implemented | `lib/template-execution/template-execution-orchestrator.ts` | `scripts/template-execution-guard.mjs` |
 | Phase 7 — Client workspace cutover | Implemented | `components/LetterGeneratorWorkspaceV2.tsx` | `scripts/template-execution-guard.mjs` |
 | Phase 8 — Runtime template debugger | Implemented | `components/console/RenderDebugger.tsx` | `scripts/ui-shell-registry-guard.mjs` |
+| Phase 9 — Verification-only template roadmap guard | Implemented | `scripts/manager-template-roadmap-guard.mjs` | `scripts/template-execution-guard.mjs` |
+| Phase 10 — MCoder event ledger | Implemented | `supabase/migrations/20260615093000_mcoder_deployment_gate_events.sql` | `scripts/template-execution-guard.mjs` |
+| Phase 11 — UI smoke execution proof | Implemented | `tests/ui-shell-smoke.spec.ts` | `npm run ui-shell:smoke` |
 
 ## Active execution contract
 
@@ -91,6 +94,7 @@ Expected shape:
 
 ```bash
 npm run template-execution:guard
+node scripts/manager-template-roadmap-guard.mjs
 npm run ui-source:guard
 npm run typecheck
 npm run build
@@ -102,5 +106,4 @@ npm run build
 | --- | --- | --- |
 | Server-side generation API | Current orchestrator runs in browser workspace | Add `/api/template-execution/generate` after client path is stable |
 | Template manifest cache | Current asset API fetches per round | Add cache tag invalidation after upload/remove |
-| Playwright authenticated smoke | Requires storage-state file | Generate and commit no secrets; store locally only |
 | Full legacy renderer deletion | Fallback still needed during rollout | Remove after v2 passes real-template regression |
