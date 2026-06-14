@@ -15,13 +15,26 @@ function ensureImport(source, anchor, line) {
   return source.replace(anchor, `${anchor}\n${line}`);
 }
 
+function removeImport(source, line) {
+  return source.replace(`${line}\n`, '');
+}
+
 function wireAdminPage() {
   const path = 'app/admin/page.tsx';
   if (!existsSync(path)) return;
   const before = readFileSync(path, 'utf8');
   let source = before;
+
+  if (source.includes('ManagerConsoleShell')) {
+    source = removeImport(source, "import ManagerWorkspaceSwitch from '../../components/ManagerWorkspaceSwitch';");
+    writeIfChanged(path, before, source, 'manager workspace switch on /admin via shared shell');
+    return;
+  }
+
   source = ensureImport(source, "import ConsoleNavLink from '../../components/ConsoleNavLink';", "import ManagerWorkspaceSwitch from '../../components/ManagerWorkspaceSwitch';");
-  if (!source.includes('<ManagerWorkspaceSwitch />')) source = source.replace('<div className="admin-monitor-account">', '<ManagerWorkspaceSwitch /><div className="admin-monitor-account">');
+  if (!source.includes('<ManagerWorkspaceSwitch />')) {
+    source = source.replace('<div className="admin-monitor-account">', '<ManagerWorkspaceSwitch /><div className="admin-monitor-account">');
+  }
   writeIfChanged(path, before, source, 'manager workspace switch on /admin');
 }
 
@@ -31,7 +44,9 @@ function wireAdminAccessPage() {
   const before = readFileSync(path, 'utf8');
   let source = before;
   source = ensureImport(source, "import ConsoleNavLink from '../../../components/ConsoleNavLink';", "import ManagerWorkspaceSwitch from '../../../components/ManagerWorkspaceSwitch';");
-  if (!source.includes('<ManagerWorkspaceSwitch />')) source = source.replace('<div className="admin-monitor-account">', '<ManagerWorkspaceSwitch /><div className="admin-monitor-account">');
+  if (!source.includes('<ManagerWorkspaceSwitch />')) {
+    source = source.replace('<div className="admin-monitor-account">', '<ManagerWorkspaceSwitch /><div className="admin-monitor-account">');
+  }
   writeIfChanged(path, before, source, 'manager workspace switch on /admin/access');
 }
 
@@ -41,7 +56,9 @@ function wireAuditView() {
   const before = readFileSync(path, 'utf8');
   let source = before;
   source = ensureImport(source, "import ConsoleNavLink from './ConsoleNavLink';", "import ManagerWorkspaceSwitch from './ManagerWorkspaceSwitch';");
-  if (!source.includes("{scope === 'manager' && <ManagerWorkspaceSwitch />}")) source = source.replace('{nav(scope)}', "{nav(scope)}\n      {scope === 'manager' && <ManagerWorkspaceSwitch />}");
+  if (!source.includes("{scope === 'manager' && <ManagerWorkspaceSwitch />}")) {
+    source = source.replace('{nav(scope)}', "{nav(scope)}\n      {scope === 'manager' && <ManagerWorkspaceSwitch />}");
+  }
   writeIfChanged(path, before, source, 'manager workspace switch on audit view');
 }
 
@@ -51,7 +68,9 @@ function wireReportView() {
   const before = readFileSync(path, 'utf8');
   let source = before;
   source = ensureImport(source, "import ConsoleNavLink from './ConsoleNavLink';", "import ManagerWorkspaceSwitch from './ManagerWorkspaceSwitch';");
-  if (!source.includes("{scope === 'manager' && <ManagerWorkspaceSwitch />}")) source = source.replace('<ReportNavigation scope={scope} />', "<ReportNavigation scope={scope} />{scope === 'manager' && <ManagerWorkspaceSwitch />}");
+  if (!source.includes("{scope === 'manager' && <ManagerWorkspaceSwitch />}")) {
+    source = source.replace('<ReportNavigation scope={scope} />', "<ReportNavigation scope={scope} />{scope === 'manager' && <ManagerWorkspaceSwitch />}");
+  }
   writeIfChanged(path, before, source, 'manager workspace switch on reports view');
 }
 
