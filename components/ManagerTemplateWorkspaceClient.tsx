@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import TemplateProgressiveWorkspace from './TemplateProgressiveWorkspace';
+import ManagerTemplateWorkspaceChrome from './ManagerTemplateWorkspaceChrome';
 import { defaultReferences, type LetterReference, type Round } from '../lib/reference-store';
 import { exhibitModes, exhibitTitles, type ExhibitAsset, type ExhibitKind, type TemplateExhibits } from '../lib/template-exhibits';
 import { summarizeTemplateQuality } from '../lib/manager-template-authority';
@@ -104,6 +105,7 @@ export default function ManagerTemplateWorkspaceClient() {
   async function handleTemplateMutation() { await loadAssets(round); }
 
   return <section className="manager-template-client-flow manager-workspace-body-shell" data-manager-workspace-body-shell="compact" data-manager-template-scope-state={managerTemplateScope?.canManageTemplates ? 'verified-upload' : loading ? 'loading' : 'locked'}>
+    <ManagerTemplateWorkspaceChrome />
     <section className="admin-monitor-card manager-template-workflow-status compact-workspace-command merged-template-command" aria-label="Manager template workspace status">
       <div className="merged-template-command-copy">
         <p className="eyebrow">Template library</p>
@@ -111,14 +113,14 @@ export default function ManagerTemplateWorkspaceClient() {
         <span>{statusMessage}</span>
       </div>
       <div className="merged-template-command-metrics" aria-label="Active manager template metrics">
-        <span><b>{loading ? '…' : assets.length}</b><small>active</small></span>
-        <span><b>{letterCount}/{exhibitCount}</b><small>letters/exhibits</small></span>
-        <span><b>{latestVersion || '—'}</b><small>latest</small></span>
-        <span><b>{warningCount}</b><small>review</small></span>
-        <span><b>{shortHash(assets[0]?.content_hash)}</b><small>proof</small></span>
-        <span className="admin-status-badge active"><b>{round}</b><small>round</small></span>
+        <span><b>{loading ? '…' : assets.length}</b><small>Active templates</small></span>
+        <span><b>{letterCount}/{exhibitCount}</b><small>Letters / exhibits</small></span>
+        <span><b>{latestVersion || '—'}</b><small>Latest version</small></span>
+        <span><b>{warningCount}</b><small>Needs review</small></span>
+        <span><b>{shortHash(assets[0]?.content_hash)}</b><small>Storage proof</small></span>
+        <span className="manager-round-chip"><b>{round}</b><small>Selected round</small></span>
       </div>
     </section>
-    <TemplateProgressiveWorkspace round={round} slots={slots} supportingReady={false} managerTemplateScope={managerTemplateScope} managedExhibits={exhibits} onSelectRound={(next) => { setRound(next); setMessage(`${next} selected for manager default template setup.`); }} onUploadLetter={handleUploadLetter} onRemoveLetter={handleRemoveLetter} onExhibitsChange={handleExhibitsHydrated} onTemplateMutation={handleTemplateMutation} onMessage={setMessage} onUseRoundForSourceData={() => setMessage(`${round} manager defaults are selected. Upload/replace templates here; clients will generate from the active versions.`)} />
+    <TemplateProgressiveWorkspace round={round} slots={slots} supportingReady={false} managerTemplateScope={managerTemplateScope} managedExhibits={exhibits} onSelectRound={(next) => { setRound(next); setMessage(`${next} selected for manager default template setup.`); }} onUploadLetter={handleUploadLetter} onRemoveLetter={handleRemoveLetter} onExhibitsChange={handleExhibitsHydrated} onTemplateMutation={handleTemplateMutation} onMessage={setMessage} />
   </section>;
 }
