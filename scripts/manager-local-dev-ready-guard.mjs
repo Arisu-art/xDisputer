@@ -28,6 +28,7 @@ run('node scripts/apply-manager-template-generation-wiring.mjs');
 
 assertContains('app/admin/page.tsx', 'ManagerConsoleShell', '/admin uses shared manager shell');
 assertContains('app/admin/page.tsx', 'mode="operations"', '/admin is operations mode');
+assertNotContains('app/admin/page.tsx', "import ManagerWorkspaceSwitch from '../../components/ManagerWorkspaceSwitch';", '/admin has no stale direct switch import after shell migration');
 assertContains('app/admin/access/page.tsx', 'ManagerWorkspaceSwitch', '/admin/access is switch-ready after nav wiring');
 assertContains('components/AccessAuditView.tsx', 'ManagerWorkspaceSwitch', '/admin/audit is switch-ready');
 assertContains('components/GenerationReportView.tsx', 'ManagerWorkspaceSwitch', '/admin/reports is switch-ready');
