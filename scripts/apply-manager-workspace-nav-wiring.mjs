@@ -16,7 +16,7 @@ function ensureImport(source, anchor, line) {
 }
 
 function removeImport(source, line) {
-  return source.replace(`${line}\n`, '');
+  return source.replace(`${line}\n`, '').replace(`\n${line}`, '');
 }
 
 function wireAdminPage() {
@@ -27,7 +27,14 @@ function wireAdminPage() {
 
   if (source.includes('ManagerConsoleShell')) {
     source = removeImport(source, "import ManagerWorkspaceSwitch from '../../components/ManagerWorkspaceSwitch';");
-    writeIfChanged(path, before, source, 'manager workspace switch on /admin via shared shell');
+    source = source.replace("    { href: '/manager-workspace', label: 'Manager workspace' },\n", '');
+    if (!source.includes("kind: 'workspace-switch'")) {
+      source = source.replace(
+        "    { href: '/admin/audit', label: 'Audit log' }",
+        "    { href: '/admin/audit', label: 'Audit log' },\n    { href: '/manager-workspace', label: 'Switch mode', kind: 'workspace-switch' as const }"
+      );
+    }
+    writeIfChanged(path, before, source, 'canonical manager workspace switch on /admin via shared shell');
     return;
   }
 
