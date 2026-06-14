@@ -27,6 +27,10 @@ if (existsSync('scripts/repair-letter-workspace-syntax.mjs')) {
   run('node scripts/repair-letter-workspace-syntax.mjs');
 }
 
+assertFile('components/console/ConsoleShell.tsx');
+assertFile('app/console-shell-system.css');
+assertFile('scripts/console-shell-contract-guard.mjs');
+assertFile('docs/ui-shell-roadmap-tracker.md');
 assertFile('lib/round-template-policy.ts');
 assertFile('lib/generation-manifest.ts');
 assertFile('lib/supabase/template-registry.ts');
@@ -44,6 +48,13 @@ assertFile('app/api/system/runtime/route.ts');
 assertFile('app/system/runtime/page.tsx');
 assertFile('app/system/templates/page.tsx');
 
+assertContains('components/console/ConsoleShell.tsx', 'data-console-shell="true"');
+assertContains('components/console/ConsoleShell.tsx', 'data-console-header-grid="true"');
+assertContains('app/account-menu-ratio-system.css', "@import './console-shell-system.css';");
+assertContains('components/ManagerConsoleShell.tsx', '<ConsoleShell');
+assertContains('app/master/MasterConsoleHome.tsx', '<ConsoleShell');
+assertContains('app/master/accounts/page.tsx', '<ConsoleShell');
+assertContains('app/master/workspaces/page.tsx', '<ConsoleShell');
 assertContains('components/LetterGeneratorWorkspaceV2.tsx', '/api/template-assets?round=');
 assertContains('components/LetterGeneratorWorkspaceV2.tsx', '/api/template-assets/file?');
 assertContains('components/LetterGeneratorWorkspaceV2.tsx', 'generation-manifest.json');
@@ -56,6 +67,7 @@ assertContains('components/GenerationPreflightChecklist.tsx', 'if (READINESS_CHE
 assertContains('lib/preflight-validation.ts', 'DISABLED_PREFLIGHT_RESULT');
 
 run('node scripts/apply-manager-workspace-nav-wiring.mjs');
+run('node scripts/console-shell-contract-guard.mjs');
 run('node scripts/manager-visible-switch-contract-guard.mjs');
 run('node scripts/readiness-checklist-disabled-guard.mjs');
 run('npm run dynamic-template:v2:regression');
