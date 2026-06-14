@@ -10,24 +10,23 @@ function read(path: string) {
 }
 
 export async function GET() {
-  const admin = read('app/admin/page.tsx');
-  const shell = read('components/ManagerConsoleShell.tsx');
-  const layout = read('app/layout.tsx');
+  const consoleShell = read('components/console/ConsoleShell.tsx');
+  const renderDebugger = read('components/console/RenderDebugger.tsx');
+  const registry = read('components/console/ui-shell-registry.ts');
+  const workspace = read('components/LetterGeneratorWorkspaceV2.tsx');
+  const orchestrator = read('lib/template-execution/template-execution-orchestrator.ts');
   const pkg = read('package.json');
+
   const snapshot = managerRuntimeSourceSyncSnapshot([
-    { key: 'admin_explicit_switch_contract', ok: admin.includes("kind: 'workspace-switch'"), label: '/admin declares explicit workspace switch nav item' },
-    { key: 'admin_no_plain_nav_duplicate', ok: !admin.includes("label: 'Manager workspace'"), label: '/admin has no duplicate plain Manager workspace nav fallback' },
-    { key: 'admin_no_direct_page_switch_duplicate', ok: !admin.includes('data-admin-direct-workspace-switch="true"'), label: '/admin has no duplicate page-level workspace switch panel' },
-    { key: 'admin_switch_target', ok: admin.includes("href: '/manager-workspace'"), label: '/admin switch targets /manager-workspace' },
-    { key: 'shell_renders_switch_kind', ok: shell.includes("item.kind === 'workspace-switch'"), label: 'ManagerConsoleShell renders explicit workspace-switch items' },
-    { key: 'shell_uses_deterministic_anchor', ok: shell.includes('function WorkspaceSwitchAnchor'), label: 'ManagerConsoleShell renders switch as deterministic anchor' },
-    { key: 'shell_canonical_switch_marker', ok: shell.includes('data-manager-canonical-switch="true"'), label: 'ManagerConsoleShell marks canonical switch anchor' },
-    { key: 'shell_visible_nav_marker', ok: shell.includes('data-manager-shell-nav="true"'), label: 'ManagerConsoleShell marks visible sidebar nav' },
-    { key: 'shell_contract_version_marker', ok: shell.includes('MANAGER_SWITCH_CONTRACT_VERSION'), label: 'ManagerConsoleShell embeds runtime contract version' },
-    { key: 'shell_no_manager_workspace_switch_import', ok: !shell.includes("import ManagerWorkspaceSwitch"), label: 'ManagerConsoleShell no longer depends on custom switch component import' },
-    { key: 'shell_no_plain_fallback_duplicate', ok: !shell.includes('data-manager-switch-fallback="true"'), label: 'ManagerConsoleShell has no duplicate plain fallback switch link' },
-    { key: 'layout_no_runtime_switch_duplicate', ok: !layout.includes('ManagerWorkspaceRuntimeSwitch'), label: 'Root layout has no duplicate floating runtime switch' },
-    { key: 'predev_includes_nav_wiring', ok: pkg.includes('apply-manager-workspace-nav-wiring.mjs'), label: 'predev still applies manager nav wiring' }
+    { key: 'console_shell_contract', ok: consoleShell.includes('data-console-shell="true"'), label: 'ConsoleShell owns shell contract' },
+    { key: 'console_shell_owns_account_menu', ok: consoleShell.includes('<AccountMenu'), label: 'ConsoleShell owns account menu placement' },
+    { key: 'debugger_template_execution_store', ok: renderDebugger.includes('__xdisputerTemplateExecution'), label: 'Render debugger reads template execution store' },
+    { key: 'registry_template_execution_signal', ok: registry.includes('templateExecutionStore'), label: 'UI registry declares template execution signal' },
+    { key: 'workspace_uses_orchestrator', ok: workspace.includes('executeTemplateGeneration({'), label: 'Client workspace calls TemplateExecutionOrchestrator' },
+    { key: 'orchestrator_resolves_manager_templates', ok: orchestrator.includes('ManagerTemplateResolver'), label: 'TemplateExecutionOrchestrator resolves manager template authority' },
+    { key: 'orchestrator_publishes_runtime_debug', ok: orchestrator.includes('window.__xdisputerTemplateExecution'), label: 'TemplateExecutionOrchestrator publishes runtime debug snapshot' },
+    { key: 'package_no_autowrite_lifecycle', ok: !pkg.includes('apply-manager-workspace-nav-wiring.mjs') && !pkg.includes('apply-manager-template-generation-wiring.mjs'), label: 'package lifecycle is verification-only and contains no UI autowrite scripts' },
+    { key: 'package_template_execution_guard', ok: pkg.includes('template-execution:guard'), label: 'package lifecycle includes template execution guard' }
   ]);
 
   return NextResponse.json(snapshot, {
