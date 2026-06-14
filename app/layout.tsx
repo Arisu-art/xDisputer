@@ -68,7 +68,9 @@ import './professional-console-layout.css';
 import './global-depth-system.css';
 import './account-menu-system.css';
 import './account-menu-ratio-system.css';
+import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
+import RenderDebugger from '../components/console/RenderDebugger';
 
 export const metadata = {
   title: 'xDisputer',
@@ -78,7 +80,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body><ControlNavGlobalTelemetry />{children}</body>
+      <body><ControlNavGlobalTelemetry /><RenderDebugger />{children}</body>
     </html>
   );
 }
