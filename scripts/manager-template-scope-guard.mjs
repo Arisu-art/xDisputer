@@ -24,9 +24,9 @@ const manifestRoute = file('app/api/template-assets/manifest/route.ts');
 ['managerUserId', 'manager/', 'templateStoragePath', 'listActiveTemplateAssets'].forEach((term) => has(registry, term, `registry includes ${term}`));
 ['manager_client_assignments', 'manager_user_id', 'uploaded_by_user_id', 'template_scope', 'app_resolve_template_manager_v1', 'app_activate_manager_template_asset_v1', 'idx_template_assets_one_active_per_manager_slot'].forEach((term) => has(migration, term, `migration includes ${term}`));
 
-has(uploadRoute, 'templateStoragePath', 'upload route uses template storage helper');
-has(fileRoute, 'template_assets', 'file route serves template assets');
-has(manifestRoute, 'templateAssetSlotKey', 'manifest route reports template slot keys');
+['resolveManagerTemplateScope', 'assertCanManageManagerTemplates', 'app_activate_manager_template_asset_v1', 'managerTemplateScopePayload', 'manager_user_id', 'uploaded_by_user_id', 'template_scope'].forEach((term) => has(uploadRoute, term, `template asset route enforces ${term}`));
+['resolveManagerTemplateScope', 'managerTemplateScopePayload', 'MANAGER_TEMPLATE', 'manager_user_id', 'MANAGER_TEMPLATE_ASSET'].forEach((term) => has(fileRoute, term, `template file route enforces ${term}`));
+['resolveManagerTemplateScope', 'managerTemplateScopePayload', 'manager_user_id', 'MANAGER_TEMPLATE_ASSET', 'managerUserId'].forEach((term) => has(manifestRoute, term, `template manifest route reports ${term}`));
 
 const failed = checks.filter((check) => !check.ok);
 checks.forEach((check) => console.log(`${check.ok ? '✅' : '❌'} ${check.label}`));
