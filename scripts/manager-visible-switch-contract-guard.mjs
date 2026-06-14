@@ -14,9 +14,11 @@ const workspace = read('app/manager-workspace/page.tsx');
 const templateWorkspace = read('components/ManagerTemplateWorkspaceClient.tsx');
 
 has(shell, "import ManagerAccountMenu from './ManagerAccountMenu';", 'shell imports top account menu');
-has(shell, '<ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />', 'shell mounts top account menu');
+has(shell, '<section className="admin-monitor-main native-console-main" data-console-header-grid="true">', 'shell uses header-flow grid main section');
+has(shell, '<ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />', 'shell mounts account menu inside header grid flow');
 has(shell, "navItems.filter((item) => item.kind !== 'workspace-switch')", 'shell removes duplicate workspace-switch nav items');
 has(shell, 'data-manager-shell-nav="true"', 'shell keeps standard sidebar nav renderer');
+notHas(shell, '<ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />\n    <aside', 'account menu no longer renders before sidebar as a frozen overlay');
 notHas(shell, 'data-manager-switch-visible-slot="plain-nav-button"', 'old sidebar switch nav button removed');
 notHas(shell, '>\n          Switch mode\n        </a>', 'old sidebar switch text removed');
 notHas(shell, 'className="admin-monitor-account"', 'old left sidebar account footer removed');
@@ -47,9 +49,14 @@ notHas(accountMenu, '↔</Link>', 'switch icon removed from closed header');
 notHas(accountMenu, 'manager-account-primary-grid', 'old two-column primary grid removed');
 notHas(accountMenu, 'manager-account-route-list', 'old duplicated route list removed');
 
-has(accountCss, 'width: clamp(220px, 25vw, 360px)', 'account CSS uses right-side 25 percent dock sizing');
+has(accountCss, 'grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr)', 'account CSS uses real 75/25 header grid');
+has(accountCss, 'position: relative !important', 'account dock is header-flow relative, not frozen fixed');
+has(accountCss, 'top: auto !important', 'account dock overrides old fixed top positioning');
+has(accountCss, 'right: auto !important', 'account dock overrides old fixed right positioning');
+has(accountCss, 'width: 100% !important', 'account dock fills the 25 percent header column');
 has(accountCss, 'justify-content: flex-end', 'account CSS exposes only avatar on the right side');
 has(accountCss, 'border-left: 1px solid rgba(129, 140, 154, .36)', 'account CSS uses neutral separator border');
+notHas(accountCss, 'position: fixed', 'account CSS no longer freezes the avatar dock');
 notHas(accountCss, 'rgba(124, 58, 237, .36)', 'violet account dock border removed');
 notHas(accountCss, 'border-left: 4px solid rgba(124', 'thick violet left border removed');
 
