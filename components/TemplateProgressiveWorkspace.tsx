@@ -37,12 +37,6 @@ export default function TemplateProgressiveWorkspace({ round, slots, supportingR
   function chooseDifferentRound() { setPacket(null); setStage('ROUND'); }
   function useSelectedRound() { onMessage(`${round} manager templates selected. Continue in Source Data to generate with this round.`); onUseRoundForSourceData(); }
   return <div className={`templates-progressive-workspace authority-${authority.mode.toLowerCase()}`} data-template-authority-mode={authority.mode}>
-    <section className="panel template-manager-policy-banner" aria-label="Template manager policy">
-      <p className="eyebrow">{authority.eyebrow}</p>
-      <h2>{authority.title}</h2>
-      <p>{authority.description}</p>
-      <div className="template-selected-badges"><span>{authority.statusBadge}</span><span>{authority.actionLabel}</span></div>
-    </section>
     {stage === 'ROUND' && <section className="panel template-selection-stage template-round-stage" aria-label="Select packet round">
       <header className="template-stage-heading"><p className="eyebrow">Manager-approved reusable templates</p><h2>Select a round</h2><p>Choose the filing round. Every assigned client uses the active manager default template for that round and slot.</p></header>
       <div className="template-round-selection-grid">{rounds.map((item, index) => <button type="button" key={item} className={`template-round-choice ${item === round ? 'current' : ''}`} onClick={() => chooseRound(item)}><span className="template-choice-number">{String(index + 1).padStart(2, '0')}</span><span className="template-choice-copy"><strong>{item}</strong><small>{item === round ? 'Current round' : 'Select round'}</small></span><span className="template-choice-arrow" aria-hidden="true">→</span></button>)}</div>
