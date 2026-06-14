@@ -7,6 +7,8 @@ export default async function ManagerWorkspacePage() {
   const session = await requireAuth();
   if (!session.isManager && !session.isMaster) redirect(session.dashboardPath);
 
+  const switchTarget = session.isMaster ? '/master' : '/admin';
+
   return <ManagerConsoleShell
     mode="workspace"
     email={session.user.email}
@@ -15,7 +17,7 @@ export default async function ManagerWorkspacePage() {
       { href: '/manager-workspace', label: 'Template library', active: true },
       { href: '/admin/access', label: 'Assigned clients' },
       { href: '/workspace', label: 'Client workspace view' },
-      { href: '/admin', label: 'Switch mode', kind: 'workspace-switch' as const }
+      { href: switchTarget, label: 'Switch mode', kind: 'workspace-switch' as const }
     ]}
   >
     <ManagerTemplateWorkspaceClient />
