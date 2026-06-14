@@ -24,12 +24,7 @@
     "init:connections": "bash scripts/init-xdisputer-connections.sh",
     "connections:doctor": "node scripts/check-env-contract.mjs",
     "active:sync": "bash scripts/xdisputer-active-sync-v2.sh",
-    "active:sync:db": "bash scripts/xdisputer-active-sync-v2.sh --sync-db --verify",
-    "verify:production": "node scripts/verify-production-build.mjs",
-    "verify:production:wait": "node scripts/wait-for-production-build.mjs",
-    "production:match": "node scripts/match-production-deploy.mjs",
-    "vercel:status": "node scripts/vercel-status.mjs",
-    "vercel:direct": "node scripts/vercel-direct-production-sync.mjs"
+    "active:sync:db": "bash scripts/xdisputer-active-sync-v2.sh --sync-db --verify"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
