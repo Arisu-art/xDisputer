@@ -8,7 +8,7 @@ function has(source, term, label) { checks.push({ ok: source.includes(term), lab
 function notHas(source, term, label) { checks.push({ ok: !source.includes(term), label }); }
 function count(source, term, expected, label) { const actual = source.split(term).length - 1; checks.push({ ok: actual === expected, label: `${label} (${actual}/${expected})` }); }
 
-for (const script of ['scripts/apply-manager-template-generation-wiring.mjs']) {
+for (const script of ['scripts/apply-manager-template-generation-wiring.mjs', 'scripts/apply-manager-template-workspace-state-wiring.mjs']) {
   if (existsSync(script)) {
     execSync(`node ${script}`, { stdio: 'inherit' });
     execSync(`node ${script}`, { stdio: 'inherit' });
@@ -18,7 +18,9 @@ for (const script of ['scripts/apply-manager-template-generation-wiring.mjs']) {
 const managerPage = read('app/manager-workspace/page.tsx');
 const managerClient = read('components/ManagerTemplateWorkspaceClient.tsx');
 const packet = read('components/TemplatePacketConfigurator.tsx');
+const progressive = read('components/TemplateProgressiveWorkspace.tsx');
 const shell = read('components/ManagerConsoleShell.tsx');
+const authority = read('lib/manager-template-authority.ts');
 const resolver = read('lib/manager-template-file-resolver.ts');
 const workspace = read('components/LetterGeneratorWorkspaceV2.tsx');
 const pkg = read('package.json');
@@ -29,10 +31,18 @@ notHas(managerPage, 'TemplateUploadCard', 'manager workspace has no raw upload c
 notHas(managerPage, 'encType="multipart/form-data"', 'manager workspace has no raw multipart upload forms');
 has(managerClient, 'TemplateProgressiveWorkspace', 'manager upload flow reuses progressive client template workflow');
 has(managerClient, 'MANAGER_TEMPLATE_ASSET', 'manager upload flow uses manager template source');
+has(managerClient, 'ManagerTemplateLibraryStatus', 'manager upload flow shows active template library status');
+has(managerClient, 'async function handleExhibitsChange() { await loadAssets(round); }', 'manager upload flow refetches manager assets after exhibit changes');
 has(packet, 'ManagerTemplateScopeUi', 'packet configurator accepts manager scope');
 has(packet, 'canManageTemplates', 'packet configurator gates upload controls');
-has(packet, 'Read-only client mode', 'packet configurator has client read-only UX');
+has(packet, 'resolveTemplateAuthority', 'packet configurator uses authority model');
+has(packet, 'Manager controlled', 'packet configurator renders locked manager-controlled client actions');
+has(packet, 'data-template-authority-mode={authority.mode}', 'packet configurator exposes authority mode');
+has(packet, 'summarizeTemplateQuality', 'packet configurator renders template quality summaries');
 count(packet, 'const readOnlyReason = managerTemplateLockMessage(managerTemplateScope);', 1, 'packet configurator has one readOnlyReason');
+has(progressive, 'data-template-authority-mode', 'progressive template UX exposes authority mode');
+has(authority, "'CLIENT_READONLY'", 'authority model defines client read-only mode');
+has(authority, "'MANAGER_EDIT'", 'authority model defines manager edit mode');
 has(shell, 'ManagerWorkspaceSwitch', 'shared manager shell owns switch mode');
 has(resolver, 'resolveManagerTemplateFile', 'template resolver exposes manager file resolver');
 has(resolver, 'allowLocalFallback', 'template resolver explicitly controls local fallback');
@@ -40,6 +50,7 @@ has(workspace, 'resolveManagerTemplateFile', 'client workspace generation uses m
 has(workspace, 'MANAGER_TEMPLATE_ASSET', 'client workspace marks manager template source');
 has(workspace, 'managerTemplateScope', 'client workspace tracks manager template scope');
 has(pkg, 'apply-manager-template-generation-wiring.mjs', 'dev/typecheck/build apply generation wiring');
+has(pkg, 'apply-manager-template-workspace-state-wiring.mjs', 'dev/typecheck/build apply workspace state wiring');
 
 checks.forEach((check) => console.log(`${check.ok ? '✅' : '❌'} ${check.label}`));
 const failed = checks.filter((check) => !check.ok);
