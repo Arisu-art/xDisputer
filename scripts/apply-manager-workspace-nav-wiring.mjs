@@ -14,11 +14,6 @@ function removeImport(source, line) {
   return source.replace(`${line}\n`, '').replace(`\n${line}`, '');
 }
 
-function ensureImport(source, anchor, line) {
-  if (source.includes(line)) return source;
-  return source.replace(anchor, `${anchor}\n${line}`);
-}
-
 function canonicalManagerConsoleShell() {
   return `import type { ReactNode } from 'react';
 import ConsoleShell from './console/ConsoleShell';
@@ -77,6 +72,7 @@ function shellHasGlobalConsoleContract(source) {
     && !source.includes('<section className="admin-monitor-main')
     && !source.includes('ManagerAccountMenu')
     && !source.includes('WorkspaceSwitchAnchor')
+    && !source.includes('ManagerWorkspaceSwitch')
     && !source.includes('manager-workspace-nav-switch')
     && !source.includes('top-visible-switch-mode')
     && !source.includes('switchLinkStyle')
@@ -110,38 +106,19 @@ function wireAdminPage() {
   writeIfChanged(path, before, source, 'top account switch contract on /admin');
 }
 
-function wireAdminAccessPage() {
-  const path = 'app/admin/access/page.tsx';
+function cleanupLegacyManagerSwitch(path, label) {
   if (!existsSync(path)) return;
   const before = readFileSync(path, 'utf8');
   let source = before;
-  source = ensureImport(source, "import ConsoleNavLink from '../../../components/ConsoleNavLink';", "import ManagerWorkspaceSwitch from '../../../components/ManagerWorkspaceSwitch';");
-  if (!source.includes('<ManagerWorkspaceSwitch />')) source = source.replace('<div className="admin-monitor-account">', '<ManagerWorkspaceSwitch /><div className="admin-monitor-account">');
-  writeIfChanged(path, before, source, 'manager workspace switch on /admin/access');
-}
-
-function wireAuditView() {
-  const path = 'components/AccessAuditView.tsx';
-  if (!existsSync(path)) return;
-  const before = readFileSync(path, 'utf8');
-  let source = before;
-  source = ensureImport(source, "import ConsoleNavLink from './ConsoleNavLink';", "import ManagerWorkspaceSwitch from './ManagerWorkspaceSwitch';");
-  if (!source.includes("{scope === 'manager' && <ManagerWorkspaceSwitch />}")) source = source.replace('{nav(scope)}', "{nav(scope)}\n      {scope === 'manager' && <ManagerWorkspaceSwitch />}");
-  writeIfChanged(path, before, source, 'manager workspace switch on audit view');
-}
-
-function wireReportView() {
-  const path = 'components/GenerationReportView.tsx';
-  if (!existsSync(path)) return;
-  const before = readFileSync(path, 'utf8');
-  let source = before;
-  source = ensureImport(source, "import ConsoleNavLink from './ConsoleNavLink';", "import ManagerWorkspaceSwitch from './ManagerWorkspaceSwitch';");
-  if (!source.includes("{scope === 'manager' && <ManagerWorkspaceSwitch />}")) source = source.replace('<ReportNavigation scope={scope} />', "<ReportNavigation scope={scope} />{scope === 'manager' && <ManagerWorkspaceSwitch />}");
-  writeIfChanged(path, before, source, 'manager workspace switch on reports view');
+  source = source
+    .replace(/import ManagerWorkspaceSwitch from ['"][^'"]+['"];\n/g, '')
+    .replace(/\{scope === 'manager' && <ManagerWorkspaceSwitch \/>\}/g, '')
+    .replace(/<ManagerWorkspaceSwitch \/>/g, '');
+  writeIfChanged(path, before, source, label);
 }
 
 wireManagerConsoleShell();
 wireAdminPage();
-wireAdminAccessPage();
-wireAuditView();
-wireReportView();
+cleanupLegacyManagerSwitch('app/admin/access/page.tsx', 'legacy manager switch cleanup on /admin/access');
+cleanupLegacyManagerSwitch('components/AccessAuditView.tsx', 'legacy manager switch cleanup on audit view');
+cleanupLegacyManagerSwitch('components/GenerationReportView.tsx', 'legacy manager switch cleanup on reports view');
