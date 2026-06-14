@@ -1,39 +1,47 @@
 import type { ReactNode } from 'react';
 import ConsoleShell from './console/ConsoleShell';
+import type { ConsoleHeaderProps } from './console/ConsoleHeader';
+import type { ConsoleNavItem, ConsoleShellMode, ConsoleShellRole } from './console/ConsoleShell';
 import { MANAGER_SWITCH_CONTRACT_VERSION } from '../lib/manager-runtime-source-sync';
 
-type NavItem = { href: string; label: string; active?: boolean; kind?: 'link' | 'workspace-switch' };
-
 type Props = {
-  mode: 'operations' | 'workspace';
+  role?: ConsoleShellRole;
+  mode: ConsoleShellMode;
   email?: string | null;
   accountLabel: string;
-  navItems: NavItem[];
+  navItems: ConsoleNavItem[];
+  className?: string;
+  header?: ConsoleHeaderProps;
   children: ReactNode;
 };
 
-function switchHref(mode: Props['mode']) {
-  return mode === 'workspace' ? '/admin' : '/manager-workspace';
+function targetFor(mode: ConsoleShellMode, role: ConsoleShellRole) {
+  if (mode === 'workspace') return role === 'master' ? '/master' : '/admin';
+  return '/manager-workspace';
 }
 
-function switchLabel(mode: Props['mode']) {
-  return mode === 'workspace' ? 'Operations console' : 'Manager workspace';
+function labelFor(mode: ConsoleShellMode, role: ConsoleShellRole) {
+  if (mode === 'workspace') return role === 'master' ? 'Master console' : 'Operations console';
+  return 'Manager workspace';
 }
 
-export default function ManagerConsoleShell({ mode, email, accountLabel, navItems, children }: Props) {
+export default function ManagerConsoleShell({ role = 'manager', mode, email, accountLabel, navItems, className, header, children }: Props) {
   const workspaceMode = mode === 'workspace';
   return <ConsoleShell
-    role="manager"
+    role={role}
     mode={mode}
     email={email}
     accountLabel={accountLabel}
-    brandSubtitle={workspaceMode ? 'Manager workspace' : 'Manager console'}
+    brandSubtitle={workspaceMode ? 'Manager workspace' : role === 'master' ? 'Master console' : 'Manager console'}
     sidebarSectionTitle={workspaceMode ? 'Workspace' : 'Operations'}
     navItems={navItems}
-    switchTarget={switchHref(mode)}
-    switchTargetLabel={switchLabel(mode)}
-    navAriaLabel={workspaceMode ? 'Manager workspace navigation' : 'Manager operations navigation'}
+    switchTarget={targetFor(mode, role)}
+    switchTargetLabel={labelFor(mode, role)}
+    className={className}
+    navAriaLabel={workspaceMode ? 'Template workspace navigation' : 'Manager operations navigation'}
     navContract={MANAGER_SWITCH_CONTRACT_VERSION}
+    activeNavUsesConsoleLink
+    header={header}
   >
     {children}
   </ConsoleShell>;
