@@ -11,17 +11,6 @@ type Props = {
   children: ReactNode;
 };
 
-const switchBlockStyle: CSSProperties = {
-  display: 'block',
-  width: '100%',
-  margin: '12px 0 18px',
-  padding: 0,
-  visibility: 'visible',
-  opacity: 1,
-  position: 'relative',
-  zIndex: 1000
-};
-
 const switchLinkStyle: CSSProperties = {
   width: '100%',
   minHeight: 62,
@@ -29,6 +18,7 @@ const switchLinkStyle: CSSProperties = {
   gridTemplateColumns: '14px minmax(0, 1fr) auto',
   alignItems: 'center',
   gap: 12,
+  margin: '0 0 16px',
   padding: '14px 15px',
   borderRadius: 20,
   color: '#ffffff',
@@ -41,7 +31,9 @@ const switchLinkStyle: CSSProperties = {
   opacity: 1,
   pointerEvents: 'auto',
   position: 'relative',
-  zIndex: 1001
+  zIndex: 1001,
+  whiteSpace: 'normal',
+  overflow: 'visible'
 };
 
 function switchCopyForTarget(href: string, reverse: boolean) {
@@ -53,13 +45,11 @@ function switchCopyForTarget(href: string, reverse: boolean) {
 
 function WorkspaceSwitchAnchor({ href, reverse }: { href: string; reverse: boolean }) {
   const targetCopy = switchCopyForTarget(href, reverse);
-  return <div data-manager-switch-visible-slot="top-sidebar" style={switchBlockStyle}>
-    <a style={switchLinkStyle} href={href} data-manager-canonical-switch="true" data-manager-switch-target={href} data-manager-switch-target-label={targetCopy}>
-      <span aria-hidden="true" style={{ width: 14, height: 14, borderRadius: 999, background: '#bbf7d0', boxShadow: '0 0 0 5px rgba(187,247,208,.18)' }} />
-      <span style={{ display: 'grid', gap: 3, minWidth: 0 }}><strong style={{ fontSize: 13, lineHeight: 1.05, letterSpacing: '.04em', textTransform: 'uppercase' }}>Switch mode</strong><small style={{ color: 'rgba(255,255,255,.92)', fontSize: 12, lineHeight: 1.2 }}>{targetCopy}</small></span>
-      <span style={{ color: 'rgba(255,255,255,.96)', fontWeight: 950, fontSize: 18 }} aria-hidden="true">→</span>
-    </a>
-  </div>;
+  return <a style={switchLinkStyle} href={href} data-manager-switch-visible-slot="nav-first" data-manager-canonical-switch="true" data-manager-switch-target={href} data-manager-switch-target-label={targetCopy}>
+    <span aria-hidden="true" style={{ width: 14, height: 14, borderRadius: 999, background: '#bbf7d0', boxShadow: '0 0 0 5px rgba(187,247,208,.18)' }} />
+    <span style={{ display: 'grid', gap: 3, minWidth: 0 }}><strong style={{ fontSize: 13, lineHeight: 1.05, letterSpacing: '.04em', textTransform: 'uppercase' }}>Switch mode</strong><small style={{ color: 'rgba(255,255,255,.92)', fontSize: 12, lineHeight: 1.2 }}>{targetCopy}</small></span>
+    <span style={{ color: 'rgba(255,255,255,.96)', fontWeight: 950, fontSize: 18 }} aria-hidden="true">→</span>
+  </a>;
 }
 
 export default function ManagerConsoleShell({ mode, email, accountLabel, navItems, children }: Props) {
@@ -73,8 +63,8 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
     <aside className="admin-monitor-sidebar native-console-sidebar">
       <div className="admin-monitor-brand"><span>xD</span><div><strong>xDisputer</strong><small>{workspaceMode ? 'Manager workspace' : 'Manager console'}</small></div></div>
       <div className="admin-sidebar-section-title">{workspaceMode ? 'Workspace' : 'Operations'}</div>
-      <WorkspaceSwitchAnchor href={visibleSwitchTarget} reverse={workspaceMode} />
       <nav aria-label={workspaceMode ? 'Manager workspace navigation' : 'Manager operations navigation'} data-manager-shell-nav="true" data-manager-switch-contract={MANAGER_SWITCH_CONTRACT_VERSION}>
+        <WorkspaceSwitchAnchor href={visibleSwitchTarget} reverse={workspaceMode} />
         {regularNavItems.map((item) => <a key={item.href} className={item.active ? 'active' : ''} href={item.href}>{item.label}</a>)}
       </nav>
       <div className="admin-monitor-account"><strong>{email || 'Manager account'}</strong><small>{accountLabel}</small><form action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form></div>
