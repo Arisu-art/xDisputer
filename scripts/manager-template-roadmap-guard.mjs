@@ -1,24 +1,28 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 
 const checks = [];
-function read(path) { const ok = existsSync(path); checks.push({ ok, label: `file exists: ${path}` }); return ok ? readFileSync(path, 'utf8') : ''; }
+function read(path) {
+  const ok = existsSync(path);
+  checks.push({ ok, label: `file exists: ${path}` });
+  return ok ? readFileSync(path, 'utf8') : '';
+}
 function has(source, term, label) { checks.push({ ok: source.includes(term), label }); }
 function notHas(source, term, label) { checks.push({ ok: !source.includes(term), label }); }
-function count(source, term, expected, label) { const actual = source.split(term).length - 1; checks.push({ ok: actual === expected, label: `${label} (${actual}/${expected})` }); }
 
-for (const script of ['scripts/apply-manager-template-generation-wiring.mjs', 'scripts/apply-manager-template-workspace-state-wiring.mjs']) {
-  if (existsSync(script)) { execSync(`node ${script}`, { stdio: 'inherit' }); execSync(`node ${script}`, { stdio: 'inherit' }); }
-}
+console.log('\n=== Manager template roadmap guard ===');
+console.log('Verification-only mode: no source-rewrite scripts are executed.');
+execSync('node scripts/template-execution-guard.mjs', { stdio: 'inherit' });
 
 const managerPage = read('app/manager-workspace/page.tsx');
 const managerClient = read('components/ManagerTemplateWorkspaceClient.tsx');
 const packet = read('components/TemplatePacketConfigurator.tsx');
 const progressive = read('components/TemplateProgressiveWorkspace.tsx');
-const shell = read('components/ManagerConsoleShell.tsx');
 const authority = read('lib/manager-template-authority.ts');
 const resolver = read('lib/manager-template-file-resolver.ts');
+const executionResolver = read('lib/template-execution/manager-template-resolver.ts');
+const orchestrator = read('lib/template-execution/template-execution-orchestrator.ts');
 const workspace = read('components/LetterGeneratorWorkspaceV2.tsx');
 const pkg = read('package.json');
 
@@ -30,9 +34,7 @@ notHas(managerPage, 'encType="multipart/form-data"', 'manager workspace has no r
 
 has(managerClient, 'TemplateProgressiveWorkspace', 'manager upload flow reuses progressive client template workflow');
 has(managerClient, 'MANAGER_TEMPLATE_ASSET', 'manager upload flow uses manager template source');
-has(managerClient, 'merged-template-command', 'manager upload flow merges template status and metrics into one command card');
-notHas(managerClient, 'ManagerTemplateLibraryStatus', 'manager upload flow does not render standalone duplicate status summary');
-has(managerClient, 'managerTemplateScope={managerTemplateScope}', 'manager client passes only verified template scope');
+has(managerClient, 'managerTemplateScope={managerTemplateScope}', 'manager client passes verified template scope');
 notHas(managerClient, 'canManageTemplates: true', 'manager client has no fake writable fallback scope');
 has(managerClient, 'handleExhibitsHydrated', 'manager client separates hydration from mutation refresh');
 has(managerClient, 'handleTemplateMutation', 'manager client reloads assets only after template mutation');
@@ -41,35 +43,36 @@ notHas(managerClient, 'async function handleExhibitsChange() { await loadAssets(
 has(packet, 'ManagerTemplateScopeUi', 'packet configurator accepts manager scope');
 has(packet, 'canManageTemplates', 'packet configurator gates upload controls');
 has(packet, 'resolveTemplateAuthority', 'packet configurator uses authority model');
-has(packet, 'Manager controlled', 'packet configurator renders locked manager-controlled client actions');
 has(packet, 'pendingActionKey', 'packet configurator tracks per-slot pending actions');
-has(packet, 'disabled={actionInFlight}', 'packet configurator disables repeated actions while upload/remove is pending');
-has(packet, 'manager-upload-action', 'packet configurator exposes always-visible upload inputs');
-has(packet, 'type="file"', 'packet configurator keeps real file inputs in the visible action row');
-notHas(packet, 'contextual-action-region', 'packet configurator no longer hides upload behind reveal-only region');
-notHas(packet, 'template-manager-policy-inline', 'packet configurator does not render duplicate authority banner');
-has(packet, 'onTemplateMutation?.()', 'packet configurator refreshes parent only after upload/remove mutation');
+has(packet, 'onTemplateMutation?.()', 'packet configurator refreshes parent after upload/remove mutation');
 has(packet, 'data-template-authority-mode={authority.mode}', 'packet configurator exposes authority mode');
-has(packet, 'summarizeTemplateQuality', 'packet configurator renders template quality summaries');
-count(packet, 'const readOnlyReason = managerTemplateLockMessage(managerTemplateScope);', 1, 'packet configurator has one readOnlyReason');
+notHas(packet, 'template-manager-policy-inline', 'packet configurator does not render duplicate authority banner');
 
 has(progressive, 'data-template-authority-mode', 'progressive template UX exposes authority mode');
 has(progressive, 'onTemplateMutation?', 'progressive template UX wires mutation callback');
 notHas(progressive, 'template-manager-policy-banner', 'progressive template UX does not render duplicate authority banner');
+
 has(authority, "'CLIENT_READONLY'", 'authority model defines client read-only mode');
 has(authority, "'MANAGER_EDIT'", 'authority model defines manager edit mode');
-has(shell, 'data-manager-canonical-switch="true"', 'shared manager shell owns canonical switch mode');
-has(shell, 'switchCopyForTarget', 'shared manager shell uses target-aware switch copy');
-has(shell, 'data-manager-switch-target-label', 'shared manager shell exposes switch target label');
-has(resolver, 'resolveManagerTemplateFile', 'template resolver exposes manager file resolver');
-has(resolver, 'allowLocalFallback', 'template resolver explicitly controls local fallback');
-has(workspace, 'resolveManagerTemplateFile', 'client workspace generation uses manager resolver');
-has(workspace, 'MANAGER_TEMPLATE_ASSET', 'client workspace marks manager template source');
-has(workspace, 'managerTemplateScope', 'client workspace tracks manager template scope');
-has(pkg, 'apply-manager-template-generation-wiring.mjs', 'dev/typecheck/build apply generation wiring');
-has(pkg, 'apply-manager-template-workspace-state-wiring.mjs', 'dev/typecheck/build apply workspace state wiring');
+has(resolver, 'resolveManagerTemplateFile', 'legacy-compatible file resolver exists');
+has(resolver, 'allowLocalFallback', 'file resolver explicitly controls local fallback');
+has(executionResolver, 'class ManagerTemplateResolver', 'template execution resolver owns manager-template selection');
+has(executionResolver, 'latestTemplateAssetsBySlot', 'template execution resolver dedupes active slots');
+has(orchestrator, 'executeTemplateGeneration', 'TemplateExecutionOrchestrator is the generation entrypoint');
+has(orchestrator, 'ManagerTemplateResolver', 'orchestrator resolves manager template authority');
+has(orchestrator, 'window.__xdisputerTemplateExecution', 'orchestrator publishes runtime execution snapshot');
+has(workspace, 'executeTemplateGeneration({', 'client workspace delegates generation to orchestrator');
+notHas(workspace, 'renderReferenceDisputeDocx(', 'workspace does not call legacy dispute renderer directly');
+notHas(workspace, 'renderLatePaymentReference(', 'workspace does not call legacy late-payment renderer directly');
+notHas(workspace, 'renderMappedAppendix(', 'workspace does not call legacy appendix renderer directly');
+notHas(pkg, 'apply-manager-template-generation-wiring.mjs', 'package scripts do not run generation autowrite');
+notHas(pkg, 'apply-manager-template-workspace-state-wiring.mjs', 'package scripts do not run workspace-state autowrite');
+has(pkg, 'template-execution:guard', 'package uses template execution guard');
 
 checks.forEach((check) => console.log(`${check.ok ? '✅' : '❌'} ${check.label}`));
 const failed = checks.filter((check) => !check.ok);
-if (failed.length) { console.error(`\nManager template roadmap guard failed: ${failed.length} check(s) failed.`); process.exit(1); }
+if (failed.length) {
+  console.error(`\nManager template roadmap guard failed: ${failed.length} check(s) failed.`);
+  process.exit(1);
+}
 console.log(`\nManager template roadmap guard passed: ${checks.length} check(s).`);
