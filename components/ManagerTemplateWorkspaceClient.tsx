@@ -40,10 +40,17 @@ function assetsToExhibits(assets: TemplateAsset[]): TemplateExhibits {
 }
 
 function workflowStatus(loading: boolean, scope: ManagerTemplateScopeUi | null, error: string | null) {
-  if (loading) return 'Loading manager template authority…';
-  if (error) return 'Manager template workflow blocked';
-  if (scope?.canManageTemplates) return 'Manager template workflow ready';
-  return 'Manager template uploads locked';
+  if (loading) return 'Checking authority';
+  if (error) return 'Blocked';
+  if (scope?.canManageTemplates) return 'Ready';
+  return 'Locked';
+}
+
+function workflowMessage(round: Round, loading: boolean, scope: ManagerTemplateScopeUi | null, error: string | null, message: string) {
+  if (loading) return `Loading ${round} manager template authority. Upload controls remain locked until verified.`;
+  if (error) return error;
+  if (scope?.canManageTemplates) return message || `${round} manager defaults are ready for upload and replacement.`;
+  return message || 'This account can review manager templates, but cannot upload or replace active defaults.';
 }
 
 export default function ManagerTemplateWorkspaceClient() {
@@ -79,6 +86,8 @@ export default function ManagerTemplateWorkspaceClient() {
 
   const slots = useMemo(() => defaultReferences().filter((slot) => slot.round === round).map((slot) => assetToLetter(slot, assets.find((asset) => asset.template_kind === 'LETTER' && asset.letter_type === slot.type))), [round, assets]);
   const exhibits = useMemo(() => assetsToExhibits(assets), [assets]);
+  const status = workflowStatus(loading, managerTemplateScope, loadError);
+  const statusMessage = workflowMessage(round, loading, managerTemplateScope, loadError, message);
 
   async function handleUploadLetter(slot: LetterReference, file: File) {
     setAssets((current) => current.map((asset) => asset.template_kind === 'LETTER' && asset.letter_type === slot.type ? { ...asset, original_filename: file.name, file_size: file.size } : asset));
@@ -88,9 +97,15 @@ export default function ManagerTemplateWorkspaceClient() {
   async function handleExhibitsHydrated() { /* Hydration does not reload Supabase assets. */ }
   async function handleTemplateMutation() { await loadAssets(round); }
 
-  return <section className="manager-template-client-flow" data-manager-template-scope-state={managerTemplateScope?.canManageTemplates ? 'verified-upload' : loading ? 'loading' : 'locked'}>
-    <header className="admin-monitor-header native-command-hero manager-compact-hero"><div><p>Manager template workspace</p><h1>Upload default templates with verified manager authority.</h1><span>Managers use the same round → packet → upload workflow as the client workspace, but upload controls unlock only after the API returns manager template scope.</span></div></header>
-    <section className="admin-monitor-card manager-template-workflow-status"><strong>{workflowStatus(loading, managerTemplateScope, loadError)}</strong><span>{message}</span></section>
+  return <section className="manager-template-client-flow manager-workspace-body-shell" data-manager-workspace-body-shell="compact" data-manager-template-scope-state={managerTemplateScope?.canManageTemplates ? 'verified-upload' : loading ? 'loading' : 'locked'}>
+    <section className="admin-monitor-card manager-template-workflow-status compact-workspace-command" aria-label="Manager template workspace status">
+      <div>
+        <p className="eyebrow">Template library</p>
+        <strong>{status}</strong>
+        <span>{statusMessage}</span>
+      </div>
+      <span className="admin-status-badge active">{round}</span>
+    </section>
     <ManagerTemplateLibraryStatus round={round} assets={assets} loading={loading} />
     <TemplateProgressiveWorkspace round={round} slots={slots} supportingReady={false} managerTemplateScope={managerTemplateScope} managedExhibits={exhibits} onSelectRound={(next) => { setRound(next); setMessage(`${next} selected for manager default template setup.`); }} onUploadLetter={handleUploadLetter} onRemoveLetter={handleRemoveLetter} onExhibitsChange={handleExhibitsHydrated} onTemplateMutation={handleTemplateMutation} onMessage={setMessage} onUseRoundForSourceData={() => setMessage(`${round} manager defaults are selected. Upload/replace templates here; clients will generate from the active versions.`)} />
   </section>;
