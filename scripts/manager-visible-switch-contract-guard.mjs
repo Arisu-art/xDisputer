@@ -8,8 +8,10 @@ function notHas(source, term, label) { checks.push({ ok: !source.includes(term),
 
 const shell = read('components/ManagerConsoleShell.tsx');
 const accountMenu = read('components/ManagerAccountMenu.tsx');
+const accountCss = read('app/account-menu-system.css');
 const admin = read('app/admin/page.tsx');
 const workspace = read('app/manager-workspace/page.tsx');
+const templateWorkspace = read('components/ManagerTemplateWorkspaceClient.tsx');
 
 has(shell, "import ManagerAccountMenu from './ManagerAccountMenu';", 'shell imports top account menu');
 has(shell, '<ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />', 'shell mounts top account menu');
@@ -28,23 +30,33 @@ has(accountMenu, "'use client';", 'account menu is client-side interactive');
 has(accountMenu, 'data-manager-account-menu="true"', 'account menu exposes stable marker');
 has(accountMenu, 'data-manager-account-layout="header-75-25-avatar-only"', 'account menu uses avatar-only 75/25 header layout marker');
 has(accountMenu, 'manager-header-account-dock', 'account menu uses merged header account dock');
-has(accountMenu, 'width: clamp(220px, 25vw, 360px)', 'account menu uses right-side 25 percent dock sizing');
-has(accountMenu, 'justify-content: flex-end', 'account dock only exposes avatar on the right side');
 has(accountMenu, 'manager-header-account-avatar', 'account menu exposes only the circle in the closed header');
 has(accountMenu, 'manager-account-popover', 'account menu has popover panel');
-has(accountMenu, 'manager-account-identity-card', 'account popover has professional identity card');
-has(accountMenu, 'manager-account-primary-grid', 'account popover has primary action grid');
+has(accountMenu, 'manager-account-identity-panel', 'account popover has vertical identity panel');
+has(accountMenu, 'manager-account-action-list', 'account popover has vertical action list');
 has(accountMenu, 'Manage access', 'account menu includes account management shortcut');
 has(accountMenu, 'data-manager-canonical-switch="true"', 'account menu owns canonical switch marker');
 has(accountMenu, 'data-manager-switch-visible-slot="account-popover"', 'switch action lives inside opened account popover');
 has(accountMenu, 'Switch mode', 'account menu includes switch mode action');
 has(accountMenu, 'action="/auth/sign-out"', 'account menu owns sign out action');
-has(accountMenu, 'position: fixed', 'account menu is mounted in upper-right');
 notHas(accountMenu, 'manager-top-account-left', 'old dock text area removed');
 notHas(accountMenu, 'manager-top-icon-button', 'old header settings/switch icons removed');
 notHas(accountMenu, 'manager-top-account-actions', 'old multi-icon header action group removed');
 notHas(accountMenu, '⚙', 'settings icon removed from closed header');
 notHas(accountMenu, '↔</Link>', 'switch icon removed from closed header');
+notHas(accountMenu, 'manager-account-primary-grid', 'old two-column primary grid removed');
+notHas(accountMenu, 'manager-account-route-list', 'old duplicated route list removed');
+
+has(accountCss, 'width: clamp(220px, 25vw, 360px)', 'account CSS uses right-side 25 percent dock sizing');
+has(accountCss, 'justify-content: flex-end', 'account CSS exposes only avatar on the right side');
+has(accountCss, 'border-left: 1px solid rgba(129, 140, 154, .36)', 'account CSS uses neutral separator border');
+notHas(accountCss, 'rgba(124, 58, 237, .36)', 'violet account dock border removed');
+notHas(accountCss, 'border-left: 4px solid rgba(124', 'thick violet left border removed');
+
+notHas(templateWorkspace, 'merged-template-command-metrics', 'template workspace compact summary chips removed');
+notHas(templateWorkspace, 'manager-round-chip', 'template selected-round compact chip removed');
+notHas(templateWorkspace, 'Active templates', 'template active summary chip removed');
+notHas(templateWorkspace, 'Storage proof', 'template storage proof chip removed');
 
 has(admin, "{ href: '/manager-workspace', label: 'Switch mode', kind: 'workspace-switch' as const }", '/admin keeps switch nav contract for account menu target');
 has(workspace, "kind: 'workspace-switch' as const", '/manager-workspace keeps reverse switch nav contract for account menu target');
