@@ -15,18 +15,13 @@ const expectedPackageScripts = [
   'connections:doctor',
   'active:sync',
   'active:sync:db',
-  'xdisputer:guard',
-  'vercel:status',
-  'vercel:direct',
-  'verify:production',
-  'verify:production:wait',
-  'production:match'
+  'xdisputer:guard'
 ];
 
 const sourceContracts = [
   {
     path: 'docs/active-context-binding.md',
-    contains: ['Arisu-art/xDisputer', 'access_workspace_account_summary_v1', 'access_workspace_attention_queue_v1']
+    contains: ['Arisu-art/xDisputer', 'Supabase target', 'access_workspace_attention_queue_v1']
   },
   {
     path: 'docs/xdisputer-connection-validation.sql',
@@ -34,7 +29,7 @@ const sourceContracts = [
   },
   {
     path: 'docs/xdisputer-active-sync-runbook.md',
-    contains: ['npm run active:sync', 'npm run active:sync:db']
+    contains: ['npm run active:sync', 'npm run active:sync:db', 'Supabase-only']
   },
   {
     path: 'lib/saas/account-directory.ts',
@@ -75,7 +70,7 @@ function warn(message) {
   console.warn(`WARN: ${message}`);
 }
 
-console.log('\n=== xDisputer connection doctor ===');
+console.log('\n=== xDisputer Supabase connection doctor ===');
 
 const remote = runText('git remote get-url origin');
 if (remote) {
@@ -91,7 +86,7 @@ if (remote) {
 const branch = runText('git branch --show-current');
 if (branch) {
   if (branch === 'main') ok('Active branch is main.');
-  else warn(`Active branch is ${branch}; use main before production sync.`);
+  else warn(`Active branch is ${branch}; use main before sync.`);
 }
 
 const pkgText = read('package.json');
@@ -119,11 +114,11 @@ for (const contract of sourceContracts) {
   ok(`Source contract verified: ${contract.path}`);
 }
 
-const envFiles = ['.env.local', '.env.production.local', '.vercel/.env.production.local', '.env.example'];
+const envFiles = ['.env.local', '.env.production.local', '.env.example'];
 const readableEnvFiles = envFiles.filter((file) => existsSync(file));
 
 if (!readableEnvFiles.length) {
-  const message = 'No local env file found. Run `npx vercel pull --yes --environment=production` or create .env.local.';
+  const message = 'No local env file found. Create .env.local from .env.example and set the Supabase public runtime keys.';
   if (strictEnv) fail(message);
   else warn(message);
 } else {
@@ -160,4 +155,4 @@ if (process.exitCode) {
   process.exit(process.exitCode);
 }
 
-console.log('\nConnection doctor passed. Expected state: GitHub repo, Vercel env, Supabase RPC contracts, and no-output-limit rules are aligned.');
+console.log('\nConnection doctor passed. Expected state: GitHub repo, Supabase RPC contracts, local env keys, and no-output-limit rules are aligned.');
