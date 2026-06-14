@@ -16,6 +16,33 @@ function ensureImport(source, anchor, importLine) {
   return source.replace(anchor, `${anchor}\n${importLine}`);
 }
 
+function count(source, needle) {
+  return source.split(needle).length - 1;
+}
+
+function normalizeTemplateAssetRouteImports(source) {
+  const staleImport = "import { downloadManagerTemplateObject, managerTemplateStorageMode, removeManagerTemplateObjects, uploadManagerTemplateObject } from '../../../lib/supabase/template-storage-service';";
+  const serverMutationImport = "import { managerTemplateStorageMode, removeManagerTemplateObjects, uploadManagerTemplateObject } from '../../../lib/supabase/template-storage-service';";
+  const scopeImport = "import { assertCanManageManagerTemplates, managerTemplateScopePayload, resolveManagerTemplateScope, ManagerTemplateScopeError } from '../../../lib/manager-template-scope';";
+
+  source = source.replaceAll(`${staleImport}\n`, '');
+  source = source.replaceAll(`\n${staleImport}`, '');
+  source = source.replaceAll(`${serverMutationImport}\n`, '');
+  source = source.replaceAll(`\n${serverMutationImport}`, '');
+
+  if (!source.includes(serverMutationImport)) {
+    if (!source.includes(scopeImport)) throw new Error('Missing manager template scope import anchor in app/api/template-assets/route.ts');
+    source = source.replace(scopeImport, `${scopeImport}\n${serverMutationImport}`);
+  }
+
+  if (count(source, 'managerTemplateStorageMode') < 1) throw new Error('managerTemplateStorageMode import or usage is missing.');
+  const importBlock = source.slice(0, source.indexOf('const allowedRounds'));
+  if (count(importBlock, 'managerTemplateStorageMode') !== 1) throw new Error('Duplicate managerTemplateStorageMode import detected in route header.');
+  if (importBlock.includes('downloadManagerTemplateObject')) throw new Error('Stale downloadManagerTemplateObject import detected in template-assets route.');
+
+  return source;
+}
+
 function normalizeTemplateStoragePayload(source) {
   const duplicateGet = "managerTemplateScope: managerTemplateScopePayload(scope), templateStorage: { mode: managerTemplateStorageMode() }, dynamicTemplateEngineV2: { rendererMode, autoBackfilled: autoBackfill.backfilledCount, warnings: autoBackfill.warnings }, templateStorage: { mode: managerTemplateStorageMode() }";
   const canonicalGet = "managerTemplateScope: managerTemplateScopePayload(scope), templateStorage: { mode: managerTemplateStorageMode() }, dynamicTemplateEngineV2: { rendererMode, autoBackfilled: autoBackfill.backfilledCount, warnings: autoBackfill.warnings }";
@@ -37,16 +64,7 @@ function patchTemplateAssetsRoute() {
   const before = readFileSync(path, 'utf8');
   let source = before;
 
-  source = ensureImport(
-    source,
-    "import { assertCanManageManagerTemplates, managerTemplateScopePayload, resolveManagerTemplateScope, ManagerTemplateScopeError } from '../../../lib/manager-template-scope';",
-    "import { downloadManagerTemplateObject, managerTemplateStorageMode, removeManagerTemplateObjects, uploadManagerTemplateObject } from '../../../lib/supabase/template-storage-service';"
-  );
-
-  source = source.replace(
-    /input\.session\.supabase\.storage\.from\(asset\.storage_bucket \|\| 'template-assets'\)\.download\(asset\.storage_path\)/g,
-    "downloadManagerTemplateObject({ sessionSupabase: input.session.supabase, bucket: asset.storage_bucket || 'template-assets', path: asset.storage_path })"
-  );
+  source = normalizeTemplateAssetRouteImports(source);
 
   source = source.replace(
     /session\.supabase\.storage\.from\('template-assets'\)\.upload\(storagePath, new Blob\(\[fileBuffer\], \{ type: file\.type \|\| 'application\/octet-stream' \}\), \{ contentType: file\.type \|\| 'application\/octet-stream', upsert: false \}\)/g,
@@ -76,6 +94,7 @@ function patchTemplateAssetsRoute() {
   );
 
   source = normalizeTemplateStoragePayload(source);
+  source = normalizeTemplateAssetRouteImports(source);
 
   writeIfChanged(path, before, source);
 }
