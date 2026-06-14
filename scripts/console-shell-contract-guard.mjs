@@ -21,6 +21,7 @@ const consoleHeader = read('components/console/ConsoleHeader.tsx');
 const accountMenu = read('components/console/AccountMenu.tsx');
 const managerAccountMenu = read('components/ManagerAccountMenu.tsx');
 const renderDebugger = read('components/console/RenderDebugger.tsx');
+const registry = read('components/console/ui-shell-registry.ts');
 const managerShell = read('components/ManagerConsoleShell.tsx');
 const masterHome = read('app/master/MasterConsoleHome.tsx');
 const masterAccounts = read('app/master/accounts/page.tsx');
@@ -37,6 +38,11 @@ const phase14 = read('scripts/phase14-local-safety-check.mjs');
 const shellCss = read('app/console-shell-system.css');
 const ratioCss = read('app/account-menu-ratio-system.css');
 const roadmap = read('docs/ui-shell-roadmap-tracker.md');
+const mcoder = read('scripts/mcoder-deployment-gate.mjs');
+const smokeSpec = read('tests/ui-shell-smoke.spec.ts');
+const playwrightConfig = read('playwright.config.ts');
+const deployWorkflow = read('.github/workflows/deploy-approved.yml');
+const deploymentMigration = read('supabase/migrations/20260615080000_mcoder_deployment_gate.sql');
 
 has(consoleShell, 'data-console-shell="true"', 'ConsoleShell owns global shell marker');
 has(consoleShell, 'data-console-sidebar="true"', 'ConsoleShell owns global sidebar marker');
@@ -57,6 +63,8 @@ has(renderDebugger, 'window.__xdisputerDebug', 'RenderDebugger exposes debug glo
 has(renderDebugger, 'document.styleSheets', 'RenderDebugger inspects loaded CSS');
 has(layout, '<RenderDebugger />', 'root layout mounts RenderDebugger');
 has(layout, "import './console-debug-overlay.css';", 'root layout imports debugger CSS');
+has(registry, 'UI_SHELL_ROUTE_EXPECTATIONS', 'UI shell registry exports route expectations');
+has(registry, 'UI_SHELL_CANONICAL_COMPONENTS', 'UI shell registry exports canonical components');
 
 delegates('ManagerConsoleShell', managerShell);
 delegates('/master', masterHome);
@@ -70,6 +78,9 @@ delegates('GenerationReportView', reportView);
 delegates('AccessAuditView', accessAuditView);
 
 has(packageJson, '"ui-source:guard"', 'package defines ui-source:guard');
+has(packageJson, '"ui-shell:registry"', 'package defines registry guard script');
+has(packageJson, '"ui-shell:smoke"', 'package defines screenshot smoke audit script');
+has(packageJson, '"mcoder:check"', 'package defines mcoder check script');
 notHas(packageJson, 'apply-manager-workspace-nav-wiring.mjs', 'package no longer auto-runs workspace wiring');
 notHas(packageJson, 'apply-user-error-flyout-wiring.mjs', 'package no longer auto-runs flyout wiring');
 notHas(phase14, 'runSelfHealingScript(', 'phase14 no longer rewrites source');
@@ -77,8 +88,22 @@ has(phase14, 'verification-only mode', 'phase14 is verification-only');
 has(shellCss, '.console-header-card', 'console shell CSS defines shared header card');
 has(shellCss, '.console-header-secondary', 'console shell CSS defines secondary header slot');
 has(ratioCss, "@import './console-shell-system.css';", 'Ratio CSS chains global console shell CSS');
-has(roadmap, 'Phase A', 'roadmap tracks stabilization phase A');
-has(roadmap, 'Phase E', 'roadmap tracks stabilization phase E');
+
+has(mcoder, 'request_deployment_approval_service', 'MCoder CLI can request deployment approval');
+has(mcoder, 'assert_deployment_approval_service', 'MCoder CLI can check approval');
+has(mcoder, 'consume_deployment_approval_service', 'MCoder CLI can consume approval');
+has(deploymentMigration, 'create table if not exists public.deployment_requests', 'MCoder migration creates deployment_requests table');
+has(deploymentMigration, 'request_deployment_approval_service', 'MCoder migration creates request RPC');
+has(deploymentMigration, 'consume_deployment_approval_service', 'MCoder migration creates consume RPC');
+has(deployWorkflow, 'Deploy approved build', 'approved deploy workflow exists');
+has(deployWorkflow, 'npm run mcoder:check', 'approved deploy workflow checks MCoder approval');
+has(deployWorkflow, 'npm run mcoder:consume', 'approved deploy workflow consumes approval');
+has(smokeSpec, 'window.__xdisputerDebug', 'smoke test reads render debugger');
+has(smokeSpec, 'toHaveScreenshot', 'smoke test captures route screenshots');
+has(playwrightConfig, 'defineConfig', 'Playwright config is present');
+
+has(roadmap, 'Phase F — M-coder deployment gate | Implemented', 'roadmap tracks Phase F implemented');
+has(roadmap, 'Phase G — Route screenshot smoke audit | Implemented', 'roadmap tracks Phase G implemented');
 
 checks.forEach((check) => console.log(`${check.ok ? '✅' : '❌'} ${check.label}`));
 const failed = checks.filter((check) => !check.ok);
