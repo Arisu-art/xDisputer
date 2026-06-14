@@ -8,6 +8,8 @@ const filesToCheck = [
   'components/LetterGeneratorWorkspaceV2.tsx',
   'app/api/generation-runs/route.ts',
   'app/api/template-assets/route.ts',
+  'app/api/template-assets/file/route.ts',
+  'app/api/template-assets/manifest/route.ts',
   'lib/letter-engine.ts',
   'lib/supplemental-template-renderer.ts'
 ];
@@ -59,13 +61,13 @@ function cleanVolatileGeneratedArtifacts() {
   }
 }
 
-function applySelfHealingWiring() {
-  if (!existsSync('scripts/apply-user-error-flyout-wiring.mjs')) return;
+function runSelfHealingScript(path, label) {
+  if (!existsSync(path)) return;
 
   try {
-    execSync('node scripts/apply-user-error-flyout-wiring.mjs', { stdio: 'inherit' });
+    execSync(`node ${path}`, { stdio: 'inherit' });
   } catch (error) {
-    fail('Could not apply user-error flyout wiring before local checks.', [`  - ${error instanceof Error ? error.message : String(error)}`]);
+    fail(`Could not apply ${label} before local checks.`, [`  - ${error instanceof Error ? error.message : String(error)}`]);
   }
 }
 
@@ -84,7 +86,8 @@ function assertNoKnownSourceTypos() {
 }
 
 cleanVolatileGeneratedArtifacts();
-applySelfHealingWiring();
+runSelfHealingScript('scripts/apply-user-error-flyout-wiring.mjs', 'user-error flyout wiring');
+runSelfHealingScript('scripts/apply-manager-template-storage-wiring.mjs', 'manager template storage wiring');
 assertNoKnownSourceTypos();
 
 let unmerged = '';
