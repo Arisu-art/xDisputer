@@ -35,5 +35,12 @@ export const UI_SHELL_CANONICAL_COMPONENTS = {
   sidebar: 'components/console/ConsoleShell.tsx',
   header: 'components/console/ConsoleHeader.tsx',
   accountMenu: 'components/console/AccountMenu.tsx',
-  renderDebugger: 'components/console/RenderDebugger.tsx'
+  renderDebugger: 'components/console/RenderDebugger.tsx',
+  templateExecution: 'lib/template-execution/template-execution-orchestrator.ts'
+} as const;
+
+export const UI_SHELL_RUNTIME_SIGNALS = {
+  renderDebuggerStore: '__xdisputerDebug',
+  templateExecutionStore: '__xdisputerTemplateExecution',
+  templateExecutionEvent: 'xdisputer:template-execution'
 } as const;
