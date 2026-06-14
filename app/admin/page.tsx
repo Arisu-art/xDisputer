@@ -50,7 +50,8 @@ function managerOperationsNav(activePanel: ManagerPanel) {
     { href: '/admin?panel=intake', label: 'Client intake', active: activePanel === 'intake' },
     { href: '/admin?panel=review', label: 'Review queue', active: activePanel === 'review' },
     { href: '/admin/reports', label: 'Reports' },
-    { href: '/admin/audit', label: 'Audit log' }
+    { href: '/admin/audit', label: 'Audit log' },
+    { href: '/manager-workspace', label: 'Switch mode', kind: 'workspace-switch' as const }
   ];
 }
 
