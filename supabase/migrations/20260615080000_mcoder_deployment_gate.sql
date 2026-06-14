@@ -30,7 +30,8 @@ create index if not exists deployment_requests_group_environment_idx on public.d
 
 alter table public.deployment_requests enable row level security;
 
-create policy if not exists deployment_requests_service_role_all
+drop policy if exists deployment_requests_service_role_all on public.deployment_requests;
+create policy deployment_requests_service_role_all
 on public.deployment_requests
 for all
 to service_role
