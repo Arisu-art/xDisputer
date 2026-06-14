@@ -5,7 +5,6 @@ import TemplateProgressiveWorkspace from './TemplateProgressiveWorkspace';
 import ManagerTemplateWorkspaceChrome from './ManagerTemplateWorkspaceChrome';
 import { defaultReferences, type LetterReference, type Round } from '../lib/reference-store';
 import { exhibitModes, exhibitTitles, type ExhibitAsset, type ExhibitKind, type TemplateExhibits } from '../lib/template-exhibits';
-import { summarizeTemplateQuality } from '../lib/manager-template-authority';
 import type { ManagerTemplateScopeUi } from '../lib/manager-template-ui';
 
 type TemplateAsset = {
@@ -54,8 +53,6 @@ function workflowMessage(round: Round, loading: boolean, scope: ManagerTemplateS
   return message || 'This account can review manager templates, but cannot upload or replace active defaults.';
 }
 
-function shortHash(value?: string | null) { return value ? value.slice(0, 10) : '—'; }
-
 export default function ManagerTemplateWorkspaceClient() {
   const [round, setRound] = useState<Round>('1st Round');
   const [assets, setAssets] = useState<TemplateAsset[]>([]);
@@ -91,10 +88,6 @@ export default function ManagerTemplateWorkspaceClient() {
   const exhibits = useMemo(() => assetsToExhibits(assets), [assets]);
   const status = workflowStatus(loading, managerTemplateScope, loadError);
   const statusMessage = workflowMessage(round, loading, managerTemplateScope, loadError, message);
-  const warningCount = assets.filter((asset) => summarizeTemplateQuality({ file: asset.original_filename, validationJson: asset.validation_json }).tone === 'warning').length;
-  const latestVersion = assets.reduce((max, asset) => Math.max(max, asset.version_number || 0), 0);
-  const letterCount = assets.filter((asset) => asset.template_kind === 'LETTER').length;
-  const exhibitCount = assets.filter((asset) => asset.template_kind === 'EXHIBIT').length;
 
   async function handleUploadLetter(slot: LetterReference, file: File) {
     setAssets((current) => current.map((asset) => asset.template_kind === 'LETTER' && asset.letter_type === slot.type ? { ...asset, original_filename: file.name, file_size: file.size } : asset));
@@ -111,14 +104,6 @@ export default function ManagerTemplateWorkspaceClient() {
         <p className="eyebrow">Template library</p>
         <strong>{status}</strong>
         <span>{statusMessage}</span>
-      </div>
-      <div className="merged-template-command-metrics" aria-label="Active manager template metrics">
-        <span><b>{loading ? '…' : assets.length}</b><small>Active templates</small></span>
-        <span><b>{letterCount}/{exhibitCount}</b><small>Letters / exhibits</small></span>
-        <span><b>{latestVersion || '—'}</b><small>Latest version</small></span>
-        <span><b>{warningCount}</b><small>Needs review</small></span>
-        <span><b>{shortHash(assets[0]?.content_hash)}</b><small>Storage proof</small></span>
-        <span className="manager-round-chip"><b>{round}</b><small>Selected round</small></span>
       </div>
     </section>
     <TemplateProgressiveWorkspace round={round} slots={slots} supportingReady={false} managerTemplateScope={managerTemplateScope} managedExhibits={exhibits} onSelectRound={(next) => { setRound(next); setMessage(`${next} selected for manager default template setup.`); }} onUploadLetter={handleUploadLetter} onRemoveLetter={handleRemoveLetter} onExhibitsChange={handleExhibitsHydrated} onTemplateMutation={handleTemplateMutation} onMessage={setMessage} />
