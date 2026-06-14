@@ -26,6 +26,8 @@ notHas('scripts/manager-template-roadmap-guard.mjs', 'execSync(`node ${script}`'
 has('scripts/manager-template-roadmap-guard.mjs', 'Verification-only mode');
 has('supabase/migrations/20260615093000_mcoder_deployment_gate_events.sql', 'deployment_request_events');
 has('supabase/migrations/20260615093000_mcoder_deployment_gate_events.sql', 'list_deployment_requests_service');
+has('supabase/migrations/20260615094000_mcoder_deployment_gate_event_triggers.sql', 'record_deployment_request_event_trigger');
+has('supabase/migrations/20260615094000_mcoder_deployment_gate_event_triggers.sql', 'deployment_requests_record_event');
 
 if (failures.length) {
   console.error('\nTemplate execution guard failed.');
