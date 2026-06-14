@@ -10,7 +10,21 @@
     "prebuild": "node scripts/apply-manager-template-generation-wiring.mjs && node scripts/phase14-local-safety-check.mjs",
     "build": "next build",
     "start": "next start",
-    "quality:check": "npm run typecheck && npm run build"
+    "quality:check": "npm run typecheck && npm run build",
+    "ai:code": "node scripts/ai-coding-assistant.js",
+    "ai:code:interactive": "node scripts/ai-coding-assistant.js --interactive",
+    "ai:code:help": "node scripts/ai-coding-assistant.js --help",
+    "ai:process": "node scripts/ai-code-processor.js",
+    "ai:apply": "node scripts/apply-changes.js",
+    "xdisputer:guard": "node scripts/xdisputer-deploy-guard.mjs",
+    "dynamic-template:v2:regression": "node scripts/dynamic-template-v2-regression.mjs",
+    "safe:sync": "bash scripts/safe-sync-guard.sh",
+    "init:connections": "bash scripts/init-xdisputer-connections.sh",
+    "verify:production": "node scripts/verify-production-build.mjs",
+    "verify:production:wait": "node scripts/wait-for-production-build.mjs",
+    "production:match": "node scripts/match-production-deploy.mjs",
+    "vercel:status": "node scripts/vercel-status.mjs",
+    "vercel:direct": "node scripts/vercel-direct-production-sync.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
