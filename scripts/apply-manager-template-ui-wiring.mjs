@@ -15,6 +15,35 @@ function ensureImport(source, anchor, importLine) {
   return source.replace(anchor, `${anchor}\n${importLine}`);
 }
 
+function normalizeReadOnlyReason(source) {
+  const line = '  const readOnlyReason = managerTemplateLockMessage(managerTemplateScope);';
+  const cleaned = source.replace(/^\s*const readOnlyReason = managerTemplateLockMessage\(managerTemplateScope\);\n/gm, '');
+  if (!cleaned.includes("  const late = slots.find((slot) => slot.type === 'LATE_PAYMENT');\n")) return source;
+  return cleaned.replace(
+    "  const late = slots.find((slot) => slot.type === 'LATE_PAYMENT');\n",
+    `  const late = slots.find((slot) => slot.type === 'LATE_PAYMENT');\n${line}\n`
+  );
+}
+
+function normalizePolicyPanel(source) {
+  const panel = '      <div className="panel template-manager-policy-inline"><p className="eyebrow">Template authority</p><strong>{canManageTemplates ? \'Manager edit mode\' : \'Read-only client mode\'}</strong><p>{canManageTemplates ? \'Changes here update the manager default templates used by assigned clients.\' : readOnlyReason}</p></div>\n';
+  const cleaned = source.replace(/^\s*<div className="panel template-manager-policy-inline"><p className="eyebrow">Template authority<\/p><strong>\{canManageTemplates \? 'Manager edit mode' : 'Read-only client mode'\}<\/strong><p>\{canManageTemplates \? 'Changes here update the manager default templates used by assigned clients\.' : readOnlyReason\}<\/p><\/div>\n/gm, '');
+  const anchor = "    <section className={`template-studio template-studio-operational progressive-surface focused-template-configurator ${embedded ? 'embedded-template-configurator' : ''}`}>\n";
+  if (!cleaned.includes(anchor)) return source;
+  return cleaned.replace(anchor, `${anchor}${panel}`);
+}
+
+function normalizeManagerProps(source) {
+  source = source.replace(/(?:\s+canManageTemplates\?: boolean;\n\s+managerTemplateScope\?: ManagerTemplateScopeUi \| null;\n\s+managedExhibits\?: TemplateExhibits;\n)+/g, '\n  canManageTemplates?: boolean;\n  managerTemplateScope?: ManagerTemplateScopeUi | null;\n  managedExhibits?: TemplateExhibits;\n');
+  source = source.replace(/(?:\s+canManageTemplates = false,\n\s+managerTemplateScope = null,\n\s+managedExhibits,\n)+/g, '\n  canManageTemplates = false,\n  managerTemplateScope = null,\n  managedExhibits,\n');
+  return source;
+}
+
+function normalizeReadOnlyGuards(source) {
+  source = source.replace(/(?:\s*if \(!canManageTemplates\) \{ onMessage\(readOnlyReason\); return; \}\n)+\s*try \{/g, '\n    if (!canManageTemplates) { onMessage(readOnlyReason); return; }\n    try {');
+  return source;
+}
+
 function patchConfigurator() {
   const path = 'components/TemplatePacketConfigurator.tsx';
   if (!existsSync(path)) return;
@@ -40,10 +69,8 @@ function patchConfigurator() {
     "  embedded = false,\n  canManageTemplates = false,\n  managerTemplateScope = null,\n  managedExhibits,\n  onUploadLetter,"
   );
 
-  source = source.replace(
-    "  const late = slots.find((slot) => slot.type === 'LATE_PAYMENT');\n",
-    "  const late = slots.find((slot) => slot.type === 'LATE_PAYMENT');\n  const readOnlyReason = managerTemplateLockMessage(managerTemplateScope);\n"
-  );
+  source = normalizeManagerProps(source);
+  source = normalizeReadOnlyReason(source);
 
   source = source.replace(
     "  useEffect(() => {\n    let cancelled = false;\n    setActiveNode(null);\n\n    void recoverTemplateExhibitsFromFiles(round)",
@@ -72,6 +99,8 @@ function patchConfigurator() {
     "  async function removeExhibit(kind: ExhibitKind) {\n    if (!canManageTemplates) { onMessage(readOnlyReason); return; }\n    try {"
   );
 
+  source = normalizeReadOnlyGuards(source);
+
   source = source.replace(
     "  function LetterActions({ slot, node }: { slot: LetterReference; node: NodeId }) {\n    const active = activeNode === node;",
     "  function LetterActions({ slot, node }: { slot: LetterReference; node: NodeId }) {\n    if (!canManageTemplates) return <div className=\"contextual-actions studio-actions readonly-template-actions\"><span className=\"packet-status neutral\">Manager controlled</span></div>;\n    const active = activeNode === node;"
@@ -82,10 +111,7 @@ function patchConfigurator() {
     "  function ExhibitActions({ kind }: { kind: ExhibitKind }) {\n    if (!canManageTemplates) return <div className=\"contextual-actions studio-actions readonly-template-actions\"><span className=\"packet-status neutral\">Manager controlled</span></div>;\n    const active = activeNode === kind;"
   );
 
-  source = source.replace(
-    "    <section className={`template-studio template-studio-operational progressive-surface focused-template-configurator ${embedded ? 'embedded-template-configurator' : ''}`}>\n",
-    "    <section className={`template-studio template-studio-operational progressive-surface focused-template-configurator ${embedded ? 'embedded-template-configurator' : ''}`}>\n      <div className=\"panel template-manager-policy-inline\"><p className=\"eyebrow\">Template authority</p><strong>{canManageTemplates ? 'Manager edit mode' : 'Read-only client mode'}</strong><p>{canManageTemplates ? 'Changes here update the manager default templates used by assigned clients.' : readOnlyReason}</p></div>\n"
-  );
+  source = normalizePolicyPanel(source);
 
   source = source.replace(/Cloud saved/g, 'Manager default');
   source = source.replace(/Upload the required/g, 'Manager must upload the required');
