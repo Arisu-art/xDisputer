@@ -11,15 +11,25 @@ type Props = {
   children: ReactNode;
 };
 
+function switchCopyForTarget(href: string, reverse: boolean) {
+  if (href.startsWith('/master')) return 'Master console';
+  if (href.startsWith('/admin')) return 'Operations console';
+  if (href.startsWith('/workspace')) return 'Client workspace';
+  return reverse ? 'Operations console' : 'Manager workspace';
+}
+
 function WorkspaceSwitchAnchor({ href, reverse }: { href: string; reverse: boolean }) {
+  const targetCopy = switchCopyForTarget(href, reverse);
+
   return <a
     className="manager-workspace-nav-switch"
     href={href}
     data-manager-canonical-switch="true"
     data-manager-switch-target={href}
+    data-manager-switch-target-label={targetCopy}
   >
     <span className="manager-workspace-switch-pulse" aria-hidden="true" />
-    <span className="manager-workspace-switch-copy"><strong>Switch mode</strong><small>{reverse ? 'Operations console' : 'Manager workspace'}</small></span>
+    <span className="manager-workspace-switch-copy"><strong>Switch mode</strong><small>{targetCopy}</small></span>
     <span className="manager-workspace-switch-arrow" aria-hidden="true">→</span>
   </a>;
 }
@@ -28,6 +38,7 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
   const workspaceMode = mode === 'workspace';
   const switchTarget = workspaceMode ? '/admin' : '/manager-workspace';
   const hasExplicitSwitch = navItems.some((item) => item.kind === 'workspace-switch');
+
   return <main className={`admin-monitor-page native-console ${workspaceMode ? 'manager-template-workspace' : 'manager-ops-console'}`} data-manager-switch-contract={MANAGER_SWITCH_CONTRACT_VERSION} data-manager-console-mode={mode}>
     <aside className="admin-monitor-sidebar native-console-sidebar">
       <div className="admin-monitor-brand"><span>xD</span><div><strong>xDisputer</strong><small>{workspaceMode ? 'Manager workspace' : 'Manager console'}</small></div></div>
