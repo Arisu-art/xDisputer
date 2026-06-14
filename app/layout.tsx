@@ -66,6 +66,7 @@ import './control-dashboard-lists.css';
 import './production-ui-lock.css';
 import './professional-console-layout.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
+import ManagerWorkspaceRuntimeSwitch from '../components/ManagerWorkspaceRuntimeSwitch';
 
 export const metadata = {
   title: 'xDisputer',
@@ -75,7 +76,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body><ControlNavGlobalTelemetry />{children}</body>
+      <body><ControlNavGlobalTelemetry /><ManagerWorkspaceRuntimeSwitch />{children}</body>
     </html>
   );
 }
