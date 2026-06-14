@@ -28,7 +28,8 @@ assigned manager template
 | Phase 8 — Runtime template debugger | Implemented | `components/console/RenderDebugger.tsx` | `scripts/ui-shell-registry-guard.mjs` |
 | Phase 9 — Verification-only template roadmap guard | Implemented | `scripts/manager-template-roadmap-guard.mjs` | `scripts/template-execution-guard.mjs` |
 | Phase 10 — MCoder event ledger | Implemented | `supabase/migrations/20260615093000_mcoder_deployment_gate_events.sql` | `scripts/template-execution-guard.mjs` |
-| Phase 11 — UI smoke execution proof | Implemented | `tests/ui-shell-smoke.spec.ts` | `npm run ui-shell:smoke` |
+| Phase 11 — MCoder event trigger | Implemented | `supabase/migrations/20260615094000_mcoder_deployment_gate_event_triggers.sql` | `scripts/template-execution-guard.mjs` |
+| Phase 12 — UI smoke execution proof | Implemented | `tests/ui-shell-smoke.spec.ts` | `npm run ui-shell:smoke` |
 
 ## Active execution contract
 
@@ -98,6 +99,16 @@ node scripts/manager-template-roadmap-guard.mjs
 npm run ui-source:guard
 npm run typecheck
 npm run build
+```
+
+## Supabase migrations
+
+Run the MCoder migrations in this order:
+
+```text
+supabase/migrations/20260615080000_mcoder_deployment_gate.sql
+supabase/migrations/20260615093000_mcoder_deployment_gate_events.sql
+supabase/migrations/20260615094000_mcoder_deployment_gate_event_triggers.sql
 ```
 
 ## Remaining improvement backlog
