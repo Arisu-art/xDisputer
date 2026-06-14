@@ -3,18 +3,27 @@ import { getSessionContext } from '../../../../lib/saas/session';
 import { workspaceAccessErrorResponse } from '../../../../lib/saas/access-entitlement';
 import { managerTemplateScopePayload, resolveManagerTemplateScope, ManagerTemplateScopeError } from '../../../../lib/manager-template-scope';
 import { downloadManagerTemplateObject } from '../../../../lib/supabase/template-storage-service';
+import { createSupabaseAdminClient } from '../../../../lib/supabase/admin';
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
 const allowedExhibitKinds = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
 
-function privateTemplateCacheHeaders(input: { etag: string; filename: string; mimeType: string | null; managerUserId: string }): Record<string, string> {
+type SessionContext = Awaited<ReturnType<typeof getSessionContext>>;
+
+function templateReadClient(session: SessionContext) {
+  try { return { supabase: createSupabaseAdminClient() as SessionContext['supabase'], mode: 'service-role' as const, warning: null as string | null }; }
+  catch (error) { return { supabase: session.supabase, mode: 'session-rls' as const, warning: error instanceof Error ? error.message : 'Service role unavailable; using session RLS fallback.' }; }
+}
+
+function privateTemplateCacheHeaders(input: { etag: string; filename: string; mimeType: string | null; managerUserId: string; readMode: string }): Record<string, string> {
   return {
     'Content-Type': input.mimeType || 'application/octet-stream',
     'Content-Disposition': `attachment; filename="${input.filename.replace(/"/g, '')}"`,
     'x-template-file-name': input.filename,
     'x-template-source': 'MANAGER_TEMPLATE_ASSET',
     'x-template-manager-user-id': input.managerUserId,
+    'x-template-read-mode': input.readMode,
     'ETag': input.etag,
     'Cache-Control': 'private, max-age=60, stale-while-revalidate=300'
   };
@@ -49,7 +58,8 @@ export async function GET(request: NextRequest) {
     return managerScopeError(error);
   }
 
-  let query = session.supabase
+  const readClient = templateReadClient(session);
+  let query = readClient.supabase
     .from('template_assets')
     .select('*')
     .eq('manager_user_id', scope.managerUserId)
@@ -70,23 +80,25 @@ export async function GET(request: NextRequest) {
   }
 
   const { data: asset, error } = await query.maybeSingle();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: error.message, readMode: readClient.mode, warning: readClient.warning }, { status: 500 });
   if (!asset) {
     return NextResponse.json({
       error: 'Manager template is missing.',
       message: 'Your assigned manager has not uploaded the required active template for this round and document slot.',
       category: 'MANAGER_TEMPLATE',
-      managerTemplateScope: managerTemplateScopePayload(scope)
+      managerTemplateScope: managerTemplateScopePayload(scope),
+      readMode: readClient.mode,
+      warning: readClient.warning
     }, { status: 404 });
   }
 
   const etag = `"template-${asset.id}-${asset.version_number}-${asset.updated_at}"`;
-  const headers = privateTemplateCacheHeaders({ etag, filename: asset.original_filename, mimeType: asset.mime_type, managerUserId: scope.managerUserId });
+  const headers = privateTemplateCacheHeaders({ etag, filename: asset.original_filename, mimeType: asset.mime_type, managerUserId: scope.managerUserId, readMode: readClient.mode });
 
   if (request.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers });
 
   const download = await downloadManagerTemplateObject({ sessionSupabase: session.supabase, bucket: asset.storage_bucket || 'template-assets', path: asset.storage_path });
-  if (download.error || !download.data) return NextResponse.json({ error: download.error?.message || 'Template file could not be loaded.', category: 'MANAGER_TEMPLATE' }, { status: 500 });
+  if (download.error || !download.data) return NextResponse.json({ error: download.error?.message || 'Template file could not be loaded.', category: 'MANAGER_TEMPLATE', readMode: readClient.mode, warning: readClient.warning }, { status: 500 });
   headers['x-template-storage-mode'] = download.mode;
 
   return new Response(download.data, { headers });
