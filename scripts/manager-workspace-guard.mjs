@@ -28,10 +28,12 @@ has(page, 'ManagerTemplateWorkspaceClient', 'manager workspace uses client-like 
 notHas(page, 'TemplateUploadCard', 'manager workspace has no raw upload cards');
 notHas(page, 'encType="multipart/form-data"', 'manager workspace has no raw multipart forms');
 has(shell, 'ManagerWorkspaceSwitch', 'shared shell owns switch mode');
+has(shell, 'variant="nav"', 'shared shell places switch inside visible sidebar nav');
 has(shell, 'admin-monitor-account', 'shared shell owns account block');
 has(clientFlow, 'TemplateProgressiveWorkspace', 'manager upload UX reuses client workspace progressive template workflow');
 has(clientFlow, '/api/template-assets?round=', 'manager upload workflow loads manager-scoped template API');
 has(clientFlow, 'MANAGER_TEMPLATE_ASSET', 'manager upload workflow uses manager template source');
+has(switchComponent, 'manager-workspace-nav-switch', 'switch component exposes visible nav CTA variant');
 has(switchComponent, 'manager-workspace-switch-button', 'switch button component exists');
 has(switchComponent, 'managerSwitchPulse', 'switch pulse animation exists');
 has(switchComponent, 'managerSwitchShine', 'switch shine animation exists');
