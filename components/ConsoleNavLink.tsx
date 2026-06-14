@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState, useTransition, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useTransition, type AnchorHTMLAttributes, type MouseEvent, type ReactNode } from 'react';
 import { warmControlRoute } from './control/controlConsoleCache';
 
 function labelText(children: ReactNode) {
@@ -26,7 +26,12 @@ function normalizeHref(href: string) {
   }
 }
 
-export default function ConsoleNavLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
+type ConsoleNavLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'children' | 'onClick'> & {
+  href: string;
+  children: ReactNode;
+};
+
+export default function ConsoleNavLink({ href, className, children, ...anchorProps }: ConsoleNavLinkProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -54,5 +59,5 @@ export default function ConsoleNavLink({ href, className, children }: { href: st
 
   const classes = [className, optimisticActive ? 'active optimistic' : '', isPending ? 'nav-pending' : ''].filter(Boolean).join(' ').trim() || undefined;
 
-  return <Link href={href} className={classes} onClick={handleClick} onMouseEnter={warm} onFocus={warm} prefetch>{children}</Link>;
+  return <Link {...anchorProps} href={href} className={classes} onClick={handleClick} onMouseEnter={warm} onFocus={warm} prefetch>{children}</Link>;
 }
