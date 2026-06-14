@@ -13,11 +13,14 @@ export type GeneratedOutputManifestItem = {
   count: number;
 };
 
-export type ManifestTemplateSource = 'LOCAL_BROWSER' | 'SUPABASE_TEMPLATE_ASSET' | 'UNKNOWN';
+export type ManifestTemplateSource = 'LOCAL_BROWSER' | 'SUPABASE_TEMPLATE_ASSET' | 'MANAGER_TEMPLATE_ASSET' | 'UNKNOWN';
 
 export type GenerationTemplateManifestItem = {
   slot: string;
   source: ManifestTemplateSource;
+  templateScope: string | null;
+  managerUserId: string | null;
+  uploadedByUserId: string | null;
   assetId: string | null;
   fileName: string;
   templateKind: 'LETTER' | 'EXHIBIT';
@@ -43,7 +46,7 @@ export type ManifestOutputInput = {
 };
 
 export type GenerationManifest = {
-  version: '1.1.0';
+  version: '1.2.0';
   generatedAt: string;
   clientName: string;
   sourceHash: string;
@@ -58,6 +61,14 @@ export type GenerationManifest = {
   routeCount: number;
   bureaus: string[];
   templates: GenerationTemplateManifestItem[];
+  managerTemplateProvenance: {
+    templateCount: number;
+    managerTemplateCount: number;
+    localBrowserTemplateCount: number;
+    managerUserIds: string[];
+    assetIds: string[];
+    contentHashes: string[];
+  };
   roundPolicy: ReturnType<typeof roundTemplateSnapshot>;
   outputs: GeneratedOutputManifestItem[];
   warnings: string[];
@@ -65,7 +76,7 @@ export type GenerationManifest = {
 
 type TemplateCarrier = {
   assetId?: string | null;
-  source?: ManifestTemplateSource;
+  source?: ManifestTemplateSource | string;
   versionNumber?: number | null;
   contentHash?: string | null;
   validationJson?: Record<string, unknown> | null;
@@ -97,6 +108,25 @@ function stableHash(value: unknown) {
 
 function safeStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function safeSource(value: unknown): ManifestTemplateSource {
+  return value === 'LOCAL_BROWSER' || value === 'SUPABASE_TEMPLATE_ASSET' || value === 'MANAGER_TEMPLATE_ASSET' || value === 'UNKNOWN'
+    ? value
+    : 'UNKNOWN';
+}
+
+function stringOrNull(value: unknown) {
+  return typeof value === 'string' && value ? value : null;
+}
+
+function provenanceFromCarrier(carrier: TemplateCarrier) {
+  const validationJson = carrier.validationJson || {};
+  return {
+    templateScope: stringOrNull(validationJson.templateScope),
+    managerUserId: stringOrNull(validationJson.managerUserId),
+    uploadedByUserId: stringOrNull(validationJson.uploadedByUserId)
+  };
 }
 
 function validationFromCarrier(carrier: TemplateCarrier, contract: unknown) {
@@ -144,13 +174,24 @@ function sourceHash(parsed: ParsedSource, routes: LetterRoute[]) {
   });
 }
 
+function sourceFromCarrier(carrier: TemplateCarrier) {
+  const validationScope = stringOrNull(carrier.validationJson?.templateScope);
+  if (validationScope === 'MANAGER_TEMPLATE_ASSET') return 'MANAGER_TEMPLATE_ASSET';
+  return safeSource(carrier.source || (carrier.assetId ? 'SUPABASE_TEMPLATE_ASSET' : 'LOCAL_BROWSER'));
+}
+
 function letterTemplateManifest(slot: LetterReference): GenerationTemplateManifestItem {
   const carrier = slot as LetterReference & TemplateCarrier;
   const validation = validationFromCarrier(carrier, slot.contract);
+  const provenance = provenanceFromCarrier(carrier);
+  const source = sourceFromCarrier(carrier);
 
   return {
     slot: `${slot.round}::LETTER::${slot.type}`,
-    source: carrier.source || (carrier.assetId ? 'SUPABASE_TEMPLATE_ASSET' : 'LOCAL_BROWSER'),
+    source,
+    templateScope: provenance.templateScope,
+    managerUserId: provenance.managerUserId,
+    uploadedByUserId: provenance.uploadedByUserId,
     assetId: carrier.assetId || null,
     fileName: slot.file || slot.name,
     templateKind: 'LETTER',
@@ -169,10 +210,15 @@ function letterTemplateManifest(slot: LetterReference): GenerationTemplateManife
 function exhibitTemplateManifest(kind: ExhibitKind, asset: NonNullable<TemplateExhibits[ExhibitKind]>): GenerationTemplateManifestItem {
   const carrier = asset as NonNullable<TemplateExhibits[ExhibitKind]> & TemplateCarrier;
   const validation = validationFromCarrier(carrier, asset.contract);
+  const provenance = provenanceFromCarrier(carrier);
+  const source = sourceFromCarrier(carrier);
 
   return {
     slot: `${kind}::EXHIBIT`,
-    source: carrier.source || (carrier.assetId ? 'SUPABASE_TEMPLATE_ASSET' : 'LOCAL_BROWSER'),
+    source,
+    templateScope: provenance.templateScope,
+    managerUserId: provenance.managerUserId,
+    uploadedByUserId: provenance.uploadedByUserId,
     assetId: carrier.assetId || (asset.id.startsWith('template-exhibit/') ? null : asset.id),
     fileName: asset.name,
     templateKind: 'EXHIBIT',
@@ -188,50 +234,35 @@ function exhibitTemplateManifest(kind: ExhibitKind, asset: NonNullable<TemplateE
   };
 }
 
-function templateManifestItems(input: {
-  references: LetterReference[];
-  templates: TemplateExhibits;
-}) {
-  const letters = input.references
-    .filter((slot) => Boolean(slot.file))
-    .map(letterTemplateManifest);
-  const exhibits = (Object.entries(input.templates) as Array<[ExhibitKind, TemplateExhibits[ExhibitKind]]>)
-    .filter(([, asset]) => Boolean(asset))
-    .map(([kind, asset]) => exhibitTemplateManifest(kind, asset!));
-
+function templateManifestItems(input: { references: LetterReference[]; templates: TemplateExhibits }) {
+  const letters = input.references.filter((slot) => Boolean(slot.file)).map(letterTemplateManifest);
+  const exhibits = (Object.entries(input.templates) as Array<[ExhibitKind, TemplateExhibits[ExhibitKind]]>).filter(([, asset]) => Boolean(asset)).map(([kind, asset]) => exhibitTemplateManifest(kind, asset!));
   return [...letters, ...exhibits];
 }
 
-export function normalizeGeneratedOutputForManifest(item: ManifestOutputInput, index: number): GeneratedOutputManifestItem {
-  const sequence = typeof item.sequence === 'number' && Number.isFinite(item.sequence)
-    ? item.sequence
-    : index + 1;
-
-  const role = item.role || 'OUTPUT';
-  const bureau = item.bureau || 'CLIENT';
-
+function managerTemplateProvenance(templates: GenerationTemplateManifestItem[]): GenerationManifest['managerTemplateProvenance'] {
+  const managerTemplates = templates.filter((template) => template.source === 'MANAGER_TEMPLATE_ASSET' || template.templateScope === 'MANAGER_TEMPLATE_ASSET');
   return {
-    id: item.id || `${cleanManifestPart(item.type, 'TYPE')}-${cleanManifestPart(bureau, 'CLIENT')}-${cleanManifestPart(role, 'OUTPUT')}-${sequence}`,
-    path: item.path,
-    type: item.type,
-    role,
-    bureau,
-    sequence,
-    count: typeof item.count === 'number' && Number.isFinite(item.count) ? item.count : 0
+    templateCount: templates.length,
+    managerTemplateCount: managerTemplates.length,
+    localBrowserTemplateCount: templates.filter((template) => template.source === 'LOCAL_BROWSER').length,
+    managerUserIds: Array.from(new Set(managerTemplates.map((template) => template.managerUserId).filter((value): value is string => Boolean(value)))),
+    assetIds: Array.from(new Set(managerTemplates.map((template) => template.assetId).filter((value): value is string => Boolean(value)))),
+    contentHashes: Array.from(new Set(managerTemplates.map((template) => template.contentHash).filter((value): value is string => Boolean(value))))
   };
 }
 
-export function buildGenerationManifest(input: {
-  round: Round;
-  parsed: ParsedSource;
-  routes: LetterRoute[];
-  references: LetterReference[];
-  templates: TemplateExhibits;
-  outputs: GeneratedOutputManifestItem[];
-  warnings: string[];
-}): GenerationManifest {
+export function normalizeGeneratedOutputForManifest(item: ManifestOutputInput, index: number): GeneratedOutputManifestItem {
+  const sequence = typeof item.sequence === 'number' && Number.isFinite(item.sequence) ? item.sequence : index + 1;
+  const role = item.role || 'OUTPUT';
+  const bureau = item.bureau || 'CLIENT';
+  return { id: item.id || `${cleanManifestPart(item.type, 'TYPE')}-${cleanManifestPart(bureau, 'CLIENT')}-${cleanManifestPart(role, 'OUTPUT')}-${sequence}`, path: item.path, type: item.type, role, bureau, sequence, count: typeof item.count === 'number' && Number.isFinite(item.count) ? item.count : 0 };
+}
+
+export function buildGenerationManifest(input: { round: Round; parsed: ParsedSource; routes: LetterRoute[]; references: LetterReference[]; templates: TemplateExhibits; outputs: GeneratedOutputManifestItem[]; warnings: string[] }): GenerationManifest {
+  const templates = templateManifestItems({ references: input.references, templates: input.templates });
   return {
-    version: '1.1.0',
+    version: '1.2.0',
     generatedAt: new Date().toISOString(),
     clientName: input.parsed.name || 'Unknown client',
     sourceHash: sourceHash(input.parsed, input.routes),
@@ -239,13 +270,9 @@ export function buildGenerationManifest(input: {
     round: input.round,
     routeCount: input.routes.length,
     bureaus: Array.from(new Set(input.routes.map((route) => route.bureau))),
-    templates: templateManifestItems({ references: input.references, templates: input.templates }),
-    roundPolicy: roundTemplateSnapshot({
-      round: input.round,
-      routes: input.routes,
-      references: input.references,
-      templates: input.templates
-    }),
+    templates,
+    managerTemplateProvenance: managerTemplateProvenance(templates),
+    roundPolicy: roundTemplateSnapshot({ round: input.round, routes: input.routes, references: input.references, templates: input.templates }),
     outputs: input.outputs,
     warnings: input.warnings
   };
@@ -259,33 +286,11 @@ export function generationManifestText(manifest: GenerationManifest) {
     `Client: ${manifest.clientName}`,
     `Source Hash: ${manifest.sourceHash}`,
     `Round: ${manifest.round}`,
-    `Route Count: ${manifest.routeCount}`,
+    `Routes: ${manifest.routeCount}`,
     `Bureaus: ${manifest.bureaus.join(', ') || 'None'}`,
-    `Ready: ${manifest.roundPolicy.ready ? 'Yes' : 'No'}`,
+    `Manager Template Count: ${manifest.managerTemplateProvenance.managerTemplateCount}/${manifest.managerTemplateProvenance.templateCount}`,
+    `Manager Template IDs: ${manifest.managerTemplateProvenance.assetIds.join(', ') || 'None'}`,
     '',
-    'Source Summary:',
-    `- Address Lines: ${manifest.sourceSummary.addressLineCount}`,
-    `- Dispute Accounts: ${manifest.sourceSummary.disputeAccountCount}`,
-    `- Hard Inquiries: ${manifest.sourceSummary.hardInquiryCount}`,
-    `- Late Payments: ${manifest.sourceSummary.latePaymentCount}`,
-    `- Custom Fields: ${manifest.sourceSummary.customFieldCount}`,
-    '',
-    'Templates:',
-    ...(manifest.templates.length ? manifest.templates.map((item) => {
-      return `- ${item.slot} | ${item.source} | asset ${item.assetId || 'local'} | version ${item.versionNumber ?? 'n/a'} | hash ${item.contentHash || 'n/a'} | status ${item.validationStatus || 'n/a'} | confidence ${item.validationConfidence ?? 'n/a'}`;
-    }) : ['- None']),
-    '',
-    'Packet Order:',
-    ...Object.entries(manifest.roundPolicy.packetOrder).map(([type, order]) => {
-      return `${type}: ${(order || []).join(' -> ')}`;
-    }),
-    '',
-    'Outputs:',
-    ...manifest.outputs.map((item) => {
-      return `- ${item.path} | ${item.type} | ${item.role} | ${item.bureau} | sequence ${item.sequence}`;
-    }),
-    '',
-    'Warnings:',
-    ...(manifest.warnings.length ? manifest.warnings.map((item) => `- ${item}`) : ['- None'])
+    JSON.stringify(manifest, null, 2)
   ].join('\n');
 }
