@@ -1,0 +1,238 @@
+/* Account menu system — global, stable styling for the 75/25 console header dock and avatar popover. */
+.manager-header-account-dock {
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  z-index: 2147482000;
+  width: clamp(220px, 25vw, 360px);
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 16px 18px;
+  border: 1px solid rgba(148, 163, 184, .30);
+  border-left: 4px solid rgba(124, 58, 237, .36);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .86);
+  box-shadow: 0 20px 52px rgba(15, 23, 42, .11);
+  backdrop-filter: blur(18px);
+}
+
+.manager-header-account-avatar {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border: 5px solid rgba(124, 58, 237, .24);
+  border-radius: 999px;
+  color: #fff;
+  background: #765343;
+  font-size: 23px;
+  font-weight: 860;
+  text-transform: lowercase;
+  cursor: pointer;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, .18);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.manager-header-account-avatar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 42px rgba(15, 23, 42, .22);
+}
+
+.manager-account-popover {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: min(390px, calc(100vw - 32px));
+  max-height: calc(100vh - 110px);
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, .28);
+  border-radius: 28px;
+  color: #081429;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 34px 90px rgba(15, 23, 42, .24);
+  backdrop-filter: blur(20px);
+}
+
+.manager-account-popover-topline {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, .24);
+}
+
+.manager-account-popover-topline span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.manager-account-close {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, .26);
+  border-radius: 999px;
+  color: #475569;
+  background: #f8fafc;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.manager-account-close:hover {
+  color: #081429;
+  background: #eef2f7;
+}
+
+.manager-account-identity-panel {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 18px 14px 16px;
+  border: 1px solid rgba(148, 163, 184, .22);
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff, #f6f8fb);
+}
+
+.manager-account-avatar-large {
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  border: 5px solid rgba(124, 58, 237, .20);
+  border-radius: 999px;
+  color: #fff;
+  background: #765343;
+  font-size: 50px;
+  font-weight: 800;
+  text-transform: lowercase;
+  box-shadow: 0 18px 34px rgba(15, 23, 42, .14);
+}
+
+.manager-account-identity-panel h2 {
+  max-width: 100%;
+  margin: 2px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #081429;
+  font-size: 26px;
+  line-height: 1.05;
+  letter-spacing: -.055em;
+}
+
+.manager-account-identity-panel p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.manager-account-action-list {
+  display: grid;
+  gap: 8px;
+}
+
+.manager-account-action-list a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 56px;
+  padding: 13px 15px;
+  border: 1px solid rgba(148, 163, 184, .24);
+  border-radius: 17px;
+  color: #081429;
+  text-decoration: none;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .055);
+}
+
+.manager-account-action-list a:hover {
+  border-color: rgba(37, 99, 235, .28);
+  background: #f8fbff;
+  transform: translateY(-1px);
+}
+
+.manager-account-action-list strong {
+  min-width: 0;
+  color: #081429;
+  font-size: 14px;
+  font-weight: 840;
+}
+
+.manager-account-action-list span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 680;
+  text-align: right;
+}
+
+.manager-account-signout {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, .24);
+}
+
+.manager-account-signout button {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: 16px;
+  color: #ffffff;
+  background: #081429;
+  font-size: 15px;
+  font-weight: 840;
+  cursor: pointer;
+  box-shadow: 0 14px 28px rgba(8, 20, 41, .18);
+}
+
+.manager-account-signout button:hover {
+  background: #111f35;
+}
+
+@media (max-width: 1100px) {
+  .manager-header-account-dock {
+    width: 116px;
+    min-height: 86px;
+    padding: 10px;
+  }
+  .manager-header-account-avatar {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+@media (max-width: 760px) {
+  .manager-header-account-dock {
+    top: 10px;
+    right: 10px;
+    width: auto;
+    min-height: auto;
+    padding: 6px;
+    border-left-width: 1px;
+  }
+  .manager-account-popover {
+    width: calc(100vw - 20px);
+    right: -2px;
+  }
+  .manager-account-action-list a {
+    grid-template-columns: 1fr;
+  }
+  .manager-account-action-list span {
+    text-align: left;
+  }
+}
