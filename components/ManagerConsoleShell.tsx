@@ -32,18 +32,8 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
       <div className="admin-monitor-brand"><span>xD</span><div><strong>xDisputer</strong><small>{workspaceMode ? 'Manager workspace' : 'Manager console'}</small></div></div>
       <div className="admin-sidebar-section-title">{workspaceMode ? 'Workspace' : 'Operations'}</div>
       <nav aria-label={workspaceMode ? 'Manager workspace navigation' : 'Manager operations navigation'} data-manager-shell-nav="true" data-manager-switch-contract={MANAGER_SWITCH_CONTRACT_VERSION}>
-        <a
-          href={switchTarget}
-          data-manager-canonical-switch="true"
-          data-manager-switch-visible-slot="plain-nav-button"
-          data-manager-switch-target={switchTarget}
-          data-manager-switch-target-label={switchTargetLabel}
-        >
-          Switch mode
-        </a>
         {visibleNavItems.map((item) => <a key={item.href} className={item.active ? 'active' : ''} href={item.href}>{item.label}</a>)}
       </nav>
-      <div className="admin-monitor-account"><strong>{email || 'Manager account'}</strong><small>{accountLabel}</small></div>
     </aside>
     <section className="admin-monitor-main native-console-main">{children}</section>
   </main>;
