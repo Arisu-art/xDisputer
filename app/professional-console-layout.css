@@ -9,6 +9,7 @@
   --console-main-pad-y: clamp(1rem, 1.8vw, 1.35rem);
   --console-card-radius: 18px;
   --console-row-gap: clamp(0.75rem, 1.5vw, 1rem);
+  --console-account-dock: clamp(220px, 25vw, 360px);
   min-width: 0;
   grid-template-columns: var(--console-sidebar) minmax(0, 1fr) !important;
   align-items: start;
@@ -43,10 +44,40 @@
   padding: var(--console-main-pad-y) var(--console-main-pad-x) 2rem !important;
 }
 
+.admin-monitor-page.native-console:has([data-manager-account-layout="header-75-25-avatar-only"]) .admin-monitor-main.native-console-main {
+  padding-top: clamp(1.25rem, 1.8vw, 1.6rem) !important;
+}
+
 .admin-monitor-header.native-command-hero {
   padding: clamp(1rem, 2.2vw, 1.5rem) clamp(1rem, 2.4vw, 1.75rem) !important;
   margin-bottom: var(--console-row-gap) !important;
   border-radius: var(--console-card-radius) !important;
+}
+
+.admin-monitor-page.native-console:has([data-manager-account-layout="header-75-25-avatar-only"]) .admin-monitor-header.native-command-hero:first-child {
+  width: calc(100% - var(--console-account-dock) - 0.85rem) !important;
+  min-height: 112px;
+  margin-right: calc(var(--console-account-dock) + 0.85rem) !important;
+  display: grid;
+  align-items: center;
+}
+
+.admin-monitor-page.native-console:has([data-manager-account-layout="header-75-25-avatar-only"]) [data-manager-account-menu="true"] {
+  top: var(--console-main-pad-y) !important;
+  right: var(--console-main-pad-x) !important;
+  width: var(--console-account-dock) !important;
+  min-height: 112px !important;
+  border-radius: var(--console-card-radius) !important;
+}
+
+.admin-monitor-page.native-console:has([data-manager-account-layout="header-75-25-avatar-only"]) [data-manager-account-menu="true"]::before {
+  content: '';
+  position: absolute;
+  left: -0.85rem;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(148, 163, 184, .28);
 }
 
 .admin-monitor-header p,
@@ -219,229 +250,17 @@
   min-width: 0;
 }
 
-.admin-monitor-table td strong,
-.admin-monitor-table td small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.admin-monitor-table td[data-label="Controls"],
-.admin-monitor-table td:last-child {
-  white-space: normal;
-}
-
-.admin-actions-row,
-.compact-actions {
-  display: flex !important;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.38rem !important;
-  min-width: 0;
-}
-
-.admin-action-button {
-  min-height: 32px !important;
-  padding-inline: 0.62rem !important;
-  border-radius: 10px !important;
-  font-size: 0.72rem !important;
-  line-height: 1 !important;
-  white-space: nowrap;
-}
-
-.full-table-toolbar {
-  min-width: 0;
-  align-items: center !important;
-  gap: 0.75rem !important;
-}
-
-.full-table-toolbar > div,
-.full-table-toolbar form {
-  min-width: 0;
-}
-
-.full-table-toolbar input,
-.full-table-toolbar select {
-  max-width: 100%;
-}
-
-.table-pagination {
-  flex-wrap: wrap;
-}
-
-/* Manager switch hardening — this file is already imported globally. */
-.admin-monitor-page.native-console .admin-monitor-sidebar.native-console-sidebar {
-  overflow: visible !important;
-}
-
-.admin-monitor-page.native-console .admin-monitor-sidebar.native-console-sidebar nav[data-manager-shell-nav="true"] {
-  overflow: visible !important;
-  align-content: start !important;
-}
-
-.admin-monitor-page.native-console .admin-monitor-sidebar.native-console-sidebar nav[data-manager-shell-nav="true"] a.manager-workspace-nav-switch[data-manager-canonical-switch="true"] {
-  grid-column: 1 / -1 !important;
-  order: 999 !important;
-  position: relative !important;
-  z-index: 40 !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  min-height: 58px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 12px !important;
-  margin-top: 12px !important;
-  padding: 12px 14px !important;
-  border-radius: 18px !important;
-  color: #eff6ff !important;
-  text-decoration: none !important;
-  white-space: normal !important;
-  text-overflow: clip !important;
-  overflow: visible !important;
-  background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
-  box-shadow: 0 16px 36px rgba(37, 99, 235, .28) !important;
-}
-
-.admin-monitor-page.native-console .admin-monitor-sidebar.native-console-sidebar nav[data-manager-shell-nav="true"] a.manager-workspace-nav-switch[data-manager-canonical-switch="true"] .manager-workspace-switch-copy {
-  display: grid !important;
-  gap: 2px !important;
-  min-width: 0 !important;
-  flex: 1 1 auto !important;
-}
-
-@media (max-width: 1180px) {
-  .admin-monitor-page.native-console {
-    grid-template-columns: 1fr !important;
-  }
-
-  .admin-monitor-sidebar.native-console-sidebar {
-    position: relative !important;
-    top: auto !important;
-    height: auto !important;
-    width: min(90vw, 1120px) !important;
-    margin: 0 auto;
-    border-right: 0 !important;
-    border-bottom: 1px solid #dbe3ef;
-    border-radius: 0 0 20px 20px;
-  }
-
-  .admin-monitor-sidebar nav {
-    grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
-  }
-
-  .admin-monitor-page.native-console .admin-monitor-sidebar.native-console-sidebar nav[data-manager-shell-nav="true"] a.manager-workspace-nav-switch[data-manager-canonical-switch="true"] {
-    grid-column: 1 / -1 !important;
-    margin-top: 10px !important;
-  }
-
-  .admin-monitor-main.native-console-main {
-    width: min(90vw, 1120px) !important;
-    padding-inline: 0 !important;
-  }
-
-  .admin-monitor-header h1 {
-    font-size: clamp(1.65rem, 4.8vw, 2.35rem) !important;
+@media (max-width: 1100px) {
+  .admin-monitor-page.native-console:has([data-manager-account-layout="header-75-25-avatar-only"]) .admin-monitor-header.native-command-hero:first-child {
+    width: calc(100% - 130px) !important;
+    margin-right: 130px !important;
   }
 }
 
 @media (max-width: 760px) {
-  .admin-monitor-sidebar.native-console-sidebar,
-  .admin-monitor-main.native-console-main {
-    width: 90vw !important;
-  }
-
-  .admin-monitor-sidebar nav {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .admin-monitor-header.native-command-hero {
-    padding: 1rem !important;
-  }
-
-  .admin-monitor-header h1 {
-    font-size: clamp(1.55rem, 7vw, 2rem) !important;
-    letter-spacing: -0.045em !important;
-  }
-
-  .admin-monitor-header span {
-    font-size: 0.82rem !important;
-  }
-
-  .admin-monitor-card-header {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .admin-monitor-card-header span,
-  .dashboard-card-link {
-    width: fit-content;
-  }
-
-  .admin-monitor-table {
-    min-width: 0 !important;
-    table-layout: auto;
-  }
-
-  .admin-monitor-table thead {
-    display: none;
-  }
-
-  .admin-monitor-table,
-  .admin-monitor-table tbody,
-  .admin-monitor-table tr,
-  .admin-monitor-table td {
-    display: block;
-    width: 100%;
-  }
-
-  .admin-monitor-table tr {
-    padding: 0.7rem;
-    border-bottom: 1px solid #eef2f7;
-  }
-
-  .admin-monitor-table td {
-    display: grid;
-    grid-template-columns: 8.5rem minmax(0, 1fr);
-    align-items: start;
-    gap: 0.75rem;
-    padding: 0.55rem 0 !important;
-    border-bottom: 0 !important;
-  }
-
-  .admin-monitor-table td::before {
-    content: attr(data-label);
-    color: #64748b;
-    font-size: 0.68rem;
-    font-weight: 950;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    line-height: 1.25;
-  }
-
-  .admin-monitor-table td strong,
-  .admin-monitor-table td small {
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
-  .admin-actions-row,
-  .compact-actions {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 520px) {
-  .admin-monitor-sidebar nav {
-    grid-template-columns: 1fr;
-  }
-
-  .admin-monitor-page.native-console .admin-monitor-sidebar.native-console-sidebar nav[data-manager-shell-nav="true"] a.manager-workspace-nav-switch[data-manager-canonical-switch="true"] {
-    min-height: 54px !important;
-  }
-
-  .admin-monitor-table td {
-    grid-template-columns: 1fr;
-    gap: 0.25rem;
+  .admin-monitor-page.native-console:has([data-manager-account-layout="header-75-25-avatar-only"]) .admin-monitor-header.native-command-hero:first-child {
+    width: 100% !important;
+    margin-right: 0 !important;
+    padding-right: 5rem !important;
   }
 }
