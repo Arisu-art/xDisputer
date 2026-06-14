@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/apply-user-error-flyout-wiring.mjs && node scripts/apply-manager-template-storage-wiring.mjs && node scripts/apply-manager-template-ui-wiring.mjs && node scripts/apply-manager-workspace-nav-wiring.mjs",
+    "predev": "node scripts/apply-user-error-flyout-wiring.mjs && node scripts/apply-manager-template-storage-wiring.mjs && node scripts/apply-manager-template-ui-wiring.mjs && node scripts/apply-manager-workspace-nav-wiring.mjs && node scripts/apply-manager-template-generation-wiring.mjs",
     "dev": "next dev",
     "pretypecheck": "node scripts/phase14-local-safety-check.mjs",
     "typecheck": "tsc --noEmit",
