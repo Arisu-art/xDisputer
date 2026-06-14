@@ -20,9 +20,7 @@
   overflow-x: clip;
 }
 
-[data-console-sidebar="true"] {
-  width: var(--console-shell-sidebar-width);
-}
+[data-console-sidebar="true"] { width: var(--console-shell-sidebar-width); }
 
 [data-console-main="true"] {
   width: min(100%, var(--console-shell-page-max));
@@ -52,14 +50,41 @@
   box-shadow: var(--console-card-shadow) !important;
 }
 
-[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type {
-  display: contents !important;
+.console-header-card {
+  min-width: 0;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(.9rem, 1.4vw, 1.15rem);
 }
 
-[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > :not(.admin-monitor-card:first-of-type),
-[data-console-header-grid="true"] > :not(.manager-header-account-dock):not(.admin-monitor-header):not(.native-command-hero):not([data-console-header-primary="true"]) {
-  grid-column: 1 / -1;
+.console-header-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  gap: .45rem;
 }
+
+.console-header-copy > p,
+.console-header-copy > h1,
+.console-header-copy > span { margin: 0; }
+
+.console-header-secondary {
+  min-width: 0;
+  flex: 0 1 420px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .75rem;
+}
+
+.console-header-secondary > * { min-width: 0; }
+
+[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type { display: contents !important; }
+
+[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > :not(.admin-monitor-card:first-of-type),
+[data-console-header-grid="true"] > :not(.manager-header-account-dock):not(.admin-monitor-header):not(.native-command-hero):not([data-console-header-primary="true"]) { grid-column: 1 / -1; }
 
 [data-console-header-grid="true"] > .manager-header-account-dock {
   grid-column: 2 !important;
@@ -84,16 +109,17 @@
   }
 }
 
+@media (max-width: 900px) {
+  .console-header-card { flex-direction: column; align-items: flex-start !important; }
+  .console-header-secondary { width: 100%; flex-basis: auto; justify-content: flex-start; }
+}
+
 @media (max-width: 760px) {
   :root {
     --console-header-ratio-right: auto;
     --console-header-height: 112px;
   }
-
-  [data-console-header-grid="true"] {
-    grid-template-columns: minmax(0, 1fr) auto !important;
-  }
-
+  [data-console-header-grid="true"] { grid-template-columns: minmax(0, 1fr) auto !important; }
   [data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
   [data-console-header-grid="true"] > .native-command-hero:first-of-type,
   [data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type,
@@ -101,7 +127,6 @@
     grid-column: 1 / -1 !important;
     padding-right: 5.25rem !important;
   }
-
   [data-console-header-grid="true"] > .manager-header-account-dock {
     grid-column: 2 !important;
     align-self: start !important;
