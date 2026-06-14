@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getSessionContext } from '../../../../lib/saas/session';
 import { workspaceAccessErrorResponse } from '../../../../lib/saas/access-entitlement';
 import { latestTemplateAssetsBySlot, templateAssetSlotKey } from '../../../../lib/supabase/template-registry';
+import { managerTemplateScopePayload, resolveManagerTemplateScope, ManagerTemplateScopeError } from '../../../../lib/manager-template-scope';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,6 +14,14 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
   response.headers.set('Cache-Control', 'private, no-store');
   response.headers.set('Vary', 'Cookie, Authorization');
   return response;
+}
+
+function managerScopeError(error: unknown) {
+  if (error instanceof ManagerTemplateScopeError) {
+    return noStoreJson({ error: error.message, code: error.code, category: 'MANAGER_TEMPLATE' }, { status: error.code === 'NO_AUTH' ? 401 : 403 });
+  }
+
+  return noStoreJson({ error: 'Could not resolve manager template scope.', category: 'MANAGER_TEMPLATE' }, { status: 500 });
 }
 
 function assetFileUrl(asset: {
@@ -46,6 +55,13 @@ export async function GET(request: NextRequest) {
     return noStoreJson({ error: 'No authenticated user.' }, { status: 401 });
   }
 
+  let scope;
+  try {
+    scope = await resolveManagerTemplateScope(session);
+  } catch (error) {
+    return managerScopeError(error);
+  }
+
   const round = request.nextUrl.searchParams.get('round');
 
   if (round && !allowedRounds.includes(round)) {
@@ -54,8 +70,8 @@ export async function GET(request: NextRequest) {
 
   let query = session.supabase
     .from('template_assets')
-    .select('id, round_label, template_kind, letter_type, exhibit_kind, original_filename, mime_type, file_size, contract_json, validation_json, content_hash, version_number, updated_at, created_at')
-    .eq('owner_id', session.user.id)
+    .select('id, manager_user_id, uploaded_by_user_id, template_scope, round_label, template_kind, letter_type, exhibit_kind, original_filename, mime_type, file_size, contract_json, validation_json, content_hash, version_number, updated_at, created_at')
+    .eq('manager_user_id', scope.managerUserId)
     .eq('is_active', true)
     .order('round_label', { ascending: true })
     .order('template_kind', { ascending: true })
@@ -74,6 +90,8 @@ export async function GET(request: NextRequest) {
 
   const assets = activeAssets.map((asset) => ({
     ...asset,
+    source: 'MANAGER_TEMPLATE_ASSET',
+    manager_user_id: asset.manager_user_id || scope.managerUserId,
     cache_key: `${asset.id}:${asset.version_number || 0}:${asset.updated_at || asset.created_at || ''}:${asset.content_hash || ''}`,
     slot_key: templateAssetSlotKey(asset),
     file_url: assetFileUrl(asset)
@@ -86,7 +104,10 @@ export async function GET(request: NextRequest) {
 
   return noStoreJson({
     manifest: {
-      ownerId: session.user.id,
+      ownerId: scope.managerUserId,
+      managerUserId: scope.managerUserId,
+      requesterUserId: scope.requesterUserId,
+      templateScope: managerTemplateScopePayload(scope),
       round: round || null,
       generatedAt: new Date().toISOString(),
       duplicateActiveSlotCount,
