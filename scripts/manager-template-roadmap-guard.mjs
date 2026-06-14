@@ -27,23 +27,37 @@ const pkg = read('package.json');
 
 has(managerPage, 'ManagerConsoleShell', 'manager workspace uses shared shell');
 has(managerPage, 'ManagerTemplateWorkspaceClient', 'manager workspace uses client-like flow');
+has(managerPage, "session.isMaster ? '/master' : '/admin'", 'manager workspace switch target is role-aware');
 notHas(managerPage, 'TemplateUploadCard', 'manager workspace has no raw upload cards');
 notHas(managerPage, 'encType="multipart/form-data"', 'manager workspace has no raw multipart upload forms');
+
 has(managerClient, 'TemplateProgressiveWorkspace', 'manager upload flow reuses progressive client template workflow');
 has(managerClient, 'MANAGER_TEMPLATE_ASSET', 'manager upload flow uses manager template source');
 has(managerClient, 'ManagerTemplateLibraryStatus', 'manager upload flow shows active template library status');
-has(managerClient, 'async function handleExhibitsChange() { await loadAssets(round); }', 'manager upload flow refetches manager assets after exhibit changes');
+has(managerClient, 'managerTemplateScope={managerTemplateScope}', 'manager client passes only verified template scope');
+notHas(managerClient, 'canManageTemplates: true', 'manager client has no fake writable fallback scope');
+has(managerClient, 'handleExhibitsHydrated', 'manager client separates hydration from mutation refresh');
+has(managerClient, 'handleTemplateMutation', 'manager client reloads assets only after template mutation');
+notHas(managerClient, 'async function handleExhibitsChange() { await loadAssets(round); }', 'manager client no longer reloads on exhibit hydration');
+
 has(packet, 'ManagerTemplateScopeUi', 'packet configurator accepts manager scope');
 has(packet, 'canManageTemplates', 'packet configurator gates upload controls');
 has(packet, 'resolveTemplateAuthority', 'packet configurator uses authority model');
 has(packet, 'Manager controlled', 'packet configurator renders locked manager-controlled client actions');
+has(packet, 'pendingActionKey', 'packet configurator tracks per-slot pending actions');
+has(packet, 'disabled={actionInFlight}', 'packet configurator disables repeated actions while upload/remove is pending');
+has(packet, 'onTemplateMutation?.()', 'packet configurator refreshes parent only after upload/remove mutation');
 has(packet, 'data-template-authority-mode={authority.mode}', 'packet configurator exposes authority mode');
 has(packet, 'summarizeTemplateQuality', 'packet configurator renders template quality summaries');
 count(packet, 'const readOnlyReason = managerTemplateLockMessage(managerTemplateScope);', 1, 'packet configurator has one readOnlyReason');
+
 has(progressive, 'data-template-authority-mode', 'progressive template UX exposes authority mode');
+has(progressive, 'onTemplateMutation?', 'progressive template UX wires mutation callback');
 has(authority, "'CLIENT_READONLY'", 'authority model defines client read-only mode');
 has(authority, "'MANAGER_EDIT'", 'authority model defines manager edit mode');
-has(shell, 'ManagerWorkspaceSwitch', 'shared manager shell owns switch mode');
+has(shell, 'data-manager-canonical-switch="true"', 'shared manager shell owns canonical switch mode');
+has(shell, 'switchCopyForTarget', 'shared manager shell uses target-aware switch copy');
+has(shell, 'data-manager-switch-target-label', 'shared manager shell exposes switch target label');
 has(resolver, 'resolveManagerTemplateFile', 'template resolver exposes manager file resolver');
 has(resolver, 'allowLocalFallback', 'template resolver explicitly controls local fallback');
 has(workspace, 'resolveManagerTemplateFile', 'client workspace generation uses manager resolver');
