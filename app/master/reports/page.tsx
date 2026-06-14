@@ -19,11 +19,12 @@ export default async function MasterReportsPage({ searchParams }: PageProps) {
   const activeCount = activeGenerationFilterCount(filters);
   const exportHref = `/master/reports/export${generationReportQueryString(filters)}`;
 
-  const { supabase } = await requireRole('master');
+  const { user, profile, supabase } = await requireRole('master');
   const { rows, summary, errorMessage } = await listGenerationReport(supabase, 'master', MASTER_REPORT_LIMIT, filters);
 
   return <GenerationReportView
     scope="master"
+    accountEmail={profile?.email || user.email || 'Master account'}
     action="/master/reports"
     exportHref={exportHref}
     filters={filters}
