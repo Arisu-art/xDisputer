@@ -1,4 +1,5 @@
 import ConsoleNavLink from './ConsoleNavLink';
+import ManagerWorkspaceSwitch from './ManagerWorkspaceSwitch';
 import type { GenerationReportFilters, GenerationReportRow, GenerationReportSummary } from '../lib/saas/generation-reports';
 
 type Scope = 'master' | 'manager';
@@ -139,7 +140,7 @@ export default function GenerationReportView({ scope, action, exportHref, filter
     <aside className="admin-monitor-sidebar native-console-sidebar">
       <div className="admin-monitor-brand"><span>xD</span><div><strong>xDisputer</strong><small>{scope === 'master' ? 'Master reports' : 'Manager reports'}</small></div></div>
       <div className="admin-sidebar-section-title">Operations</div>
-      <ReportNavigation scope={scope} />
+      <ReportNavigation scope={scope} />{scope === 'manager' && <ManagerWorkspaceSwitch />}
     </aside>
 
     <section className="admin-monitor-main native-console-main">

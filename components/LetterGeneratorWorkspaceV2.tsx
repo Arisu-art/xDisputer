@@ -10,6 +10,7 @@ import GuidedSourceDataFlow from './GuidedSourceDataFlow';
 import GenerationPreflightChecklist from './GenerationPreflightChecklist';
 import OutputReviewWorkspace, { type ReviewOutput } from './OutputReviewWorkspace';
 import TemplateProgressiveWorkspace from './TemplateProgressiveWorkspace';
+import UserErrorFlyout from './UserErrorFlyout';
 import WorkspaceSettingsPanel from './WorkspaceSettingsPanel';
 import WorkspacePortabilityPanel from './WorkspacePortabilityPanel';
 import { clearOperationsRecords, exportOperationsRecords, loadClientCases, loadFilings, markFilingSent, upsertClientCase, type ClientCaseRecord, type ClientCaseStatus, type FilingRecord } from '../lib/client-operations-store';
@@ -32,6 +33,8 @@ import { evaluateGenerationPreflight, preflightFailureMessage } from '../lib/pre
 import { buildCasePipeline, nextCaseAction } from '../lib/case-pipeline';
 import { resolveUxVisibility } from '../lib/ux-visibility-contract';
 import { buildGenerationManifest, generationManifestText, normalizeGeneratedOutputForManifest, type GenerationManifest } from '../lib/generation-manifest';
+import type { ManagerTemplateScopeUi } from '../lib/manager-template-ui';
+import { explainWebsiteError, type UserFacingError } from '../lib/user-facing-error';
 
 type Panel = 'Dashboard' | 'Templates' | 'Source Data' | 'Outputs' | 'Client Center' | 'Settings';
 type SourceDraftSnapshot = { text: string; normalized: boolean; label: string; capturedAt: string };
@@ -109,6 +112,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   const [evidence, setEvidence] = useState<PacketAssets>(emptyEvidence);
   const [templates, setTemplates] = useState<TemplateExhibits>(emptyTemplates);
   const [registryAssets, setRegistryAssets] = useState<RegistryTemplateAsset[]>([]);
+  const [managerTemplateScope, setManagerTemplateScope] = useState<ManagerTemplateScopeUi | null>(null);
   const [docs, setDocs] = useState<ReviewOutput[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [orderedZip, setOrderedZip] = useState<{ name: string; blob: Blob } | null>(null);
@@ -117,6 +121,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   const [generateAttempted, setGenerateAttempted] = useState(false);
   const [status, setStatus] = useState('Configure packet templates, then load a client source file.');
   const [statusTone, setStatusTone] = useState<StatusTone>('info');
+  const [activeError, setActiveError] = useState<UserFacingError | null>(null);
 
   useEffect(() => {
     const storedPreferences = loadWorkspacePreferences();
@@ -139,10 +144,16 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
     fetch(`/api/template-assets?round=${encodeURIComponent(round)}`)
       .then((response) => response.ok ? response.json() : { assets: [] })
       .then((payload) => {
-        if (!cancelled) setRegistryAssets(Array.isArray(payload.assets) ? payload.assets : []);
+        if (!cancelled) {
+          setRegistryAssets(Array.isArray(payload.assets) ? payload.assets : []);
+          setManagerTemplateScope(payload.managerTemplateScope || null);
+        }
       })
       .catch(() => {
-        if (!cancelled) setRegistryAssets([]);
+        if (!cancelled) {
+          setRegistryAssets([]);
+          setManagerTemplateScope(null);
+        }
       });
 
     return () => { cancelled = true; };
@@ -163,7 +174,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
       size: registryAsset.file_size || undefined,
       contract: registryAsset.contract_json as any,
       assetId: registryAsset.id,
-      source: 'SUPABASE_TEMPLATE_ASSET',
+      source: 'MANAGER_TEMPLATE_ASSET',
       versionNumber: registryAsset.version_number || null,
       contentHash: registryAsset.content_hash || null,
       validationJson: registryAsset.validation_json || null
@@ -190,7 +201,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
         size: registryAsset.file_size || 0,
         contract: registryAsset.contract_json as any,
         assetId: registryAsset.id,
-        source: 'SUPABASE_TEMPLATE_ASSET',
+        source: 'MANAGER_TEMPLATE_ASSET',
         versionNumber: registryAsset.version_number || null,
         contentHash: registryAsset.content_hash || null,
         validationJson: registryAsset.validation_json || null
@@ -203,7 +214,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   const routes = useMemo(() => detectRoutes(parsed), [parsed]);
   const verified = normalized && Boolean(parsed.name);
   const evidenceKey = caseId ? `${round}::${caseId}` : '';
-  const missingLetters = Array.from(new Set(routes.map((route) => route.type))).filter((type) => !refs.find((item) => item.type === type)?.file);
+  const missingLetters = Array.from(new Set(routes.map((route) => route.type))).filter((type) => !effectiveRefs.find((item) => item.type === type)?.file);
   const dispute = routes.some((route) => route.type === 'DISPUTE');
   const disputed = bureaus.some((bureau) => parsed.dispute[bureau].length > 0);
   const affidavitRequired = dispute && disputed;
@@ -223,7 +234,15 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
 
   useEffect(() => setEvidence(evidenceKey ? loadPacketAssets(evidenceKey) : emptyEvidence()), [evidenceKey]);
 
-  function report(message: string, tone: StatusTone = 'info') { setStatus(message); setStatusTone(tone); }
+  function report(message: string, tone: StatusTone = 'info') {
+    setStatus(message);
+    setStatusTone(tone);
+    if (tone === 'error') {
+      setActiveError(explainWebsiteError(message, { operation: 'Workspace action', round, panel }));
+    } else if (tone === 'success') {
+      setActiveError(null);
+    }
+  }
   function clearOutputs() { setDocs([]); setWarnings([]); setOrderedZip(null); setDocDate(''); setGenerateAttempted(false); }
   async function persistGenerationRun(manifest: GenerationManifest) {
     try {
@@ -271,8 +290,8 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   }
   function restoreOriginal() { setSource(originalSource || source); setNormalized(false); report('Original source copy restored. Standardize again before generation.'); }
   function recoverDraft() { if (!recoveryDraft) return; setSource(recoveryDraft.text); setNormalized(recoveryDraft.normalized); report(`${recoveryDraft.label} draft restored.`, 'success'); }
-  function refBlob(type: LetterType) { const slot = refs.find((item) => item.type === type); return slot ? readReferenceFile(slot.id) : Promise.resolve(null); }
-  function exhibitBlob(kind: ExhibitKind) { return readTemplateExhibit(round, kind); }
+  function refBlob(type: LetterType) { if (!managerTemplateScope?.canManageTemplates) return Promise.resolve(null); const slot = refs.find((item) => item.type === type); return slot ? readReferenceFile(slot.id) : Promise.resolve(null); }
+  function exhibitBlob(kind: ExhibitKind) { return managerTemplateScope?.canManageTemplates ? readTemplateExhibit(round, kind) : Promise.resolve(null); }
   function disputeValues(route: LetterRoute, date: string) {
     return { consumerName: parsed.name, addressLines: parsed.address.length ? parsed.address : ['N/A'], dob: parsed.dob, ssn: parsed.ssn, letterDate: date, bureauName: bureauInfo[route.bureau].name, bureauAddressLines: bureauInfo[route.bureau].address.split('\n'), disputeItems: parsed.dispute[route.bureau].map((item) => item.displayText), hardInquiryItems: parsed.inquiry[route.bureau].map((item) => item.displayText), fraudItems: route.items.map((item) => item.displayText) };
   }
@@ -322,6 +341,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   }
   async function generate() {
     setGenerateAttempted(true);
+    setActiveError(null);
     if (!preflight.ready) { report(preflightFailureMessage(preflight), 'error'); return; }
     setBusy(true); setWarnings([]); setOrderedZip(null); setDocDate(dateNow());
     const output: ReviewOutput[] = []; const notes: string[] = [];
@@ -362,8 +382,8 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
         round,
         parsed,
         routes,
-        references: refs,
-        templates,
+        references: effectiveRefs,
+        templates: effectiveTemplates,
         outputs: output.map((item, index) => normalizeGeneratedOutputForManifest({ id: item.id, path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count }, index)),
         warnings: notes
       });
@@ -411,5 +431,5 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   function dashboard() { return <DashboardOperationsWorkspace cases={cases} filings={filings} activeCaseId={caseId} onNewCase={begin} onOpenTemplates={() => setPanel('Templates')} onOpenOutputs={() => setPanel(orderedZip ? 'Outputs' : 'Dashboard')} onOpenTracker={() => setPanel('Client Center')} onContinueCase={(item) => setPanel(item.id === caseId && item.status !== 'PDF_READY' ? (item.status === 'REVIEW_READY' ? 'Outputs' : 'Source Data') : 'Client Center')} />; }
   function sourceView() { return <>{uxRules.showPreflightPanel && <GenerationPreflightChecklist result={preflight} />}<GuidedSourceDataFlow source={source} originalSource={originalSource} recoveryDraft={recoveryDraft} normalized={normalized} verified={verified} parsed={affidavitRequired ? affidavitSource : parsed} routes={routes} sourceWarnings={sourceWarnings} evidenceKey={evidenceKey} evidence={evidence} canGenerate={preflight.ready && canGenerate} missingLetters={missingLetters.map((item) => labels[item])} missingInsertCount={missingNodes.length} affidavitRequired={affidavitRequired} ftcRequired={Boolean(parsed.ftcAccounts.length)} customFields={customFields} strict={preferences.strictValidation} busy={busy} onImportSource={importSource} onStandardizeDraft={standardizeDraft} onStartManualDraft={startManualDraft} onEditSource={(value) => { setSource(value); setNormalized(false); clearOutputs(); }} onSourceFieldChange={setLine} onFtcAccountChange={() => {}} onFtcAccountAdd={() => {}} onFtcAccountRemove={() => {}} onFtcAccountSeed={() => {}} onRestoreOriginal={restoreOriginal} onRecoverDraft={recoverDraft} onEvidenceChanged={(value) => { setEvidence(value); clearOutputs(); saveCase(value.supporting.length ? 'EVIDENCE_READY' : 'SOURCE_LOCKED', { evidenceCount: value.supporting.length, editableCount: 0 }); }} onMessage={(message) => report(message)} onGenerate={generate} /></>; }
   function settingsView() { return <><WorkspaceSettingsPanel preferences={preferences} caseCount={cases.length} filingCount={filings.length} accountEmail={accountEmail} accountRole={accountRole} onChange={(value) => setPreferences(saveWorkspacePreferences(value))} onExportRecords={() => download('XDISPUTER_LOCAL_WORKSPACE_RECORDS.json', new Blob([JSON.stringify(exportOperationsRecords(), null, 2)], { type: 'application/json' }))} onClearRecords={() => { const value = clearOperationsRecords(); setCases(value.cases); setFilings(value.filings); }} /><WorkspacePortabilityPanel round={round} caseId={caseId} clientName={parsed.name} source={source} originalSource={originalSource} normalized={normalized} preferences={preferences} disabled={busy} onImported={applyWorkspaceImport} onMessage={(message, tone) => report(message, tone)} /></>; }
-  return <main className="app-shell"><aside className="sidebar"><div className="brand"><span /><div><strong>xDisputer</strong><small>Client workspace</small></div></div><nav>{panels.map((item) => <button key={item} className={panel === item ? 'active' : ''} disabled={item === 'Outputs' && !orderedZip} onClick={() => setPanel(item)}><strong>{item}</strong></button>)}</nav><div className="workspace-account-card"><div><span>{(accountEmail || 'CL').slice(0, 2).toUpperCase()}</span><div><strong>{accountRole === 'admin' ? 'Admin account' : 'Client account'}</strong><small>{accountEmail || 'Signed in'}</small></div></div><button type="button" onClick={() => setPanel('Settings')}>Account settings</button><form action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form></div></aside><section className="main-area"><header className="header"><div><p className="eyebrow">{panel === 'Dashboard' ? 'Client operations' : panel === 'Client Center' ? 'Client workspace' : `${round} workflow`}</p><h1>{panel}</h1>{uxRules.showStatusText && <p className={`workspace-operation-status ${statusTone}`} role={statusTone === 'error' ? 'alert' : 'status'} aria-live="polite">{status}</p>}</div><div className="workspace-header-actions">{panel === 'Dashboard' && <OutputLimitResetChip />}{uxRules.showHeaderNextAction && <CasePipelineStatus stages={pipelineStages} nextAction={pipelineNextAction} status={status} statusTone={statusTone} />}</div></header>{panel === 'Dashboard' && dashboard()}{panel === 'Templates' && <TemplateProgressiveWorkspace round={round} slots={refs} supportingReady={evidence.supporting.length > 0} onSelectRound={(value) => { setRound(value); clearOutputs(); report(`${value} selected. Templates and generation will use this round.`, 'success'); }} onUploadLetter={uploadRef} onRemoveLetter={removeRef} onExhibitsChange={(value) => { setTemplates(value); clearOutputs(); }} onMessage={(message) => report(message)} onUseRoundForSourceData={() => { clearOutputs(); report(`${round} is active. Source Data generation will use this round's templates.`, 'success'); setPanel('Source Data'); }} />}{panel === 'Source Data' && sourceView()}{panel === 'Outputs' && <OutputReviewWorkspace round={round} outputs={docs} expectedRoutes={routes} zipName={orderedZip?.name} warnings={uxRules.showOutputWarnings ? warnings : []} evidenceKey={evidenceKey} evidence={evidence} onEvidenceChanged={(value) => void updateOutputEvidence(value)} onMessage={(message) => report(message)} onZip={() => orderedZip && download(orderedZip.name, orderedZip.blob)} onReplace={saveEdited} />}{panel === 'Client Center' && <ClientCenterWorkspace cases={cases} filings={filings} activeCaseId={caseId} outputsAvailable={Boolean(orderedZip)} onOpenTemplates={() => setPanel('Templates')} onOpenSource={() => setPanel('Source Data')} onOpenOutputs={() => setPanel('Outputs')} onStartCase={begin} onMarkSent={(id) => setFilings(markFilingSent(id))} />}{panel === 'Settings' && settingsView()}</section></main>;
+  return <><main className="app-shell"><aside className="sidebar"><div className="brand"><span /><div><strong>xDisputer</strong><small>Client workspace</small></div></div><nav>{panels.map((item) => <button key={item} className={panel === item ? 'active' : ''} disabled={item === 'Outputs' && !orderedZip} onClick={() => setPanel(item)}><strong>{item}</strong></button>)}</nav><div className="workspace-account-card"><div><span>{(accountEmail || 'CL').slice(0, 2).toUpperCase()}</span><div><strong>{accountRole === 'admin' ? 'Admin account' : 'Client account'}</strong><small>{accountEmail || 'Signed in'}</small></div></div><button type="button" onClick={() => setPanel('Settings')}>Account settings</button><form action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form></div></aside><section className="main-area"><header className="header"><div><p className="eyebrow">{panel === 'Dashboard' ? 'Client operations' : panel === 'Client Center' ? 'Client workspace' : `${round} workflow`}</p><h1>{panel}</h1>{uxRules.showStatusText && <p className={`workspace-operation-status ${statusTone}`} role={statusTone === 'error' ? 'alert' : 'status'} aria-live="polite">{status}</p>}</div><div className="workspace-header-actions">{panel === 'Dashboard' && <OutputLimitResetChip />}{uxRules.showHeaderNextAction && <CasePipelineStatus stages={pipelineStages} nextAction={pipelineNextAction} status={status} statusTone={statusTone} />}</div></header>{panel === 'Dashboard' && dashboard()}{panel === 'Templates' && <TemplateProgressiveWorkspace round={round} slots={effectiveRefs} supportingReady={evidence.supporting.length > 0} managerTemplateScope={managerTemplateScope} managedExhibits={effectiveTemplates} onSelectRound={(value) => { setRound(value); clearOutputs(); report(`${value} selected. Templates and generation will use this round.`, 'success'); }} onUploadLetter={uploadRef} onRemoveLetter={removeRef} onExhibitsChange={(value) => { setTemplates(value); clearOutputs(); }} onMessage={(message) => report(message)} onUseRoundForSourceData={() => { clearOutputs(); report(`${round} is active. Source Data generation will use this round's templates.`, 'success'); setPanel('Source Data'); }} />}{panel === 'Source Data' && sourceView()}{panel === 'Outputs' && <OutputReviewWorkspace round={round} outputs={docs} expectedRoutes={routes} zipName={orderedZip?.name} warnings={uxRules.showOutputWarnings ? warnings : []} evidenceKey={evidenceKey} evidence={evidence} onEvidenceChanged={(value) => void updateOutputEvidence(value)} onMessage={(message) => report(message)} onZip={() => orderedZip && download(orderedZip.name, orderedZip.blob)} onReplace={saveEdited} />}{panel === 'Client Center' && <ClientCenterWorkspace cases={cases} filings={filings} activeCaseId={caseId} outputsAvailable={Boolean(orderedZip)} onOpenTemplates={() => setPanel('Templates')} onOpenSource={() => setPanel('Source Data')} onOpenOutputs={() => setPanel('Outputs')} onStartCase={begin} onMarkSent={(id) => setFilings(markFilingSent(id))} />}{panel === 'Settings' && settingsView()}</section></main><UserErrorFlyout issue={activeError} onClose={() => setActiveError(null)} onNavigate={(target) => { setPanel(target); setActiveError(null); }} /></>;
 }

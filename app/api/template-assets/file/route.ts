@@ -2,12 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getSessionContext, type SessionContext } from '../../../../lib/saas/session';
 import { workspaceAccessErrorResponse } from '../../../../lib/saas/access-entitlement';
 import { managerTemplateScopePayload, resolveManagerTemplateScope, ManagerTemplateScopeError } from '../../../../lib/manager-template-scope';
+import { downloadManagerTemplateObject } from '../../../../lib/supabase/template-storage-service';
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
 const allowedExhibitKinds = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'];
 
-function privateTemplateCacheHeaders(input: { etag: string; filename: string; mimeType: string | null; managerUserId: string }) {
+function privateTemplateCacheHeaders(input: { etag: string; filename: string; mimeType: string | null; managerUserId: string }): Record<string, string> {
   return {
     'Content-Type': input.mimeType || 'application/octet-stream',
     'Content-Disposition': `attachment; filename="${input.filename.replace(/"/g, '')}"`,
@@ -130,8 +131,9 @@ export async function GET(request: NextRequest) {
 
   if (request.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers });
 
-  const download = await session.supabase.storage.from(asset.storage_bucket).download(asset.storage_path);
-  if (download.error) return NextResponse.json({ error: download.error.message }, { status: 500 });
+  const download = await downloadManagerTemplateObject({ sessionSupabase: session.supabase, bucket: asset.storage_bucket || 'template-assets', path: asset.storage_path });
+  if (download.error || !download.data) return NextResponse.json({ error: download.error?.message || 'Template file could not be loaded.', category: 'MANAGER_TEMPLATE' }, { status: 500 });
+  headers['x-template-storage-mode'] = download.mode;
 
   return new Response(download.data, { headers });
 }

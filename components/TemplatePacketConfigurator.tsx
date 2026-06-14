@@ -44,8 +44,8 @@ export default function TemplatePacketConfigurator({ round, slots, supportingRea
   const [exhibits, setExhibits] = useState<TemplateExhibits>({ FCRA: null, AFFIDAVIT: null, ATTACHMENT: null, FTC: null });
   const dispute = slots.find((slot) => slot.type === 'DISPUTE');
   const late = slots.find((slot) => slot.type === 'LATE_PAYMENT');
-  const authority = useMemo(() => resolveTemplateAuthority(managerTemplateScope), [managerTemplateScope]);
   const readOnlyReason = managerTemplateLockMessage(managerTemplateScope);
+  const authority = useMemo(() => resolveTemplateAuthority(managerTemplateScope), [managerTemplateScope]);
   const mayManageTemplates = canManageTemplates && authority.canUpload;
 
   useEffect(() => { let cancelled = false; setActiveNode(null); if (hasManagedExhibits(managedExhibits)) { setExhibits(managedExhibits!); void onExhibitsChange(managedExhibits!); return () => { cancelled = true; }; } if (!mayManageTemplates) { const empty: TemplateExhibits = { FCRA: null, AFFIDAVIT: null, ATTACHMENT: null, FTC: null }; setExhibits(empty); void onExhibitsChange(empty); return () => { cancelled = true; }; } void recoverTemplateExhibitsFromFiles(round).then((saved) => { if (!cancelled) { setExhibits(saved); void onExhibitsChange(saved); } }).catch(() => { if (!cancelled) onMessage('Template recovery could not be completed. Reopen Templates or upload the missing file again.'); }); return () => { cancelled = true; }; }, [round, mayManageTemplates, managedExhibits]);

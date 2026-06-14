@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import TemplateProgressiveWorkspace from './TemplateProgressiveWorkspace';
-import { defaultReferences, rounds, type LetterReference, type Round } from '../lib/reference-store';
+import ManagerTemplateLibraryStatus from './ManagerTemplateLibraryStatus';
+import { defaultReferences, type LetterReference, type Round } from '../lib/reference-store';
 import { exhibitModes, exhibitTitles, type ExhibitAsset, type ExhibitKind, type TemplateExhibits } from '../lib/template-exhibits';
 import type { ManagerTemplateScopeUi } from '../lib/manager-template-ui';
 
@@ -96,7 +97,7 @@ export default function ManagerTemplateWorkspaceClient() {
   }
 
   async function handleRemoveLetter() { await loadAssets(round); }
-  function handleExhibitsChange(next: TemplateExhibits) { setAssets((current) => current.map((asset) => asset.exhibit_kind && next[asset.exhibit_kind] ? { ...asset, original_filename: next[asset.exhibit_kind]!.name, file_size: next[asset.exhibit_kind]!.size } : asset)); }
+  async function handleExhibitsChange() { await loadAssets(round); }
 
   return <section className="manager-template-client-flow">
     <header className="admin-monitor-header native-command-hero manager-compact-hero">
@@ -107,6 +108,7 @@ export default function ManagerTemplateWorkspaceClient() {
       </div>
     </header>
     <section className="admin-monitor-card manager-template-workflow-status"><strong>{loading ? 'Loading manager template library…' : 'Manager template workflow ready'}</strong><span>{message}</span></section>
+    <ManagerTemplateLibraryStatus round={round} assets={assets} loading={loading} />
     <TemplateProgressiveWorkspace
       round={round}
       slots={slots}
