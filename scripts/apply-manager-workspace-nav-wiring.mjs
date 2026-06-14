@@ -19,7 +19,7 @@ function ensureImport(source, anchor, line) {
   return source.replace(anchor, `${anchor}\n${line}`);
 }
 
-function canonicalPlainManagerConsoleShell() {
+function canonicalManagerConsoleShell() {
   return `import type { ReactNode } from 'react';
 import { MANAGER_SWITCH_CONTRACT_VERSION } from '../lib/manager-runtime-source-sync';
 import ManagerAccountMenu from './ManagerAccountMenu';
@@ -54,18 +54,8 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
       <div className="admin-monitor-brand"><span>xD</span><div><strong>xDisputer</strong><small>{workspaceMode ? 'Manager workspace' : 'Manager console'}</small></div></div>
       <div className="admin-sidebar-section-title">{workspaceMode ? 'Workspace' : 'Operations'}</div>
       <nav aria-label={workspaceMode ? 'Manager workspace navigation' : 'Manager operations navigation'} data-manager-shell-nav="true" data-manager-switch-contract={MANAGER_SWITCH_CONTRACT_VERSION}>
-        <a
-          href={switchTarget}
-          data-manager-canonical-switch="true"
-          data-manager-switch-visible-slot="plain-nav-button"
-          data-manager-switch-target={switchTarget}
-          data-manager-switch-target-label={switchTargetLabel}
-        >
-          Switch mode
-        </a>
         {visibleNavItems.map((item) => <a key={item.href} className={item.active ? 'active' : ''} href={item.href}>{item.label}</a>)}
       </nav>
-      <div className="admin-monitor-account"><strong>{email || 'Manager account'}</strong><small>{accountLabel}</small></div>
     </aside>
     <section className="admin-monitor-main native-console-main">{children}</section>
   </main>;
@@ -73,16 +63,14 @@ export default function ManagerConsoleShell({ mode, email, accountLabel, navItem
 `;
 }
 
-function shellIsPlainSwitchContract(source) {
+function shellHasTopAccountContract(source) {
   const required = [
     "import ManagerAccountMenu from './ManagerAccountMenu';",
     '<ManagerAccountMenu email={email} accountLabel={accountLabel} mode={mode} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />',
     'function switchHref',
     'function switchLabel',
-    'data-manager-canonical-switch="true"',
-    'data-manager-switch-visible-slot="plain-nav-button"',
-    '>\n          Switch mode\n        </a>',
-    "navItems.filter((item) => item.kind !== 'workspace-switch')"
+    "navItems.filter((item) => item.kind !== 'workspace-switch')",
+    'data-manager-shell-nav="true"'
   ];
   return required.every((token) => source.includes(token))
     && !source.includes('WorkspaceSwitchAnchor')
@@ -90,16 +78,19 @@ function shellIsPlainSwitchContract(source) {
     && !source.includes('top-visible-switch-mode')
     && !source.includes('switchLinkStyle')
     && !source.includes('accountSwitchTarget')
-    && !source.includes('action="/auth/sign-out" method="post"><button type="submit">Sign out</button>');
+    && !source.includes('data-manager-switch-visible-slot="plain-nav-button"')
+    && !source.includes('>\n          Switch mode\n        </a>')
+    && !source.includes('action="/auth/sign-out" method="post"><button type="submit">Sign out</button>')
+    && !source.includes('className="admin-monitor-account"');
 }
 
 function wireManagerConsoleShell() {
   const path = 'components/ManagerConsoleShell.tsx';
   if (!existsSync(path)) return;
   const before = readFileSync(path, 'utf8');
-  const source = shellIsPlainSwitchContract(before) ? before : canonicalPlainManagerConsoleShell();
-  if (!shellIsPlainSwitchContract(source)) throw new Error('Plain manager switch nav and top account menu contract could not be generated.');
-  writeIfChanged(path, before, source, 'plain manager switch nav shell with top account menu');
+  const source = shellHasTopAccountContract(before) ? before : canonicalManagerConsoleShell();
+  if (!shellHasTopAccountContract(source)) throw new Error('Top account menu shell contract could not be generated.');
+  writeIfChanged(path, before, source, 'manager shell with top account menu only');
 }
 
 function wireAdminPage() {
@@ -115,7 +106,7 @@ function wireAdminPage() {
       "    { href: '/admin/audit', label: 'Audit log' },\n    { href: '/manager-workspace', label: 'Switch mode', kind: 'workspace-switch' as const }"
     );
   }
-  writeIfChanged(path, before, source, 'plain switch nav contract on /admin');
+  writeIfChanged(path, before, source, 'top account switch contract on /admin');
 }
 
 function wireAdminAccessPage() {
