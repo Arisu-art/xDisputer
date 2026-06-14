@@ -11,28 +11,38 @@ type Props = {
   children: ReactNode;
 };
 
-const visibleSwitchStyle: CSSProperties = {
+const switchBlockStyle: CSSProperties = {
+  display: 'block',
   width: '100%',
-  minHeight: 58,
-  display: 'flex',
+  margin: '12px 0 18px',
+  padding: 0,
+  visibility: 'visible',
+  opacity: 1,
+  position: 'relative',
+  zIndex: 1000
+};
+
+const switchLinkStyle: CSSProperties = {
+  width: '100%',
+  minHeight: 62,
+  display: 'grid',
+  gridTemplateColumns: '14px minmax(0, 1fr) auto',
   alignItems: 'center',
   gap: 12,
-  margin: '12px 0 18px',
-  padding: '13px 14px',
-  borderRadius: 18,
-  color: '#eff6ff',
+  padding: '14px 15px',
+  borderRadius: 20,
+  color: '#ffffff',
   textDecoration: 'none',
-  background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
-  boxShadow: '0 16px 34px rgba(37, 99, 235, .34)',
+  background: 'linear-gradient(135deg, #111827 0%, #2563eb 48%, #7c3aed 100%)',
+  border: '1px solid rgba(255,255,255,.28)',
+  boxShadow: '0 18px 38px rgba(37, 99, 235, .38)',
   boxSizing: 'border-box',
   visibility: 'visible',
   opacity: 1,
   pointerEvents: 'auto',
   position: 'relative',
-  zIndex: 50
+  zIndex: 1001
 };
-
-const switchCopyStyle: CSSProperties = { display: 'grid', gap: 2, minWidth: 0, flex: 1 };
 
 function switchCopyForTarget(href: string, reverse: boolean) {
   if (href.startsWith('/master')) return 'Master console';
@@ -43,11 +53,13 @@ function switchCopyForTarget(href: string, reverse: boolean) {
 
 function WorkspaceSwitchAnchor({ href, reverse }: { href: string; reverse: boolean }) {
   const targetCopy = switchCopyForTarget(href, reverse);
-  return <a className="manager-workspace-nav-switch top-visible-switch-mode" style={visibleSwitchStyle} href={href} data-manager-canonical-switch="true" data-manager-switch-target={href} data-manager-switch-target-label={targetCopy}>
-    <span aria-hidden="true" style={{ width: 13, height: 13, flex: 'none', borderRadius: 999, background: '#bbf7d0', boxShadow: '0 0 0 5px rgba(187,247,208,.18)' }} />
-    <span className="manager-workspace-switch-copy" style={switchCopyStyle}><strong style={{ fontSize: 13, lineHeight: 1.1, letterSpacing: '.03em', textTransform: 'uppercase' }}>Switch mode</strong><small style={{ color: 'rgba(239,246,255,.92)', fontSize: 12, lineHeight: 1.2 }}>{targetCopy}</small></span>
-    <span className="manager-workspace-switch-arrow" style={{ color: 'rgba(239,246,255,.95)', fontWeight: 900 }} aria-hidden="true">→</span>
-  </a>;
+  return <div data-manager-switch-visible-slot="top-sidebar" style={switchBlockStyle}>
+    <a style={switchLinkStyle} href={href} data-manager-canonical-switch="true" data-manager-switch-target={href} data-manager-switch-target-label={targetCopy}>
+      <span aria-hidden="true" style={{ width: 14, height: 14, borderRadius: 999, background: '#bbf7d0', boxShadow: '0 0 0 5px rgba(187,247,208,.18)' }} />
+      <span style={{ display: 'grid', gap: 3, minWidth: 0 }}><strong style={{ fontSize: 13, lineHeight: 1.05, letterSpacing: '.04em', textTransform: 'uppercase' }}>Switch mode</strong><small style={{ color: 'rgba(255,255,255,.92)', fontSize: 12, lineHeight: 1.2 }}>{targetCopy}</small></span>
+      <span style={{ color: 'rgba(255,255,255,.96)', fontWeight: 950, fontSize: 18 }} aria-hidden="true">→</span>
+    </a>
+  </div>;
 }
 
 export default function ManagerConsoleShell({ mode, email, accountLabel, navItems, children }: Props) {
