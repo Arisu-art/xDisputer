@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
@@ -15,8 +14,6 @@ type Props = {
   switchTarget: string;
   switchTargetLabel: string;
 };
-
-type AccountAction = { href: string; title: string; subtitle: string };
 
 const ACCOUNT_RAIL_CONTRACT_CSS = `
   @media (min-width: 761px) {
@@ -70,27 +67,23 @@ function displayNameFromEmail(email?: string | null) {
   return localPart.replace(/[._-]+/g, ' ');
 }
 
-function accountActions(role: ConsoleRole): AccountAction[] {
-  if (role === 'master') return [
-    { href: '/master/accounts', title: 'Manage accounts', subtitle: 'Workspace-wide account directory and limits' },
-    { href: '/master/reports', title: 'Reports', subtitle: 'Cross-workspace reporting and activity views' },
-    { href: '/master/system', title: 'System health', subtitle: 'Operational events and integrity visibility' }
-  ];
-  return [
-    { href: '/admin/access', title: 'Manage access', subtitle: 'Review client approvals and account controls' },
-    { href: '/admin/reports', title: 'Reports', subtitle: 'Manager reporting and generation summaries' },
-    { href: '/admin/audit', title: 'Audit log', subtitle: 'Access and control history for the workspace' }
-  ];
+function roleLabel(role: ConsoleRole, mode: ConsoleMode) {
+  if (role === 'master') return 'Master account';
+  return mode === 'workspace' ? 'Manager workspace account' : 'Manager operations account';
 }
 
-export default function AccountMenu({ role, mode, email, accountLabel, switchTarget, switchTargetLabel }: Props) {
+function surfaceLabel(mode: ConsoleMode) {
+  return mode === 'workspace' ? 'Workspace authoring' : 'Operations monitoring';
+}
+
+export default function AccountMenu({ role, mode, email, accountLabel }: Props) {
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const popoverId = useMemo(() => `xdisputer-account-popover-${role}-${mode}`, [role, mode]);
   const initial = useMemo(() => initialFromEmail(email), [email]);
   const displayName = useMemo(() => displayNameFromEmail(email), [email]);
-  const actions = useMemo(() => accountActions(role), [role]);
+  const safeNext = pathname || '/';
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -110,17 +103,23 @@ export default function AccountMenu({ role, mode, email, accountLabel, switchTar
     };
   }, [open]);
 
-  return <div ref={rootRef} className="manager-header-account-dock" data-console-component="AccountMenu" data-console-account-menu="true" data-console-account-role={role} data-console-mode={mode} data-manager-account-menu="true" data-manager-account-anchor="header-ratio-grid" data-manager-account-layout="header-75-25-avatar-only" data-manager-account-state={open ? 'open' : 'closed'} data-manager-account-popover-align="below-right">
+  return <div ref={rootRef} className="manager-header-account-dock" data-console-component="AccountMenu" data-console-account-menu="true" data-console-account-role={role} data-console-mode={mode} data-manager-account-menu="true" data-manager-account-anchor="header-ratio-grid" data-manager-account-layout="header-75-25-avatar-only" data-manager-account-state={open ? 'open' : 'closed'} data-manager-account-popover-align="same-rail">
     <style data-account-rail-contract="true">{ACCOUNT_RAIL_CONTRACT_CSS}</style>
-    <button type="button" className="manager-header-account-avatar" aria-haspopup="dialog" aria-expanded={open} aria-controls={popoverId} aria-label={`Open ${accountLabel} menu`} onClick={() => setOpen((value) => !value)}>{initial}</button>
-    {open ? <div id={popoverId} className="manager-account-popover" data-console-account-popover="true" data-manager-account-popover="true" data-manager-account-popover-align="below-right" role="dialog" aria-label={`${accountLabel} menu`}>
-      <div className="manager-account-popover-topline"><span>{email || accountLabel}</span><button type="button" className="manager-account-close" aria-label="Close account menu" onClick={() => setOpen(false)}>×</button></div>
-      <section className="manager-account-identity-panel"><div className="manager-account-avatar-large" aria-hidden="true">{initial}</div><h2>{displayName}</h2><p>{accountLabel}</p></section>
-      <section className="manager-account-action-list" aria-label="Account actions">
-        {actions.map((action) => <Link key={action.href} href={action.href} aria-current={pathname === action.href ? 'page' : undefined} onClick={() => setOpen(false)}><div><strong>{action.title}</strong><small>{action.subtitle}</small></div><span aria-hidden="true">→</span></Link>)}
-        <Link href={switchTarget} data-manager-canonical-switch="true" data-manager-switch-visible-slot="account-popover" data-manager-switch-target={switchTarget} data-manager-switch-target-label={switchTargetLabel} onClick={() => setOpen(false)}><div><strong>{switchTargetLabel}</strong><small>Switch between the paired workspace and console surfaces</small></div><span aria-hidden="true">↔</span></Link>
+    <button type="button" className="manager-header-account-avatar" aria-haspopup="dialog" aria-expanded={open} aria-controls={popoverId} aria-label={`Open ${accountLabel} account settings`} onClick={() => setOpen((value) => !value)}>{initial}</button>
+    {open ? <div id={popoverId} className="manager-account-popover" data-console-account-popover="true" data-manager-account-popover="true" data-manager-account-popover-align="same-rail" role="dialog" aria-label={`${accountLabel} settings`}>
+      <div className="manager-account-popover-topline"><span>{email || accountLabel}</span><button type="button" className="manager-account-close" aria-label="Close account settings" onClick={() => setOpen(false)}>×</button></div>
+      <section className="manager-account-identity-panel"><div className="manager-account-avatar-large" aria-hidden="true">{initial}</div><h2>{displayName}</h2><p>{roleLabel(role, mode)}</p></section>
+      <section className="manager-account-function-panel" aria-label="Current account context">
+        <div><strong>Current surface</strong><span>{surfaceLabel(mode)}</span></div>
+        <div><strong>Access role</strong><span>{role}</span></div>
+        <div><strong>Account email</strong><span>{email || 'Not available'}</span></div>
       </section>
-      <form className="manager-account-signout" action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form>
+      <form className="manager-account-settings-form" action="/api/account/profile" method="post">
+        <input type="hidden" name="next" value={safeNext} />
+        <label><span>Display name</span><input name="full_name" defaultValue={displayName} maxLength={120} placeholder="Account display name" /></label>
+        <button type="submit">Save account settings</button>
+      </form>
+      <section className="manager-account-session-panel" aria-label="Session security"><div><strong>Session security</strong><span>End the active browser session for this account.</span></div><form className="manager-account-signout" action="/auth/sign-out" method="post"><button type="submit">Sign out securely</button></form></section>
     </div> : null}
   </div>;
 }
