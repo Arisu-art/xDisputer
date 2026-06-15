@@ -9,6 +9,7 @@ import {
   type AccountDirectoryListResult,
   type AccountDirectoryRow
 } from '../../lib/saas/account-directory';
+import { navItemsForDomain } from '../../lib/console/contracts/navigation-manifest';
 import { requireRole } from '../../lib/saas/session';
 
 type ManagerPanel = 'monitoring' | 'intake' | 'review' | 'reports';
@@ -42,19 +43,6 @@ function ClientMonitorList({ clients, emptyText }: { clients: AccountDirectoryRo
 }
 
 function SnapshotFooter({ count, total, href }: { count: number; total: number; href: string }) { return <div className="dashboard-snapshot-footer"><span>Showing 1-{Math.min(count, total)} of {total}</span><ConsoleNavLink className="dashboard-card-link" href={href}>View all</ConsoleNavLink></div>; }
-
-function managerOperationsNav(activePanel: ManagerPanel) {
-  return [
-    { href: '/manager-workspace', label: 'myco' },
-    { href: '/admin', label: 'Monitoring', active: activePanel === 'monitoring' },
-    { href: '/admin/access', label: 'Access control' },
-    { href: '/admin?panel=intake', label: 'Client intake', active: activePanel === 'intake' },
-    { href: '/admin?panel=review', label: 'Review queue', active: activePanel === 'review' },
-    { href: '/admin/reports', label: 'Reports' },
-    { href: '/admin/audit', label: 'Audit log' },
-    { href: '/manager-workspace', label: 'Switch mode', kind: 'workspace-switch' as const }
-  ];
-}
 
 export default async function AdminPage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : {};
@@ -90,13 +78,18 @@ export default async function AdminPage({ searchParams }: PageProps) {
   const queryError = summaryResult.errorMessage || pendingResult.errorMessage || activeResult.errorMessage || blockedResult.errorMessage;
   const activeRate = summary.clients ? Math.round((summary.active / summary.clients) * 100) : 0;
 
-  return <ManagerConsoleShell mode="operations" email={profile?.email || user.email} accountLabel="Manager account" navItems={managerOperationsNav(activePanel)}>
-    <header className="admin-monitor-header native-command-hero manager-compact-hero"><div><p>Manager operations</p><h1>Client access center.</h1><span>Compact workspace RPC reads keep this dashboard fast while the full access table remains paginated.</span></div></header>
+  return <ManagerConsoleShell
+    mode="operations"
+    email={profile?.email || user.email}
+    accountLabel="Manager account"
+    navItems={navItemsForDomain('manager-operations', '/admin')}
+    header={{ eyebrow: 'Manager operations', title: 'Client access center.', description: 'Compact workspace RPC reads keep this dashboard fast while the full access table remains paginated.' }}
+  >
     {controlStatus && <section className={`admin-monitor-card admin-feedback-card ${controlStatus === 'ok' ? 'success' : 'error'}`}><strong>{controlStatus === 'ok' ? 'Action completed' : 'Action failed'}</strong><span>{controlStatus === 'ok' ? 'The manager console has refreshed with the latest client state.' : controlMessage || 'Unknown error.'}</span></section>}
     {queryError ? <section className="admin-monitor-card"><div className="admin-monitor-empty">Could not load assigned client records: {queryError}</div></section> : <>
-      {activePanel === 'monitoring' && <><section className="admin-monitor-stats" aria-label="Client monitoring metrics"><article><p>Assigned</p><strong>{summary.clients}</strong></article><article><p>Pending</p><strong>{summary.pending}</strong></article><article><p>Active</p><strong>{summary.active}</strong></article><article><p>Active rate</p><strong>{activeRate}%</strong></article></section><section className="admin-power-grid"><article className="admin-monitor-card native-operation-card dashboard-snapshot-card"><div className="admin-monitor-card-header"><div><p>Monitoring</p><h2>Pending approval</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin/access?view=pending">Review</ConsoleNavLink></div><ClientMonitorList clients={pendingResult.accounts} emptyText="No clients are waiting for approval." /><SnapshotFooter count={pendingResult.accounts.length} total={summary.pending} href="/admin/access?view=pending" /></article><article className="admin-monitor-card native-operation-card dashboard-snapshot-card"><div className="admin-monitor-card-header"><div><p>Monitoring</p><h2>Active clients</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin/access?view=active">View all</ConsoleNavLink></div><ClientMonitorList clients={activeResult.accounts} emptyText="No active clients yet." /><SnapshotFooter count={activeResult.accounts.length} total={summary.active} href="/admin/access?view=active" /></article></section></>}
+      {activePanel === 'monitoring' && <><section className="admin-monitor-stats" aria-label="Client monitoring metrics"><article><p>Assigned</p><strong>{summary.clients}</strong></article><article><p>Pending</p><strong>{summary.pending}</strong></article><article><p>Active</p><strong>{summary.active}</strong></article><article><p>Active rate</p><strong>{activeRate}%</strong></article></section><section className="admin-power-grid"><article className="admin-monitor-card native-operation-card dashboard-snapshot-card"><div className="admin-monitor-card-header"><div><p>Monitoring</p><h2>Pending approval</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin/lifecycle">Review</ConsoleNavLink></div><ClientMonitorList clients={pendingResult.accounts} emptyText="No clients are waiting for approval." /><SnapshotFooter count={pendingResult.accounts.length} total={summary.pending} href="/admin/lifecycle" /></article><article className="admin-monitor-card native-operation-card dashboard-snapshot-card"><div className="admin-monitor-card-header"><div><p>Monitoring</p><h2>Active clients</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin/access?view=active">View all</ConsoleNavLink></div><ClientMonitorList clients={activeResult.accounts} emptyText="No active clients yet." /><SnapshotFooter count={activeResult.accounts.length} total={summary.active} href="/admin/access?view=active" /></article></section></>}
       {activePanel === 'intake' && <section className="admin-power-grid"><article className="admin-monitor-card native-operation-card manager-intake-card"><div className="admin-monitor-card-header"><div><p>Invite</p><h2>Manager invite link</h2></div><span>{inviteCode}</span></div><p>Share this link with clients who should connect to your workspace. They remain pending until you approve them.</p><code>{inviteLink}</code></article></section>}
-      {activePanel === 'review' && <section className="admin-power-grid"><article className="admin-monitor-card native-operation-card dashboard-snapshot-card"><div className="admin-monitor-card-header"><div><p>Review</p><h2>Blocked clients</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin/access?view=blocked">Open queue</ConsoleNavLink></div><ClientMonitorList clients={blockedResult.accounts} emptyText="No disabled or suspended clients." /><SnapshotFooter count={blockedResult.accounts.length} total={summary.blocked} href="/admin/access?view=blocked" /></article></section>}
+      {activePanel === 'review' && <section className="admin-power-grid"><article className="admin-monitor-card native-operation-card dashboard-snapshot-card"><div className="admin-monitor-card-header"><div><p>Review</p><h2>Blocked clients</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin/exceptions">Open queue</ConsoleNavLink></div><ClientMonitorList clients={blockedResult.accounts} emptyText="No disabled or suspended clients." /><SnapshotFooter count={blockedResult.accounts.length} total={summary.blocked} href="/admin/exceptions" /></article></section>}
       {activePanel === 'reports' && <section className="admin-power-grid"><article className="admin-monitor-card native-operation-card"><div className="admin-monitor-card-header"><div><p>Reports</p><h2>Manager workspace summary</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin/reports">Open reports</ConsoleNavLink></div><div className="admin-power-list"><span>Assigned clients: {summary.clients}</span><span>Linked clients: {summary.linked}</span><span>Unassigned clients: {summary.unassigned}</span><span>Blocked accounts: {summary.blocked}</span></div></article></section>}
     </>}
   </ManagerConsoleShell>;
