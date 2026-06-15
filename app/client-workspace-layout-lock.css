@@ -1,0 +1,253 @@
+/* Client workspace layout lock
+   Purpose: keep the /workspace client dashboard on the standard compact SaaS layout.
+   Root cause guarded here:
+   - the client shell must be a two-column desktop grid, not a hover-collapsed/fixed rail;
+   - the shell must use the full viewport width, not a centered/cropped canvas;
+   - the dashboard hero, output-limit chip, metrics, and recent-work rows must remain compact and aligned. */
+
+:root {
+  --client-workspace-sidebar-width: clamp(268px, 17vw, 304px);
+  --client-workspace-content-max: 1320px;
+  --client-workspace-page-pad: clamp(20px, 2.1vw, 32px);
+  --client-workspace-gap: clamp(12px, 1.3vw, 18px);
+}
+
+body:has(.app-shell > .sidebar + .main-area) {
+  overflow-x: clip;
+}
+
+.app-shell:has(> .sidebar + .main-area) {
+  width: 100% !important;
+  max-width: 100vw !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: grid !important;
+  grid-template-columns: var(--client-workspace-sidebar-width) minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  background: var(--bg) !important;
+  overflow-x: clip !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) > .sidebar {
+  grid-column: 1 !important;
+  position: sticky !important;
+  inset: 0 auto auto 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: var(--client-workspace-sidebar-width) !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  padding: 20px 14px !important;
+  overflow-x: clip !important;
+  overflow-y: auto !important;
+  transform: none !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) > .sidebar:hover,
+.app-shell:has(> .sidebar + .main-area) > .sidebar:focus-within {
+  width: 100% !important;
+  max-width: var(--client-workspace-sidebar-width) !important;
+  transform: none !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) > .main-area {
+  grid-column: 2 !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: var(--client-workspace-page-pad) !important;
+  overflow-x: clip !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .header {
+  width: min(100%, var(--client-workspace-content-max));
+  margin-inline: auto;
+}
+
+.app-shell:has(> .sidebar + .main-area) .saas-dashboard-workspace,
+.app-shell:has(> .sidebar + .main-area) .operations-workspace,
+.app-shell:has(> .sidebar + .main-area) .client-center-workspace,
+.app-shell:has(> .sidebar + .main-area) .template-progressive-workspace,
+.app-shell:has(> .sidebar + .main-area) .source-progressive-workspace,
+.app-shell:has(> .sidebar + .main-area) .output-review-workspace,
+.app-shell:has(> .sidebar + .main-area) .settings-workspace,
+.app-shell:has(> .sidebar + .main-area) .panel,
+.app-shell:has(> .sidebar + .main-area) .client-template-runtime {
+  max-width: var(--client-workspace-content-max);
+}
+
+.app-shell:has(> .sidebar + .main-area) .saas-dashboard-workspace,
+.app-shell:has(> .sidebar + .main-area) .operations-workspace,
+.app-shell:has(> .sidebar + .main-area) .client-center-workspace,
+.app-shell:has(> .sidebar + .main-area) .settings-workspace {
+  width: min(100%, var(--client-workspace-content-max));
+  margin-inline: auto;
+  display: grid;
+  gap: var(--client-workspace-gap);
+}
+
+.app-shell:has(> .sidebar + .main-area) .dashboard-command-card {
+  min-height: 0 !important;
+  padding: clamp(20px, 2.4vw, 28px) !important;
+  border-radius: 24px !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .dashboard-command-header-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 370px) !important;
+  align-items: stretch !important;
+  gap: clamp(14px, 1.7vw, 22px) !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .dashboard-command-header-row > div {
+  min-width: 0 !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .dashboard-command-card h2 {
+  max-width: 760px !important;
+  font-size: clamp(34px, 4vw, 52px) !important;
+  line-height: .94 !important;
+  letter-spacing: -.075em !important;
+  overflow-wrap: normal !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .dashboard-command-card p:not(.eyebrow) {
+  max-width: 720px !important;
+  font-size: clamp(14px, 1.05vw, 18px) !important;
+  line-height: 1.42 !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .dashboard-command-actions {
+  margin-top: clamp(16px, 1.7vw, 24px) !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .dashboard-command-actions button {
+  min-width: min(100%, 190px) !important;
+  min-height: 52px !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .output-limit-reset-chip {
+  min-height: 118px !important;
+  padding: 16px 18px !important;
+  border-radius: 22px !important;
+  grid-template-columns: minmax(0, 1fr) minmax(118px, .82fr) !important;
+  gap: 12px !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .output-limit-reset-chip strong {
+  font-size: clamp(20px, 1.65vw, 27px) !important;
+  line-height: .98 !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .output-limit-chip-timer strong {
+  font-size: clamp(22px, 1.9vw, 30px) !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .dashboard-operational-metrics {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: var(--client-workspace-gap) !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .dashboard-operational-metrics article {
+  min-height: 108px !important;
+  padding: 18px 22px !important;
+  border-radius: 20px !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .dashboard-case-portfolio {
+  padding: clamp(18px, 2vw, 24px) !important;
+  border-radius: 24px !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .compact-case-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .compact-case-row {
+  min-height: 72px !important;
+  padding: 12px 14px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, auto) minmax(130px, 180px) !important;
+  align-items: center !important;
+  gap: 12px !important;
+  border-radius: 16px !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .compact-case-row .secondary-button {
+  width: 100% !important;
+  min-height: 42px !important;
+}
+
+@media (max-width: 1280px) {
+  .app-shell:has(> .sidebar + .main-area) {
+    --client-workspace-sidebar-width: clamp(236px, 20vw, 276px);
+  }
+
+  .app-shell:has(> .sidebar + .main-area) .dashboard-command-header-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell:has(> .sidebar + .main-area) .output-limit-reset-chip {
+    max-width: 720px !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .app-shell:has(> .sidebar + .main-area) {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell:has(> .sidebar + .main-area) > .sidebar {
+    position: relative !important;
+    height: auto !important;
+    max-height: none !important;
+    max-width: none !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--line) !important;
+  }
+
+  .app-shell:has(> .sidebar + .main-area) > .main-area {
+    grid-column: 1 !important;
+    padding: clamp(14px, 3.5vw, 22px) !important;
+  }
+
+  .app-shell:has(> .sidebar + .main-area) .dashboard-operational-metrics,
+  .app-shell:has(> .sidebar + .main-area) .compact-case-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell:has(> .sidebar + .main-area) .compact-case-row .operations-status,
+  .app-shell:has(> .sidebar + .main-area) .compact-case-row .secondary-button {
+    justify-self: start !important;
+    width: auto !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell:has(> .sidebar + .main-area) .dashboard-command-card h2 {
+    font-size: clamp(30px, 11vw, 42px) !important;
+  }
+
+  .app-shell:has(> .sidebar + .main-area) .dashboard-command-actions,
+  .app-shell:has(> .sidebar + .main-area) .dashboard-command-actions button {
+    width: 100% !important;
+  }
+
+  .app-shell:has(> .sidebar + .main-area) .output-limit-reset-chip {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell:has(> .sidebar + .main-area) .output-limit-chip-timer {
+    padding-left: 0 !important;
+    padding-top: 12px !important;
+    border-left: 0 !important;
+    border-top: 1px solid #dbeafe !important;
+  }
+}
