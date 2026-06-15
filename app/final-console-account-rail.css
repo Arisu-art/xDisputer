@@ -47,6 +47,137 @@
   animation: none !important;
 }
 
+.manager-account-popover[data-manager-account-popover-align="same-rail"],
+.manager-account-popover {
+  top: 0 !important;
+  right: 0 !important;
+  left: auto !important;
+  width: min(420px, calc(100vw - 32px)) !important;
+  max-width: calc(100vw - 32px) !important;
+  max-height: min(680px, calc(100dvh - 32px)) !important;
+  overflow: auto !important;
+  transform-origin: top right !important;
+}
+
+.manager-account-function-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.manager-account-function-panel > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(96px, .45fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(129, 140, 154, .22);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.manager-account-function-panel strong,
+.manager-account-function-panel span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manager-account-function-panel strong {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.manager-account-function-panel span {
+  color: #081429;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.manager-account-settings-form {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(129, 140, 154, .22);
+  border-radius: 18px;
+  background: #fff;
+}
+
+.manager-account-settings-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.manager-account-settings-form label > span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.manager-account-settings-form input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  color: #081429;
+  background: #f8fafc;
+  font-size: 14px;
+  font-weight: 720;
+}
+
+.manager-account-settings-form button,
+.manager-account-session-panel .manager-account-signout button {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 13px;
+  color: #fff;
+  background: #081429;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.manager-account-session-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(129, 140, 154, .22);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.manager-account-session-panel > div {
+  display: grid;
+  gap: 3px;
+}
+
+.manager-account-session-panel strong {
+  color: #081429;
+  font-size: 14px;
+  font-weight: 860;
+}
+
+.manager-account-session-panel span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.manager-account-session-panel .manager-account-signout {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 @media (max-width: 1100px) and (min-width: 761px) {
   .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] {
     --account-dock-width: minmax(220px, .86fr) !important;
@@ -76,5 +207,13 @@
     min-height: var(--account-dock-height) !important;
     padding: .4rem !important;
     justify-self: end !important;
+  }
+
+  .manager-account-popover[data-manager-account-popover-align="same-rail"],
+  .manager-account-popover {
+    top: 0 !important;
+    right: 0 !important;
+    width: min(360px, calc(100vw - 20px)) !important;
+    max-height: calc(100dvh - 20px) !important;
   }
 }
