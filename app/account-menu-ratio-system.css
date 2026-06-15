@@ -1,11 +1,11 @@
 @import './console-shell-system.css';
 
 /* Account menu ratio override — final source of truth for manager/master console header split.
-   Enforces a responsive 75/25 header-to-account dock relationship and keeps the popover anchored to the same right rail. */
+   This file loads last and owns the visible 75/25 header rail, vertical alignment, and popover anchor. */
 
 .admin-monitor-main[data-console-header-grid="true"] {
   --account-dock-width: minmax(220px, 1fr);
-  --account-dock-min-height: clamp(140px, 10vw, 152px);
+  --account-dock-height: clamp(140px, 10vw, 152px);
   --account-dock-radius: 24px;
   --account-dock-border: rgba(203, 213, 225, .82);
   --account-dock-shadow: 0 18px 45px rgba(15, 23, 42, .085), 0 2px 8px rgba(15, 23, 42, .045);
@@ -15,9 +15,10 @@
   --account-popover-top: calc(100% + clamp(.55rem, .9vw, .8rem));
   display: grid !important;
   grid-template-columns: minmax(0, 3fr) var(--account-dock-width) !important;
-  grid-auto-rows: auto;
-  gap: var(--account-dock-gap) !important;
-  align-items: stretch !important;
+  grid-template-rows: var(--account-dock-height) auto !important;
+  column-gap: var(--account-dock-gap) !important;
+  row-gap: clamp(1rem, 1.8vw, 1.45rem) !important;
+  align-items: start !important;
 }
 
 .admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
@@ -27,13 +28,18 @@
   grid-row: 1 !important;
   width: auto !important;
   min-width: 0 !important;
-  min-height: var(--account-dock-min-height) !important;
-  height: 100% !important;
-  margin: 0 0 var(--console-row-gap, 1rem) 0 !important;
+  min-height: var(--account-dock-height) !important;
+  height: var(--account-dock-height) !important;
+  max-height: var(--account-dock-height) !important;
+  margin: 0 !important;
   display: grid !important;
   align-items: center !important;
-  align-self: stretch !important;
+  align-self: start !important;
   border-radius: var(--account-dock-radius) !important;
+  box-shadow: var(--account-dock-shadow) !important;
+  animation: none !important;
+  transform: none !important;
+  z-index: 1;
 }
 
 .admin-monitor-main[data-console-header-grid="true"]:not([data-console-has-header="true"]) > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type {
@@ -41,18 +47,51 @@
   grid-row: 1 !important;
   width: auto !important;
   min-width: 0 !important;
-  min-height: var(--account-dock-min-height) !important;
-  height: 100% !important;
-  margin: 0 0 var(--console-row-gap, 1rem) 0 !important;
+  min-height: var(--account-dock-height) !important;
+  height: var(--account-dock-height) !important;
+  max-height: var(--account-dock-height) !important;
+  margin: 0 !important;
   display: grid !important;
   align-items: center !important;
-  align-self: stretch !important;
+  align-self: start !important;
   border-radius: var(--account-dock-radius) !important;
+  box-shadow: var(--account-dock-shadow) !important;
+  animation: none !important;
+  transform: none !important;
+  z-index: 1;
 }
 
+.admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
 .admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock {
   grid-column: 2 !important;
   grid-row: 1 !important;
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: var(--account-dock-height) !important;
+  height: var(--account-dock-height) !important;
+  max-height: var(--account-dock-height) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  align-self: start !important;
+  justify-self: stretch !important;
+  justify-content: stretch !important;
+  overflow: visible !important;
+  isolation: isolate;
+  border: 1px solid var(--account-dock-border) !important;
+  border-left: 1px solid rgba(129, 140, 154, .36) !important;
+  border-radius: var(--account-dock-radius) !important;
+  background: rgba(255, 255, 255, .94) !important;
+  box-shadow: var(--account-dock-shadow) !important;
+  backdrop-filter: blur(18px);
+  animation: none !important;
+  transform: none !important;
+  z-index: 2;
 }
 
 .admin-monitor-main[data-console-header-grid="true"] > :not(.manager-header-account-dock):not(.admin-monitor-header):not(.native-command-hero):not([data-console-header-primary="true"]) {
@@ -66,33 +105,8 @@
 .admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > :not(.admin-monitor-card:first-of-type),
 .admin-monitor-main[data-console-header-grid="true"][data-console-has-header="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type {
   grid-column: 1 / -1 !important;
-}
-
-.manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
-.manager-header-account-dock {
-  position: relative !important;
-  inset: auto !important;
-  top: auto !important;
-  right: auto !important;
-  z-index: 20;
-  width: 100% !important;
-  min-width: 0 !important;
-  min-height: var(--account-dock-min-height) !important;
-  height: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  display: grid !important;
-  place-items: center !important;
-  align-self: stretch !important;
-  justify-content: stretch !important;
-  overflow: visible !important;
-  isolation: isolate;
-  border: 1px solid var(--account-dock-border) !important;
-  border-left: 1px solid rgba(129, 140, 154, .36) !important;
-  border-radius: var(--account-dock-radius) !important;
-  background: rgba(255, 255, 255, .92) !important;
-  box-shadow: var(--account-dock-shadow) !important;
-  backdrop-filter: blur(18px);
+  grid-row: auto !important;
+  margin-top: 0 !important;
 }
 
 .manager-header-account-dock[data-manager-account-state="open"] {
@@ -113,18 +127,25 @@
 .manager-header-account-avatar {
   width: var(--console-account-avatar-size, clamp(54px, 4.8vw, 68px)) !important;
   height: var(--console-account-avatar-size, clamp(54px, 4.8vw, 68px)) !important;
+  flex: 0 0 auto;
 }
 
 .manager-account-popover[data-manager-account-popover-align="below-right"],
 .manager-account-popover {
+  position: absolute !important;
   top: var(--account-popover-top) !important;
   right: 0 !important;
   left: auto !important;
   width: var(--account-popover-width) !important;
   max-width: calc(100vw - 32px) !important;
-  max-height: min(640px, calc(100dvh - 32px - var(--account-dock-min-height))) !important;
+  max-height: min(640px, calc(100dvh - 32px - var(--account-dock-height))) !important;
+  overflow: auto !important;
   transform-origin: top right !important;
   z-index: 2147483000 !important;
+  border: 1px solid rgba(129, 140, 154, .24) !important;
+  border-radius: 28px !important;
+  background: rgba(255, 255, 255, .98) !important;
+  box-shadow: 0 34px 90px rgba(15, 23, 42, .24) !important;
 }
 
 @media (max-width: 1240px) {
@@ -137,21 +158,24 @@
 @media (max-width: 1100px) {
   .admin-monitor-main[data-console-header-grid="true"] {
     --account-dock-width: clamp(96px, 10vw, 128px);
-    --account-dock-min-height: clamp(124px, 11vw, 140px);
+    --account-dock-height: clamp(124px, 11vw, 140px);
     --account-popover-width: min(390px, calc(100vw - 28px));
     grid-template-columns: minmax(0, 1fr) var(--account-dock-width) !important;
+    grid-template-rows: var(--account-dock-height) auto !important;
   }
 }
 
 @media (max-width: 760px) {
   .admin-monitor-main[data-console-header-grid="true"] {
     --account-dock-width: clamp(58px, 14vw, 74px);
-    --account-dock-min-height: clamp(58px, 14vw, 74px);
+    --account-dock-height: clamp(58px, 14vw, 74px);
     --account-dock-radius: 18px;
     --account-popover-width: calc(100vw - 24px);
     --account-popover-top: calc(100% + .6rem);
     grid-template-columns: minmax(0, 1fr) var(--account-dock-width) !important;
-    gap: .65rem !important;
+    grid-template-rows: minmax(112px, auto) auto !important;
+    column-gap: .65rem !important;
+    row-gap: 1rem !important;
   }
 
   .admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
@@ -162,16 +186,19 @@
     grid-row: 1 !important;
     padding-right: calc(var(--account-dock-width) + 1rem) !important;
     min-height: clamp(112px, 26vw, 136px) !important;
+    height: auto !important;
+    max-height: none !important;
   }
 
-  .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
-  .manager-header-account-dock {
+  .admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
+  .admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock {
     grid-column: 2 !important;
     grid-row: 1 !important;
     width: var(--account-dock-width) !important;
     min-width: var(--account-dock-width) !important;
-    min-height: var(--account-dock-min-height) !important;
-    height: var(--account-dock-min-height) !important;
+    min-height: var(--account-dock-height) !important;
+    height: var(--account-dock-height) !important;
+    max-height: var(--account-dock-height) !important;
     padding: .35rem !important;
     align-self: start !important;
     justify-self: end !important;
@@ -197,9 +224,9 @@
 @media (max-width: 480px) {
   .admin-monitor-main[data-console-header-grid="true"] {
     --account-dock-width: 56px;
-    --account-dock-min-height: 56px;
+    --account-dock-height: 56px;
     --account-popover-width: calc(100vw - 16px);
-    gap: .5rem !important;
+    column-gap: .5rem !important;
   }
 
   .admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
