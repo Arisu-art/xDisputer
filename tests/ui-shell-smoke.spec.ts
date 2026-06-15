@@ -1,26 +1,27 @@
-import { test, expect, type Page } from '@playwright/test';
+// @ts-nocheck
+import { test, expect } from '@playwright/test';
 
 const authStatePath = process.env.E2E_AUTH_STATE || '';
 const managerRoutes = [
-  '/admin?xdisputerDebug=1',
-  '/manager-workspace?xdisputerDebug=1',
-  '/admin/access?xdisputerDebug=1',
-  '/admin/reports?xdisputerDebug=1',
-  '/admin/audit?xdisputerDebug=1'
+  '/admin?xdisputerDebug=panel',
+  '/manager-workspace?xdisputerDebug=panel',
+  '/admin/access?xdisputerDebug=panel',
+  '/admin/reports?xdisputerDebug=panel',
+  '/admin/audit?xdisputerDebug=panel'
 ];
 const masterRoutes = [
-  '/master?xdisputerDebug=1',
-  '/master/accounts?xdisputerDebug=1',
-  '/master/workspaces?xdisputerDebug=1',
-  '/master/reports?xdisputerDebug=1',
-  '/master/audit?xdisputerDebug=1',
-  '/master/system?xdisputerDebug=1',
-  '/master/recovery?xdisputerDebug=1'
+  '/master?xdisputerDebug=panel',
+  '/master/accounts?xdisputerDebug=panel',
+  '/master/workspaces?xdisputerDebug=panel',
+  '/master/reports?xdisputerDebug=panel',
+  '/master/audit?xdisputerDebug=panel',
+  '/master/system?xdisputerDebug=panel',
+  '/master/recovery?xdisputerDebug=panel'
 ];
 
 test.use(authStatePath ? { storageState: authStatePath } : {});
 
-async function seedExecutionSnapshot(page: Page) {
+async function seedExecutionSnapshot(page) {
   await page.evaluate(() => {
     const detail = {
       status: 'rendered',
@@ -37,7 +38,7 @@ async function seedExecutionSnapshot(page: Page) {
   });
 }
 
-async function assertShell(page: Page, route: string) {
+async function assertShell(page, route) {
   test.skip(!authStatePath, 'Set E2E_AUTH_STATE to a Playwright storage-state JSON file for authenticated shell smoke audit.');
   await page.goto(route);
   await page.waitForLoadState('networkidle');
@@ -45,6 +46,7 @@ async function assertShell(page: Page, route: string) {
   await expect(page.locator('[data-console-sidebar="true"]')).toHaveCount(1);
   await expect(page.locator('[data-console-account-menu="true"]')).toHaveCount(1);
   await expect(page.locator('[data-xdisputer-debugger]')).toHaveCount(1);
+  await expect(page.locator('[data-xdisputer-debugger="open"]')).toHaveCount(1);
 
   const debug = await page.evaluate(() => window.__xdisputerDebug ?? null);
   expect(debug, 'Render debugger snapshot must be populated').toBeTruthy();
