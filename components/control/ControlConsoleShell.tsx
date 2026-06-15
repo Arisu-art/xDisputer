@@ -45,8 +45,6 @@ export default function ControlConsoleShell({
   brandLabel,
   brandSubtitle,
   sectionLabel = 'Operations',
-  accountEmail,
-  accountLabel,
   navItems,
   mainClassName = '',
   children
@@ -69,14 +67,6 @@ export default function ControlConsoleShell({
       <nav aria-label={`${scope} navigation`}>
         {navItems.map((item) => <ConsoleNavLink key={item.href} href={item.href} className={isActiveNav(item.href, currentRoute, hrefs) ? 'active' : undefined}>{item.label}</ConsoleNavLink>)}
       </nav>
-
-      <div className="admin-monitor-account">
-        <strong>{accountEmail}</strong>
-        <small>{accountLabel}</small>
-        <form action="/auth/sign-out" method="post">
-          <button type="submit">Sign out</button>
-        </form>
-      </div>
     </aside>
 
     <section className="admin-monitor-main native-console-main">
