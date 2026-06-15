@@ -9,6 +9,8 @@ const CONSOLE_ROUTES = [
   '/master/*'
 ];
 
+const TEMPLATE_WORKSPACE_ROUTES = ['/manager-workspace', '/manager-workspace/studio', '/manager-workspace/engine'];
+
 export const UI_CONTRACTS: UIContract[] = [
   {
     id: 'console-shell',
@@ -96,19 +98,36 @@ export const UI_CONTRACTS: UIContract[] = [
     propagationGroup: 'diagnostics-global'
   },
   {
+    id: 'template-workspace-navigation',
+    kind: 'navigation',
+    scope: 'domain',
+    owner: 'manager',
+    label: 'Manager Workspace Three-Hub Navigation',
+    description: 'Manager template workspace navigation reduced to Template Library, Template Studio, and Generation Engine.',
+    sourceFiles: ['lib/templates/workspace/template-workspace-navigation.ts', 'components/templates/workspace/TemplateWorkspaceShell.tsx'],
+    connectedRoutes: TEMPLATE_WORKSPACE_ROUTES,
+    connectedProcesses: ['template-source-of-truth', 'template-authoring-rules', 'template-execution-control'],
+    requiredMarkers: ['TEMPLATE_WORKSPACE_NAV_ITEMS', 'templateWorkspaceNavForPath'],
+    designTokens: ['template-workspace-hub'],
+    dependencies: ['ConsoleShell', 'TemplateWorkspaceContract'],
+    allowedCustomizations: ['hub label', 'hub description', 'active path'],
+    forbiddenPatterns: ['Contracts static nav', 'Mappings static nav', 'Quality static nav', 'Releases static nav', 'Automation static nav'],
+    propagationGroup: 'template-domain'
+  },
+  {
     id: 'template-execution',
     kind: 'template',
     scope: 'domain',
     owner: 'manager',
     label: 'Template Execution Contract',
-    description: 'Manager-owned dynamic template pipeline from parser to canonical fields, mapping, renderer, generation engine, and output review.',
-    sourceFiles: ['lib/templates', 'components/ManagerTemplateWorkspaceClient.tsx', 'scripts/template-execution-guard.mjs'],
-    connectedRoutes: ['/manager-workspace', '/manager-workspace/*'],
+    description: 'Manager-owned dynamic template pipeline from library to studio to generation engine.',
+    sourceFiles: ['lib/templates/workspace', 'components/templates/workspace', 'scripts/template-workspace-contract-guard.mjs'],
+    connectedRoutes: TEMPLATE_WORKSPACE_ROUTES,
     connectedProcesses: ['parser', 'canonical-fields', 'mapping', 'renderer', 'generation-engine', 'output-review'],
-    requiredMarkers: ['WINDOW.__XDISPUTERTEMPLATEEXECUTION', 'data-report-workbench'],
-    designTokens: ['template-round-selection-grid'],
-    dependencies: ['canonical-field-registry', 'template-contract-registry', 'manager-template-roadmap'],
-    allowedCustomizations: ['template copy', 'round label', 'mapping alias'],
+    requiredMarkers: ['decideTemplateTokenBehavior', 'computeTemplateReadiness', 'previewGenerationPlan'],
+    designTokens: ['template-round-selection-grid', 'templateReadyGlow'],
+    dependencies: ['canonical-field-registry', 'template-workspace-navigation', 'template-workspace-contract'],
+    allowedCustomizations: ['template copy', 'round label', 'mapping alias', 'generation preview state'],
     forbiddenPatterns: ['template-specific field outside canonical registry', 'duplicate renderer mapping', 'unregistered parser output'],
     propagationGroup: 'template-domain'
   }
@@ -130,16 +149,16 @@ export const FEATURE_CONTRACTS: FeatureContract[] = [
   },
   {
     id: 'manager-template-authoring',
-    label: 'Manager Template Authoring Pipeline',
+    label: 'Manager Template Workspace Pipeline',
     owner: 'manager',
     status: 'active',
-    entryRoutes: ['/manager-workspace', '/manager-workspace/*'],
-    sourceFiles: ['components/ManagerTemplateWorkspaceClient.tsx', 'lib/templates'],
-    apiRoutes: [],
-    databaseObjects: ['manager template tables', 'template storage'],
-    uiContracts: ['template-execution', 'console-shell'],
-    dependencies: ['canonical field registry', 'renderer', 'generation engine'],
-    fallbackBehavior: 'Block release and show mapping/quality review when a required canonical field is missing.'
+    entryRoutes: TEMPLATE_WORKSPACE_ROUTES,
+    sourceFiles: ['components/templates/workspace', 'lib/templates/workspace', 'components/ManagerTemplateWorkspaceClient.tsx'],
+    apiRoutes: ['/api/template-assets'],
+    databaseObjects: ['template_assets', 'template storage'],
+    uiContracts: ['template-workspace-navigation', 'template-execution', 'console-shell'],
+    dependencies: ['template library service', 'template studio service', 'generation engine service'],
+    fallbackBehavior: 'Route missing templates to Library, mapping issues to Studio, and release checks to Generation Engine.'
   }
 ];
 
