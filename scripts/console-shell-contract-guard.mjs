@@ -57,6 +57,9 @@ has(consoleShell, 'data-console-main="true"', 'ConsoleShell owns global main mar
 has(consoleShell, 'data-console-layout-ratio="75/25"', 'ConsoleShell exposes active ratio marker');
 has(consoleShell, '<ConsoleHeader', 'ConsoleShell owns ConsoleHeader placement');
 has(consoleShell, '<AccountMenu', 'ConsoleShell owns shared AccountMenu placement');
+has(consoleShell, 'switchModeContract', 'ConsoleShell owns advanced switch mode intent logic');
+has(consoleShell, 'data-console-mode-switch="sidebar-bottom"', 'ConsoleShell renders mode switch at sidebar bottom');
+has(consoleShell, 'data-manager-switch-visible-slot="sidebar-bottom"', 'ConsoleShell exposes canonical switch only in sidebar bottom');
 notHas(consoleShell, '<ManagerAccountMenu', 'ConsoleShell no longer mounts legacy ManagerAccountMenu');
 notHas(consoleShell, 'action="/auth/sign-out"', 'ConsoleShell does not duplicate account actions');
 
@@ -78,6 +81,8 @@ has(accountProfileRoute, 'supabase.auth.updateUser', 'Account profile API syncs 
 has(finalAccountRailCss, 'data-manager-account-popover-align="same-rail"', 'Final account rail CSS anchors popover on same rail');
 has(finalAccountRailCss, '.manager-account-settings-form', 'Final account rail CSS styles settings form');
 has(finalAccountRailCss, '.manager-account-function-panel', 'Final account rail CSS styles account function panel');
+has(finalAccountRailCss, '.console-sidebar-mode-switch', 'Final account rail CSS styles bottom sidebar mode switch');
+has(finalAccountRailCss, 'margin-top: auto !important', 'Bottom sidebar switch is pinned to bottom of side navigation');
 has(managerAccountMenu, '<AccountMenu', 'compat ManagerAccountMenu forwards to shared AccountMenu');
 has(renderDebugger, 'window.__xdisputerDebug', 'RenderDebugger exposes debug global');
 has(renderDebugger, 'document.styleSheets', 'RenderDebugger inspects loaded CSS');
