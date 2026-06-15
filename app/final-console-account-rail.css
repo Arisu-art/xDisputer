@@ -1,5 +1,5 @@
 /* Final console account rail override.
-   Root cause fixed here: legacy account-menu-system.css still defined a compact 88-112px rail and a 1100px rule that reduced the account card to 86px. This final file loads last and restores the standard 75/25 rail. */
+   This file loads last. It owns: 75/25 header/account rail, same-rail account settings popover, and highlighted sidebar-bottom Switch Mode. */
 
 .admin-monitor-page[data-console-shell="true"] .admin-monitor-sidebar > .admin-monitor-account,
 .admin-monitor-page[data-console-shell="true"] .admin-monitor-account {
@@ -19,10 +19,24 @@
 
 .console-sidebar-mode-switch {
   margin-top: auto !important;
-  padding-top: 1rem !important;
+  padding: 1rem .1rem .15rem !important;
   display: grid !important;
-  gap: .65rem !important;
+  gap: .72rem !important;
   border-top: 1px solid rgba(203, 213, 225, .82) !important;
+  position: sticky !important;
+  bottom: .85rem !important;
+  z-index: 10 !important;
+}
+
+.console-sidebar-mode-switch::before {
+  content: '';
+  position: absolute;
+  inset: .5rem -.35rem -.45rem;
+  z-index: -1;
+  border-radius: 22px;
+  background: radial-gradient(circle at 30% 20%, rgba(37, 99, 235, .12), transparent 48%), linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.84));
+  box-shadow: 0 20px 44px rgba(15, 23, 42, .10);
+  opacity: .96;
 }
 
 .console-sidebar-mode-switch > div {
@@ -44,31 +58,33 @@
 
 .console-sidebar-mode-switch strong {
   color: #081429;
-  font-size: .9rem;
-  font-weight: 880;
+  font-size: .92rem;
+  font-weight: 900;
   line-height: 1.18;
 }
 
 .console-sidebar-mode-switch small {
   max-width: 17rem;
   font-size: .72rem;
-  font-weight: 680;
+  font-weight: 700;
   line-height: 1.42;
 }
 
 .console-sidebar-mode-switch-button {
-  min-height: 46px !important;
-  padding: .72rem .82rem !important;
+  min-height: 48px !important;
+  padding: .75rem .82rem !important;
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) auto !important;
   align-items: center !important;
   gap: .65rem !important;
-  border: 1px solid rgba(15, 23, 42, .12) !important;
+  border: 1px solid rgba(37, 99, 235, .24) !important;
   border-radius: 16px !important;
   color: #fff !important;
-  background: linear-gradient(135deg, #081429, #162238) !important;
+  background: linear-gradient(135deg, #061227, #0f2f68 54%, #2563eb) !important;
   text-decoration: none !important;
-  box-shadow: 0 16px 32px rgba(15, 23, 42, .16) !important;
+  box-shadow: 0 16px 32px rgba(37, 99, 235, .22), 0 8px 18px rgba(15, 23, 42, .16) !important;
+  transform: translateZ(0);
+  animation: consoleSwitchPulse 2600ms ease-in-out infinite;
 }
 
 .console-sidebar-mode-switch-button span {
@@ -77,7 +93,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: .82rem;
-  font-weight: 850;
+  font-weight: 900;
 }
 
 .console-sidebar-mode-switch-button em {
@@ -87,14 +103,15 @@
   place-items: center;
   border-radius: 999px;
   color: #081429;
-  background: rgba(255, 255, 255, .92);
+  background: rgba(255, 255, 255, .94);
   font-style: normal;
-  font-weight: 900;
+  font-weight: 950;
+  box-shadow: 0 8px 18px rgba(2, 6, 23, .18);
 }
 
 .console-sidebar-mode-switch-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 20px 42px rgba(15, 23, 42, .2) !important;
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 22px 48px rgba(37, 99, 235, .28), 0 12px 24px rgba(15, 23, 42, .18) !important;
 }
 
 .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] {
@@ -166,6 +183,11 @@
 .manager-account-session-panel span { color: #64748b; font-size: 12px; font-weight: 650; line-height: 1.45; }
 .manager-account-session-panel .manager-account-signout { margin: 0; padding: 0; border: 0; }
 
+@keyframes consoleSwitchPulse {
+  0%, 100% { filter: saturate(1); box-shadow: 0 16px 32px rgba(37, 99, 235, .22), 0 8px 18px rgba(15, 23, 42, .16); }
+  50% { filter: saturate(1.18); box-shadow: 0 18px 42px rgba(37, 99, 235, .32), 0 10px 22px rgba(15, 23, 42, .18); }
+}
+
 @media (max-width: 1100px) and (min-width: 761px) {
   .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] { --account-dock-width: minmax(220px, .86fr) !important; --account-dock-height: clamp(128px, 12vw, 144px) !important; grid-template-columns: minmax(0, 2.8fr) var(--account-dock-width) !important; }
   .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"], .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock { min-width: 220px !important; }
@@ -175,5 +197,9 @@
   .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] { --account-dock-width: clamp(56px, 14vw, 74px) !important; --account-dock-height: clamp(56px, 14vw, 74px) !important; grid-template-columns: minmax(0, 1fr) var(--account-dock-width) !important; grid-template-rows: minmax(112px, auto) auto !important; }
   .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"], .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock { width: var(--account-dock-width) !important; min-width: var(--account-dock-width) !important; height: var(--account-dock-height) !important; min-height: var(--account-dock-height) !important; padding: .4rem !important; justify-self: end !important; }
   .manager-account-popover[data-manager-account-popover-align="same-rail"], .manager-account-popover { top: 0 !important; right: 0 !important; width: min(360px, calc(100vw - 20px)) !important; max-height: calc(100dvh - 20px) !important; }
-  .console-sidebar-mode-switch { margin-top: 1rem !important; }
+  .console-sidebar-mode-switch { margin-top: 1rem !important; position: relative !important; bottom: auto !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .console-sidebar-mode-switch-button { animation: none !important; }
 }
