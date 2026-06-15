@@ -14,6 +14,11 @@ type DebugSnapshot = {
   loadedCssFiles: string[];
   activeLayoutRatio: string;
   gridTemplateColumns: string;
+  headerRect: string;
+  accountRect: string;
+  headerAccountTopDelta: string;
+  headerAccountWidthRatio: string;
+  detectionMode: string;
 };
 
 type TemplateExecutionSnapshot = {
@@ -66,31 +71,78 @@ function pickLabel(element: Element | null, fallback: string) {
   return element.getAttribute('data-console-component') || fallback;
 }
 
-function findHeaderElement() {
-  return document.querySelector('[data-console-header="true"], [data-console-header-primary="true"], .admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:first-of-type, .admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type');
+function findShellElement() {
+  return document.querySelector('[data-console-shell="true"]') || document.querySelector('.admin-monitor-page.native-console');
+}
+
+function findMainElement(shell: Element | null) {
+  return shell?.querySelector('[data-console-main="true"][data-console-header-grid="true"]')
+    || document.querySelector('[data-console-main="true"][data-console-header-grid="true"]')
+    || shell?.querySelector('.admin-monitor-main.native-console-main')
+    || document.querySelector('.admin-monitor-main.native-console-main');
+}
+
+function findHeaderElement(shell: Element | null) {
+  return shell?.querySelector('[data-console-header="true"], [data-console-header-primary="true"], .admin-monitor-main > .admin-monitor-header:first-of-type, .admin-monitor-main > .native-command-hero:first-of-type')
+    || document.querySelector('[data-console-header="true"], [data-console-header-primary="true"], .admin-monitor-main > .admin-monitor-header:first-of-type, .admin-monitor-main > .native-command-hero:first-of-type');
+}
+
+function findSidebarElement(shell: Element | null) {
+  return shell?.querySelector('[data-console-sidebar="true"], .admin-monitor-sidebar.native-console-sidebar')
+    || document.querySelector('[data-console-sidebar="true"], .admin-monitor-sidebar.native-console-sidebar');
+}
+
+function findAccountElement(shell: Element | null) {
+  return shell?.querySelector('[data-console-account-menu="true"], [data-manager-account-menu="true"], .manager-header-account-dock')
+    || document.querySelector('[data-console-account-menu="true"], [data-manager-account-menu="true"], .manager-header-account-dock');
+}
+
+function rectSummary(element: Element | null) {
+  if (!element) return 'missing';
+  const rect = element.getBoundingClientRect();
+  return `x:${rect.x.toFixed(1)} y:${rect.y.toFixed(1)} w:${rect.width.toFixed(1)} h:${rect.height.toFixed(1)}`;
+}
+
+function topDelta(first: Element | null, second: Element | null) {
+  if (!first || !second) return 'missing';
+  return `${Math.abs(first.getBoundingClientRect().top - second.getBoundingClientRect().top).toFixed(2)}px`;
+}
+
+function widthRatio(header: Element | null, account: Element | null) {
+  if (!header || !account) return 'missing';
+  const headerWidth = header.getBoundingClientRect().width;
+  const accountWidth = account.getBoundingClientRect().width;
+  const total = headerWidth + accountWidth;
+  if (!total) return 'missing';
+  return `${Math.round((headerWidth / total) * 100)} / ${Math.round((accountWidth / total) * 100)}`;
 }
 
 function collectSnapshot(route: string): DebugSnapshot {
-  const shell = document.querySelector('[data-console-shell="true"]');
-  const main = document.querySelector('[data-console-main="true"][data-console-header-grid="true"]');
-  const header = findHeaderElement();
-  const sidebar = document.querySelector('[data-console-sidebar="true"]');
-  const accountMenu = document.querySelector('[data-console-account-menu="true"], [data-manager-account-menu="true"]');
+  const shell = findShellElement();
+  const main = findMainElement(shell);
+  const header = findHeaderElement(shell);
+  const sidebar = findSidebarElement(shell);
+  const accountMenu = findAccountElement(shell);
   const rootStyle = getComputedStyle(document.documentElement);
   const left = rootStyle.getPropertyValue('--console-header-ratio-left').trim() || '3fr';
-  const right = rootStyle.getPropertyValue('--console-header-ratio-right').trim() || '1fr';
+  const right = rootStyle.getPropertyValue('--console-header-ratio-right').trim() || 'minmax(220px, 1fr)';
   const gridTemplateColumns = main ? getComputedStyle(main).gridTemplateColumns : 'not-available';
   return {
     route,
-    role: shell?.getAttribute('data-console-role') || 'not-available',
+    role: shell?.getAttribute('data-console-role') || shell?.getAttribute('data-control-console') || 'not-available',
     mode: shell?.getAttribute('data-console-mode') || 'not-available',
-    renderedShell: pickLabel(shell, 'ConsoleShell'),
-    renderedHeader: pickLabel(header, 'ConsoleHeader'),
-    renderedSidebar: pickLabel(sidebar, 'ConsoleSidebar'),
-    renderedAccountMenu: pickLabel(accountMenu, 'AccountMenu'),
+    renderedShell: pickLabel(shell, shell ? 'ConsoleShell[class-fallback]' : 'ConsoleShell'),
+    renderedHeader: pickLabel(header, header ? 'ConsoleHeader[class-fallback]' : 'ConsoleHeader'),
+    renderedSidebar: pickLabel(sidebar, sidebar ? 'ConsoleSidebar[class-fallback]' : 'ConsoleSidebar'),
+    renderedAccountMenu: pickLabel(accountMenu, accountMenu ? 'AccountMenu[class-fallback]' : 'AccountMenu'),
     loadedCssFiles: readLoadedCssFiles(),
     activeLayoutRatio: `${left} / ${right}`,
-    gridTemplateColumns
+    gridTemplateColumns,
+    headerRect: rectSummary(header),
+    accountRect: rectSummary(accountMenu),
+    headerAccountTopDelta: topDelta(header, accountMenu),
+    headerAccountWidthRatio: widthRatio(header, accountMenu),
+    detectionMode: shell?.hasAttribute('data-console-shell') ? 'canonical-data-attributes' : shell ? 'class-fallback' : 'missing'
   };
 }
 
@@ -99,7 +151,7 @@ function sameSnapshot(a: DebugSnapshot | null, b: DebugSnapshot) {
 }
 
 function debuggerShouldOpen(searchParams: ReturnType<typeof useSearchParams>) {
-  return searchParams.get('debugPanel') === '1' || searchParams.get('xdisputerDebug') === 'panel' || searchParams.get('debug') === 'ui-panel';
+  return searchParams.get('debugPanel') === '1' || searchParams.get('xdisputerDebug') === 'panel' || searchParams.get('xdisputerDebug') === '1' || searchParams.get('debug') === 'ui-panel';
 }
 
 export default function RenderDebugger() {
@@ -127,11 +179,13 @@ export default function RenderDebugger() {
       });
     };
     sync();
-    const shell = document.querySelector('[data-console-shell="true"]');
-    const observer = shell ? new MutationObserver(sync) : null;
-    observer?.observe(shell as Node, { subtree: true, childList: true, attributes: true });
+    const observerRoot = document.body || document.documentElement;
+    const observer = new MutationObserver(sync);
+    observer.observe(observerRoot, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style', 'data-console-shell', 'data-console-main', 'data-console-header-grid', 'data-console-component', 'data-manager-account-state'] });
+    const interval = window.setInterval(sync, 800);
     window.addEventListener('resize', sync);
-    return () => { cancelAnimationFrame(frame); observer?.disconnect(); window.removeEventListener('resize', sync); };
+    window.addEventListener('orientationchange', sync);
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); window.clearInterval(interval); window.removeEventListener('resize', sync); window.removeEventListener('orientationchange', sync); };
   }, [enabled, route]);
 
   useEffect(() => {
@@ -147,7 +201,7 @@ export default function RenderDebugger() {
     <button type="button" className="xdisputer-render-debugger-toggle" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="xdisputer-render-debugger-panel"><span>{open ? 'Hide debug' : 'Debug ready'}</span><small>{snapshot.renderedShell}</small></button>
     {open ? <section id="xdisputer-render-debugger-panel" className="xdisputer-render-debugger-panel" aria-live="polite">
       <div className="xdisputer-render-debugger-heading"><strong>xDisputer debug</strong><small>Runtime proof only. Does not affect layout.</small></div>
-      <dl><dt>Route</dt><dd>{snapshot.route}</dd><dt>Shell</dt><dd>{snapshot.renderedShell}</dd><dt>Header</dt><dd>{snapshot.renderedHeader}</dd><dt>Sidebar</dt><dd>{snapshot.renderedSidebar}</dd><dt>Account</dt><dd>{snapshot.renderedAccountMenu}</dd><dt>Role</dt><dd>{snapshot.role} / {snapshot.mode}</dd><dt>Ratio</dt><dd>{snapshot.activeLayoutRatio}</dd><dt>Grid</dt><dd>{snapshot.gridTemplateColumns}</dd></dl>
+      <dl><dt>Route</dt><dd>{snapshot.route}</dd><dt>Shell</dt><dd>{snapshot.renderedShell}</dd><dt>Header</dt><dd>{snapshot.renderedHeader}</dd><dt>Sidebar</dt><dd>{snapshot.renderedSidebar}</dd><dt>Account</dt><dd>{snapshot.renderedAccountMenu}</dd><dt>Role</dt><dd>{snapshot.role} / {snapshot.mode}</dd><dt>Ratio token</dt><dd>{snapshot.activeLayoutRatio}</dd><dt>Grid</dt><dd>{snapshot.gridTemplateColumns}</dd><dt>Header rect</dt><dd>{snapshot.headerRect}</dd><dt>Account rect</dt><dd>{snapshot.accountRect}</dd><dt>Top delta</dt><dd>{snapshot.headerAccountTopDelta}</dd><dt>Width ratio</dt><dd>{snapshot.headerAccountWidthRatio}</dd><dt>Detection</dt><dd>{snapshot.detectionMode}</dd></dl>
       {execution ? <div className="xdisputer-render-debugger-execution"><strong>Template execution</strong><dl><dt>Status</dt><dd>{execution.status}</dd><dt>Round</dt><dd>{execution.round}</dd><dt>Outputs</dt><dd>{execution.outputs}</dd><dt>Warnings</dt><dd>{execution.warnings}</dd><dt>Engines</dt><dd>{execution.engines.join(', ') || 'none'}</dd><dt>Missing</dt><dd>{execution.missingSlots.join(', ') || 'none'}</dd></dl></div> : null}
       <details className="xdisputer-render-debugger-css"><summary>Loaded CSS files ({snapshot.loadedCssFiles.length})</summary><ol>{snapshot.loadedCssFiles.map((file) => <li key={file}>{file}</li>)}</ol></details>
     </section> : null}
