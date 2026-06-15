@@ -70,6 +70,7 @@ import './account-menu-system.css';
 import './account-menu-ratio-system.css';
 import './report-workbench-system.css';
 import './template-workspace-hubs.css';
+import './dynamic-template-intelligence.css';
 import './final-console-account-rail.css';
 import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
