@@ -1,5 +1,5 @@
-import ConsolePanelRoutePage from '../../../components/console/ConsolePanelRoutePage';
+import { redirect } from 'next/navigation';
 
 export default function ManagerWorkspaceReleasesPage() {
-  return <ConsolePanelRoutePage route="/manager-workspace/releases" />;
+  redirect('/manager-workspace/engine');
 }
