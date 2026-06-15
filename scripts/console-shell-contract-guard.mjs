@@ -56,6 +56,8 @@ notHas(consoleShell, 'action="/auth/sign-out"', 'ConsoleShell does not duplicate
 has(consoleHeader, 'data-console-header="true"', 'ConsoleHeader exposes header marker');
 has(consoleHeader, 'export type ConsoleHeaderProps', 'ConsoleHeader exports typed props');
 has(accountMenu, 'data-console-account-menu="true"', 'AccountMenu exposes shared marker');
+has(accountMenu, 'data-manager-account-anchor="header-ratio-grid"', 'AccountMenu exposes header ratio anchor marker');
+has(accountMenu, 'data-manager-account-popover-align="below-right"', 'AccountMenu exposes responsive popover alignment marker');
 has(accountMenu, "role === 'master'", 'AccountMenu supports master role behavior');
 has(accountMenu, 'data-manager-canonical-switch="true"', 'AccountMenu keeps canonical switch contract');
 has(managerAccountMenu, '<AccountMenu', 'compat ManagerAccountMenu forwards to shared AccountMenu');
@@ -88,6 +90,12 @@ has(phase14, 'verification-only mode', 'phase14 is verification-only');
 has(shellCss, '.console-header-card', 'console shell CSS defines shared header card');
 has(shellCss, '.console-header-secondary', 'console shell CSS defines secondary header slot');
 has(ratioCss, "@import './console-shell-system.css';", 'Ratio CSS chains global console shell CSS');
+has(ratioCss, '--account-dock-width: minmax(220px, 1fr)', 'Ratio CSS keeps 75/25 account column contract');
+has(ratioCss, 'grid-template-columns: minmax(0, 3fr) var(--account-dock-width)', 'Ratio CSS enforces 3fr/1fr header grid');
+has(ratioCss, '--account-popover-top: calc(100% + clamp(.55rem, .9vw, .8rem))', 'Ratio CSS anchors popover below header dock');
+has(ratioCss, 'data-manager-account-popover-align="below-right"', 'Ratio CSS targets explicit popover alignment marker');
+has(ratioCss, '@media (max-width: 760px)', 'Ratio CSS has mobile alignment breakpoint');
+has(ratioCss, '@media (max-width: 480px)', 'Ratio CSS has small-screen alignment breakpoint');
 
 has(mcoder, 'request_deployment_approval_service', 'MCoder CLI can request deployment approval');
 has(mcoder, 'assert_deployment_approval_service', 'MCoder CLI can check approval');
