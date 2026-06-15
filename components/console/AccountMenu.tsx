@@ -71,9 +71,9 @@ export default function AccountMenu({ role, mode, email, accountLabel, switchTar
     };
   }, [open]);
 
-  return <div ref={rootRef} className="manager-header-account-dock" data-console-component="AccountMenu" data-console-account-menu="true" data-console-account-role={role} data-console-mode={mode} data-manager-account-menu="true" data-manager-account-layout="header-75-25-avatar-only" data-manager-account-state={open ? 'open' : 'closed'}>
+  return <div ref={rootRef} className="manager-header-account-dock" data-console-component="AccountMenu" data-console-account-menu="true" data-console-account-role={role} data-console-mode={mode} data-manager-account-menu="true" data-manager-account-anchor="header-ratio-grid" data-manager-account-layout="header-75-25-avatar-only" data-manager-account-state={open ? 'open' : 'closed'} data-manager-account-popover-align="below-right">
     <button type="button" className="manager-header-account-avatar" aria-haspopup="dialog" aria-expanded={open} aria-controls={popoverId} aria-label={`Open ${accountLabel} menu`} onClick={() => setOpen((value) => !value)}>{initial}</button>
-    {open ? <div id={popoverId} className="manager-account-popover" data-console-account-popover="true" role="dialog" aria-label={`${accountLabel} menu`}>
+    {open ? <div id={popoverId} className="manager-account-popover" data-console-account-popover="true" data-manager-account-popover="true" data-manager-account-popover-align="below-right" role="dialog" aria-label={`${accountLabel} menu`}>
       <div className="manager-account-popover-topline"><span>{email || accountLabel}</span><button type="button" className="manager-account-close" aria-label="Close account menu" onClick={() => setOpen(false)}>×</button></div>
       <section className="manager-account-identity-panel"><div className="manager-account-avatar-large" aria-hidden="true">{initial}</div><h2>{displayName}</h2><p>{accountLabel}</p></section>
       <section className="manager-account-action-list" aria-label="Account actions">
