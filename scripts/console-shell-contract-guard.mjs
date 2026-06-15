@@ -37,6 +37,7 @@ const packageJson = read('package.json');
 const phase14 = read('scripts/phase14-local-safety-check.mjs');
 const shellCss = read('app/console-shell-system.css');
 const ratioCss = read('app/account-menu-ratio-system.css');
+const reportWorkbenchCss = read('app/report-workbench-system.css');
 const roadmap = read('docs/ui-shell-roadmap-tracker.md');
 const mcoder = read('scripts/mcoder-deployment-gate.mjs');
 const smokeSpec = read('tests/ui-shell-smoke.spec.ts');
@@ -65,6 +66,7 @@ has(renderDebugger, 'window.__xdisputerDebug', 'RenderDebugger exposes debug glo
 has(renderDebugger, 'document.styleSheets', 'RenderDebugger inspects loaded CSS');
 has(layout, '<RenderDebugger />', 'root layout mounts RenderDebugger');
 has(layout, "import './console-debug-overlay.css';", 'root layout imports debugger CSS');
+has(layout, "import './report-workbench-system.css';", 'root layout imports report workbench system after ratio CSS');
 has(registry, 'UI_SHELL_ROUTE_EXPECTATIONS', 'UI shell registry exports route expectations');
 has(registry, 'UI_SHELL_CANONICAL_COMPONENTS', 'UI shell registry exports canonical components');
 
@@ -78,6 +80,10 @@ delegates('/admin/access', managerAccess);
 delegates('/admin/clients', managerClients);
 delegates('GenerationReportView', reportView);
 delegates('AccessAuditView', accessAuditView);
+has(reportView, 'header={{ eyebrow, title, description }}', 'Generation report uses canonical ConsoleHeader instead of custom overflowing header');
+has(reportView, 'data-report-workbench="filters-activity-merged"', 'Generation report merges filters and activity into workbench card');
+notHas(reportView, 'report-side-summary', 'Generation report no longer uses overlapping side summary inside header');
+notHas(reportView, 'compact-report-hero', 'Generation report no longer uses custom compact report hero');
 
 has(packageJson, '"ui-source:guard"', 'package defines ui-source:guard');
 has(packageJson, '"ui-shell:registry"', 'package defines registry guard script');
@@ -96,6 +102,10 @@ has(ratioCss, '--account-popover-top: calc(100% + clamp(.55rem, .9vw, .8rem))', 
 has(ratioCss, 'data-manager-account-popover-align="below-right"', 'Ratio CSS targets explicit popover alignment marker');
 has(ratioCss, '@media (max-width: 760px)', 'Ratio CSS has mobile alignment breakpoint');
 has(ratioCss, '@media (max-width: 480px)', 'Ratio CSS has small-screen alignment breakpoint');
+has(reportWorkbenchCss, '.report-workbench-card', 'Report workbench CSS defines merged card shell');
+has(reportWorkbenchCss, '.report-workbench-grid', 'Report workbench CSS defines filters/activity split grid');
+has(reportWorkbenchCss, '.report-workbench-event-list', 'Report workbench CSS defines scrollable activity list');
+has(reportWorkbenchCss, '@media (max-width: 1060px)', 'Report workbench CSS collapses to one column on smaller screens');
 
 has(mcoder, 'request_deployment_approval_service', 'MCoder CLI can request deployment approval');
 has(mcoder, 'assert_deployment_approval_service', 'MCoder CLI can check approval');
