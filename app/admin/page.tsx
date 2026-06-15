@@ -81,6 +81,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   return <ManagerConsoleShell
     mode="operations"
     email={profile?.email || user.email}
+    accountName={profile?.full_name || user.user_metadata?.full_name as string | null | undefined}
     accountLabel="Manager account"
     navItems={navItemsForDomain('manager-operations', '/admin')}
     header={{ eyebrow: 'Manager operations', title: 'Client access center.', description: 'Compact workspace RPC reads keep this dashboard fast while the full access table remains paginated.' }}
