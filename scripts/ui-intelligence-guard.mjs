@@ -5,16 +5,16 @@ const contracts = [
   {
     id: 'console-shell',
     label: 'Console Shell',
-    sourceFiles: ['components/console/ConsoleShell.tsx', 'app/final-console-account-rail.css'],
+    sourceFiles: ['components/console/ConsoleShell.tsx', 'app/final-console-account-rail.css', 'app/account-menu-ratio-system.css'],
     requiredMarkers: ['data-console-shell="true"', 'data-console-main="true"', 'data-console-header-grid="true"', 'data-console-layout-ratio="75/25"', 'data-console-mode-switch="sidebar-bottom"'],
-    forbidden: ['ControlConsoleShell', 'className="admin-monitor-account"', '<ManagerAccountMenu']
+    forbidden: ['ControlConsoleShell', 'className="admin-monitor-account"', '<ManagerAccountMenu', 'clamp(96px, 10vw, 128px)', 'grid-template-columns: minmax(0, 1fr) var(--account-dock-width) !important;\n    grid-template-rows: var(--account-dock-height) auto !important;']
   },
   {
     id: 'account-menu',
     label: 'Account Settings Rail',
-    sourceFiles: ['components/console/AccountMenu.tsx', 'app/api/account/profile/route.ts', 'app/final-console-account-rail.css'],
-    requiredMarkers: ['data-console-account-menu="true"', 'data-manager-account-anchor="header-ratio-grid"', 'data-manager-account-popover-align="same-rail"', 'manager-account-settings-form', 'upsert({ id: user.id'],
-    forbidden: ['Manage accounts', 'System health', 'data-manager-canonical-switch="true"']
+    sourceFiles: ['components/console/AccountMenu.tsx', 'app/api/account/profile/route.ts', 'app/final-console-account-rail.css', 'app/account-menu-ratio-system.css'],
+    requiredMarkers: ['data-console-account-menu="true"', 'data-manager-account-anchor="header-ratio-grid"', 'data-manager-account-popover-align="same-rail"', 'manager-account-settings-form', 'upsert({ id: user.id', '--account-dock-width: minmax(220px, .86fr)'],
+    forbidden: ['Manage accounts', 'System health', 'data-manager-canonical-switch="true"', '--account-dock-width: clamp(96px']
   },
   {
     id: 'sidebar-switch-mode',
@@ -72,6 +72,11 @@ contracts.forEach((contract) => {
   contract.requiredMarkers.forEach((marker) => check(source.includes(marker), `${contract.label} contains required marker: ${marker}`, 'critical'));
   contract.forbidden.forEach((pattern) => check(!source.includes(pattern), `${contract.label} excludes forbidden pattern: ${pattern}`, 'critical'));
 });
+
+const ratioCss = read('app/account-menu-ratio-system.css');
+check(!ratioCss.includes('--account-dock-width: clamp(96px'), 'ratio CSS never collapses tablet account rail to 96-128px', 'critical');
+check(ratioCss.includes('--account-dock-width: minmax(220px, .86fr)'), 'ratio CSS keeps tablet account rail at minimum 220px', 'critical');
+check(ratioCss.includes('grid-template-columns: minmax(0, 2.8fr) var(--account-dock-width)'), 'ratio CSS uses proportional tablet grid instead of compact icon rail', 'critical');
 
 const adminLayout = read('app/admin/layout.tsx');
 const masterLayout = read('app/master/layout.tsx');
