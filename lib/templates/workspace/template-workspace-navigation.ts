@@ -49,7 +49,7 @@ export const TEMPLATE_WORKSPACE_NAV_ITEMS: TemplateWorkspaceNavItem[] = [
 export function templateWorkspaceNavForPath(pathname: string) {
   return TEMPLATE_WORKSPACE_NAV_ITEMS.map((item) => ({
     href: item.href,
-    label: item.shortLabel,
+    label: item.label,
     active: item.href === '/manager-workspace' ? pathname === '/manager-workspace' : pathname.startsWith(item.href)
   }));
 }
