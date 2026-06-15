@@ -10,6 +10,7 @@ type Props = {
   role: ConsoleRole;
   mode: ConsoleMode;
   email?: string | null;
+  displayName?: string | null;
   accountLabel: string;
   switchTarget: string;
   switchTargetLabel: string;
@@ -54,13 +55,19 @@ const ACCOUNT_RAIL_CONTRACT_CSS = `
   }
 `;
 
-function initialFromEmail(email?: string | null) {
-  const value = email?.trim();
-  if (!value) return 'x';
-  return value[0]?.toLowerCase() || 'x';
+function cleanDisplayName(value?: string | null) {
+  return value?.trim().replace(/\s+/g, ' ') || '';
 }
 
-function displayNameFromEmail(email?: string | null) {
+function initialFromDisplayName(value?: string | null) {
+  const clean = cleanDisplayName(value);
+  if (!clean) return 'x';
+  return clean[0]?.toLowerCase() || 'x';
+}
+
+function displayNameFromIdentity(displayName?: string | null, email?: string | null) {
+  const explicit = cleanDisplayName(displayName);
+  if (explicit) return explicit;
   const value = email?.trim();
   if (!value) return 'Signed-in account';
   const localPart = value.split('@')[0] || value;
@@ -76,13 +83,13 @@ function surfaceLabel(mode: ConsoleMode) {
   return mode === 'workspace' ? 'Workspace authoring' : 'Operations monitoring';
 }
 
-export default function AccountMenu({ role, mode, email, accountLabel }: Props) {
+export default function AccountMenu({ role, mode, email, displayName, accountLabel }: Props) {
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const popoverId = useMemo(() => `xdisputer-account-popover-${role}-${mode}`, [role, mode]);
-  const initial = useMemo(() => initialFromEmail(email), [email]);
-  const displayName = useMemo(() => displayNameFromEmail(email), [email]);
+  const resolvedDisplayName = useMemo(() => displayNameFromIdentity(displayName, email), [displayName, email]);
+  const initial = useMemo(() => initialFromDisplayName(resolvedDisplayName), [resolvedDisplayName]);
   const safeNext = pathname || '/';
 
   useEffect(() => setOpen(false), [pathname]);
@@ -108,7 +115,7 @@ export default function AccountMenu({ role, mode, email, accountLabel }: Props) 
     <button type="button" className="manager-header-account-avatar" aria-haspopup="dialog" aria-expanded={open} aria-controls={popoverId} aria-label={`Open ${accountLabel} account settings`} onClick={() => setOpen((value) => !value)}>{initial}</button>
     {open ? <div id={popoverId} className="manager-account-popover" data-console-account-popover="true" data-manager-account-popover="true" data-manager-account-popover-align="same-rail" role="dialog" aria-label={`${accountLabel} settings`}>
       <div className="manager-account-popover-topline"><span>{email || accountLabel}</span><button type="button" className="manager-account-close" aria-label="Close account settings" onClick={() => setOpen(false)}>×</button></div>
-      <section className="manager-account-identity-panel"><div className="manager-account-avatar-large" aria-hidden="true">{initial}</div><h2>{displayName}</h2><p>{roleLabel(role, mode)}</p></section>
+      <section className="manager-account-identity-panel"><div className="manager-account-avatar-large" aria-hidden="true">{initial}</div><h2>{resolvedDisplayName}</h2><p>{roleLabel(role, mode)}</p></section>
       <section className="manager-account-function-panel" aria-label="Current account context">
         <div><strong>Current surface</strong><span>{surfaceLabel(mode)}</span></div>
         <div><strong>Access role</strong><span>{role}</span></div>
@@ -116,7 +123,7 @@ export default function AccountMenu({ role, mode, email, accountLabel }: Props) 
       </section>
       <form className="manager-account-settings-form" action="/api/account/profile" method="post">
         <input type="hidden" name="next" value={safeNext} />
-        <label><span>Display name</span><input name="full_name" defaultValue={displayName} maxLength={120} placeholder="Account display name" /></label>
+        <label><span>Display name</span><input name="full_name" defaultValue={resolvedDisplayName} maxLength={120} placeholder="Account display name" /></label>
         <button type="submit">Save account settings</button>
       </form>
       <section className="manager-account-session-panel" aria-label="Session security"><div><strong>Session security</strong><span>End the active browser session for this account.</span></div><form className="manager-account-signout" action="/auth/sign-out" method="post"><button type="submit">Sign out securely</button></form></section>
