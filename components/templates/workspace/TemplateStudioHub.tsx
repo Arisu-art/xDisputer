@@ -1,15 +1,18 @@
+import DynamicTemplateRuleControlPanel from './DynamicTemplateRuleControlPanel';
 import TemplateReadinessCard from './TemplateReadinessCard';
 import TemplateRuleEditor from './TemplateRuleEditor';
+import type { DynamicTemplateInspectionResult, DynamicTemplateRule } from '../../../lib/templates/intelligence';
 import type { TemplateLibraryContext } from '../../../lib/templates/workspace/template-library-service';
 import type { TemplateStructureInspection } from '../../../lib/templates/workspace/template-studio-service';
 
-export default function TemplateStudioHub({ context, inspection }: { context: TemplateLibraryContext; inspection: TemplateStructureInspection }) {
+export default function TemplateStudioHub({ context, inspection, intelligence, intelligenceRules }: { context: TemplateLibraryContext; inspection: TemplateStructureInspection; intelligence: DynamicTemplateInspectionResult; intelligenceRules: DynamicTemplateRule[] }) {
   return <section className="template-workspace-hub" data-template-workspace-hub="studio" data-template-process="template-authoring-rules">
     <TemplateReadinessCard contract={context.contract} summary="Template Studio controls parser rules, canonical mapping, static preservation, variables, entities, and table layout before the engine can release output." action={context.nextAction} />
+    <DynamicTemplateRuleControlPanel inspection={intelligence} rules={intelligenceRules} />
     <section className="template-workspace-hub-grid studio" aria-label="Template Studio inspection summary">
-      <article className="admin-monitor-card template-workspace-status-card"><p className="eyebrow">Static text</p><strong>{inspection.staticTextBlocks.length}</strong><span>Legal and instruction blocks marked for preservation.</span></article>
-      <article className="admin-monitor-card template-workspace-status-card"><p className="eyebrow">Variables</p><strong>{inspection.dynamicTokens.length}</strong><span>Detected template variables routed to canonical or manager rules.</span></article>
-      <article className="admin-monitor-card template-workspace-status-card"><p className="eyebrow">Entities</p><strong>{inspection.detectedEntities.length}</strong><span>Consumer, bureau, creditor, account, and round entities.</span></article>
+      <article className="admin-monitor-card template-workspace-status-card"><p className="eyebrow">Static text</p><strong>{intelligence.staticTextBlocks.length}</strong><span>Legal and instruction blocks marked for preservation.</span></article>
+      <article className="admin-monitor-card template-workspace-status-card"><p className="eyebrow">Variables</p><strong>{intelligence.variables.length}</strong><span>Detected template variables routed to canonical or manager rules.</span></article>
+      <article className="admin-monitor-card template-workspace-status-card"><p className="eyebrow">Mapped fields</p><strong>{intelligence.mappedFields.length}</strong><span>Canonical mappings available for renderer replacement.</span></article>
     </section>
     <section className="template-workspace-two-column">
       <TemplateRuleEditor rules={inspection.rules} />
