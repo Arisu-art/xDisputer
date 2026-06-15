@@ -89,11 +89,17 @@ has(finalAccountRailCss, '.manager-account-settings-form', 'Final account rail C
 has(finalAccountRailCss, '.manager-account-function-panel', 'Final account rail CSS styles account function panel');
 has(finalAccountRailCss, '.console-sidebar-mode-switch', 'Final account rail CSS styles bottom sidebar mode switch');
 has(finalAccountRailCss, 'margin-top: auto !important', 'Bottom sidebar switch is pinned to bottom of side navigation');
+has(finalAccountRailCss, 'animation: consoleSwitchPulse', 'Bottom sidebar switch has visible pulse animation');
+has(finalAccountRailCss, '@keyframes consoleSwitchPulse', 'Bottom sidebar switch animation keyframes exist');
 has(managerAccountMenu, '<AccountMenu', 'compat ManagerAccountMenu forwards to shared AccountMenu');
 has(managerShell, 'accountName?: string | null', 'Manager shell forwards account profile name');
 has(adminPage, 'accountName={profile?.full_name', 'Admin page binds account settings to profile name');
 has(managerWorkspacePage, 'accountName={session.profile?.full_name', 'Workspace page binds account settings to profile name');
 has(renderDebugger, 'window.__xdisputerDebug', 'RenderDebugger exposes debug global');
+has(renderDebugger, 'findShellElement', 'RenderDebugger retries shell lookup with fallback selectors');
+has(renderDebugger, 'MutationObserver(sync)', 'RenderDebugger observes body for delayed shell mount');
+has(renderDebugger, 'headerAccountWidthRatio', 'RenderDebugger reports real header/account width ratio');
+has(renderDebugger, 'detectionMode', 'RenderDebugger reports canonical versus fallback detection');
 has(renderDebugger, 'document.styleSheets', 'RenderDebugger inspects loaded CSS');
 has(layout, '<RenderDebugger />', 'root layout mounts RenderDebugger');
 has(layout, "import './console-debug-overlay.css';", 'root layout imports debugger CSS');
