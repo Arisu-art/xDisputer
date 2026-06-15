@@ -1,7 +1,7 @@
 @import './console-shell-system.css';
 
 /* Account menu ratio override — final source of truth for manager/master console header split.
-   Applies to /admin, /manager-workspace, and master console pages that render data-console-header-grid. */
+   Enforces a responsive 75/25 header-to-account dock relationship and keeps the popover anchored to the same right rail. */
 
 .admin-monitor-main[data-console-header-grid="true"] {
   --account-dock-width: minmax(220px, 1fr);
@@ -10,24 +10,30 @@
   --account-dock-border: rgba(203, 213, 225, .82);
   --account-dock-shadow: 0 18px 45px rgba(15, 23, 42, .085), 0 2px 8px rgba(15, 23, 42, .045);
   --account-dock-shadow-hover: 0 26px 68px rgba(15, 23, 42, .13), 0 8px 18px rgba(15, 23, 42, .06);
+  --account-dock-gap: clamp(.8rem, 1.35vw, 1.05rem);
+  --account-popover-width: min(420px, calc(100vw - 32px));
+  --account-popover-top: calc(100% + clamp(.55rem, .9vw, .8rem));
   display: grid !important;
   grid-template-columns: minmax(0, 3fr) var(--account-dock-width) !important;
   grid-auto-rows: auto;
-  gap: clamp(.8rem, 1.35vw, 1.05rem) !important;
+  gap: var(--account-dock-gap) !important;
   align-items: stretch !important;
 }
 
 .admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
 .admin-monitor-main[data-console-header-grid="true"] > .native-command-hero:first-of-type,
-.admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type {
+.admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type,
+.admin-monitor-main[data-console-header-grid="true"] > [data-console-header-primary="true"] {
   grid-column: 1 !important;
   grid-row: 1 !important;
   width: auto !important;
+  min-width: 0 !important;
   min-height: var(--account-dock-min-height) !important;
   height: 100% !important;
   margin: 0 0 var(--console-row-gap, 1rem) 0 !important;
   display: grid !important;
   align-items: center !important;
+  align-self: stretch !important;
   border-radius: var(--account-dock-radius) !important;
 }
 
@@ -36,7 +42,7 @@
   grid-row: 1 !important;
 }
 
-.admin-monitor-main[data-console-header-grid="true"] > :not(.manager-header-account-dock):not(.admin-monitor-header):not(.native-command-hero) {
+.admin-monitor-main[data-console-header-grid="true"] > :not(.manager-header-account-dock):not(.admin-monitor-header):not(.native-command-hero):not([data-console-header-primary="true"]) {
   grid-column: 1 / -1;
 }
 
@@ -48,6 +54,7 @@
   grid-column: 1 / -1 !important;
 }
 
+.manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
 .manager-header-account-dock {
   position: relative !important;
   inset: auto !important;
@@ -65,6 +72,7 @@
   align-self: stretch !important;
   justify-content: stretch !important;
   overflow: visible !important;
+  isolation: isolate;
   border: 1px solid var(--account-dock-border) !important;
   border-left: 1px solid rgba(129, 140, 154, .36) !important;
   border-radius: var(--account-dock-radius) !important;
@@ -75,54 +83,120 @@
 
 .manager-header-account-dock[data-manager-account-state="open"] {
   z-index: 2147482000 !important;
+  box-shadow: var(--account-dock-shadow-hover) !important;
 }
 
 .manager-header-account-dock::before {
   content: '';
   position: absolute;
-  left: calc(-1 * clamp(.8rem, 1.35vw, 1.05rem) / 2);
+  left: calc(-1 * var(--account-dock-gap) / 2);
   top: 0;
   bottom: 0;
   width: 1px;
   background: rgba(129, 140, 154, .26);
 }
 
+.manager-header-account-avatar {
+  width: var(--console-account-avatar-size, clamp(54px, 4.8vw, 68px)) !important;
+  height: var(--console-account-avatar-size, clamp(54px, 4.8vw, 68px)) !important;
+}
+
+.manager-account-popover[data-manager-account-popover-align="below-right"],
 .manager-account-popover {
-  top: 0 !important;
+  top: var(--account-popover-top) !important;
   right: 0 !important;
+  left: auto !important;
+  width: var(--account-popover-width) !important;
+  max-width: calc(100vw - 32px) !important;
+  max-height: min(640px, calc(100dvh - 32px - var(--account-dock-min-height))) !important;
   transform-origin: top right !important;
+  z-index: 2147483000 !important;
+}
+
+@media (max-width: 1240px) {
+  .admin-monitor-main[data-console-header-grid="true"] {
+    --account-dock-width: minmax(180px, .8fr);
+    grid-template-columns: minmax(0, 3fr) var(--account-dock-width) !important;
+  }
 }
 
 @media (max-width: 1100px) {
   .admin-monitor-main[data-console-header-grid="true"] {
-    --account-dock-width: 116px;
+    --account-dock-width: clamp(96px, 10vw, 128px);
+    --account-dock-min-height: clamp(124px, 11vw, 140px);
+    --account-popover-width: min(390px, calc(100vw - 28px));
     grid-template-columns: minmax(0, 1fr) var(--account-dock-width) !important;
   }
 }
 
 @media (max-width: 760px) {
   .admin-monitor-main[data-console-header-grid="true"] {
-    --account-dock-width: auto;
-    grid-template-columns: minmax(0, 1fr) auto !important;
+    --account-dock-width: clamp(58px, 14vw, 74px);
+    --account-dock-min-height: clamp(58px, 14vw, 74px);
+    --account-dock-radius: 18px;
+    --account-popover-width: calc(100vw - 24px);
+    --account-popover-top: calc(100% + .6rem);
+    grid-template-columns: minmax(0, 1fr) var(--account-dock-width) !important;
+    gap: .65rem !important;
   }
 
   .admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
   .admin-monitor-main[data-console-header-grid="true"] > .native-command-hero:first-of-type,
-  .admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type {
+  .admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type,
+  .admin-monitor-main[data-console-header-grid="true"] > [data-console-header-primary="true"] {
     grid-column: 1 / -1 !important;
-    padding-right: 5.25rem !important;
+    grid-row: 1 !important;
+    padding-right: calc(var(--account-dock-width) + 1rem) !important;
+    min-height: clamp(112px, 26vw, 136px) !important;
   }
 
+  .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
   .manager-header-account-dock {
     grid-column: 2 !important;
-    width: auto !important;
-    min-height: auto !important;
-    height: auto !important;
-    padding: .45rem !important;
+    grid-row: 1 !important;
+    width: var(--account-dock-width) !important;
+    min-width: var(--account-dock-width) !important;
+    min-height: var(--account-dock-min-height) !important;
+    height: var(--account-dock-min-height) !important;
+    padding: .35rem !important;
     align-self: start !important;
+    justify-self: end !important;
+    border-radius: var(--account-dock-radius) !important;
   }
 
   .manager-header-account-dock::before {
     display: none !important;
+  }
+
+  .manager-account-popover[data-manager-account-popover-align="below-right"],
+  .manager-account-popover {
+    position: absolute !important;
+    top: var(--account-popover-top) !important;
+    right: 0 !important;
+    width: var(--account-popover-width) !important;
+    max-width: var(--account-popover-width) !important;
+    max-height: calc(100dvh - 96px) !important;
+    border-radius: 24px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-monitor-main[data-console-header-grid="true"] {
+    --account-dock-width: 56px;
+    --account-dock-min-height: 56px;
+    --account-popover-width: calc(100vw - 16px);
+    gap: .5rem !important;
+  }
+
+  .admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
+  .admin-monitor-main[data-console-header-grid="true"] > .native-command-hero:first-of-type,
+  .admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type,
+  .admin-monitor-main[data-console-header-grid="true"] > [data-console-header-primary="true"] {
+    padding-right: 4.5rem !important;
+  }
+
+  .manager-account-popover[data-manager-account-popover-align="below-right"],
+  .manager-account-popover {
+    right: -8px !important;
   }
 }
