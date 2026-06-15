@@ -98,17 +98,22 @@ function sameSnapshot(a: DebugSnapshot | null, b: DebugSnapshot) {
   return a !== null && JSON.stringify(a) === JSON.stringify(b);
 }
 
+function debuggerShouldOpen(searchParams: ReturnType<typeof useSearchParams>) {
+  return searchParams.get('debugPanel') === '1' || searchParams.get('xdisputerDebug') === 'panel' || searchParams.get('debug') === 'ui-panel';
+}
+
 export default function RenderDebugger() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const route = useMemo(() => routeLabel(pathname, searchParams), [pathname, searchParams]);
-  const queryEnabled = searchParams.get('xdisputerDebug') === '1' || searchParams.get('debug') === 'ui';
+  const queryEnabled = searchParams.get('xdisputerDebug') === '1' || searchParams.get('xdisputerDebug') === 'panel' || searchParams.get('debug') === 'ui' || searchParams.get('debug') === 'ui-panel';
   const enabled = process.env.NODE_ENV !== 'production' || queryEnabled;
-  const [open, setOpen] = useState(queryEnabled);
+  const queryOpen = debuggerShouldOpen(searchParams);
+  const [open, setOpen] = useState(queryOpen);
   const [snapshot, setSnapshot] = useState<DebugSnapshot | null>(null);
   const [execution, setExecution] = useState<TemplateExecutionSnapshot | null>(null);
 
-  useEffect(() => { if (queryEnabled) setOpen(true); }, [queryEnabled]);
+  useEffect(() => { setOpen(queryOpen); }, [queryOpen, pathname]);
 
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') return;
@@ -138,13 +143,13 @@ export default function RenderDebugger() {
   }, [enabled]);
 
   if (!enabled || !snapshot) return null;
-  return <aside className="xdisputer-render-debugger" data-xdisputer-debugger={open ? 'open' : 'closed'}>
-    <button type="button" className="xdisputer-render-debugger-toggle" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="xdisputer-render-debugger-panel">{open ? 'Hide UI debug' : 'Show UI debug'}</button>
+  return <aside className="xdisputer-render-debugger" data-xdisputer-debugger={open ? 'open' : 'closed'} data-xdisputer-debugger-mode="compact-dock">
+    <button type="button" className="xdisputer-render-debugger-toggle" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="xdisputer-render-debugger-panel"><span>{open ? 'Hide debug' : 'Debug ready'}</span><small>{snapshot.renderedShell}</small></button>
     {open ? <section id="xdisputer-render-debugger-panel" className="xdisputer-render-debugger-panel" aria-live="polite">
-      <div className="xdisputer-render-debugger-heading"><strong>xDisputer render debugger</strong><small>window.__xdisputerDebug + window.__xdisputerTemplateExecution</small></div>
-      <dl><dt>Route</dt><dd>{snapshot.route}</dd><dt>Shell</dt><dd>{snapshot.renderedShell}</dd><dt>Header</dt><dd>{snapshot.renderedHeader}</dd><dt>Sidebar</dt><dd>{snapshot.renderedSidebar}</dd><dt>Account menu</dt><dd>{snapshot.renderedAccountMenu}</dd><dt>Role / mode</dt><dd>{snapshot.role} / {snapshot.mode}</dd><dt>Ratio</dt><dd>{snapshot.activeLayoutRatio}</dd><dt>Grid columns</dt><dd>{snapshot.gridTemplateColumns}</dd></dl>
-      {execution ? <div className="xdisputer-render-debugger-execution"><strong>Template execution</strong><dl><dt>Status</dt><dd>{execution.status}</dd><dt>Round</dt><dd>{execution.round}</dd><dt>Outputs</dt><dd>{execution.outputs}</dd><dt>Warnings</dt><dd>{execution.warnings}</dd><dt>Engines</dt><dd>{execution.engines.join(', ') || 'none'}</dd><dt>Missing slots</dt><dd>{execution.missingSlots.join(', ') || 'none'}</dd><dt>Generated</dt><dd>{execution.generatedAt}</dd><dt>Summary</dt><dd>{execution.summary || 'No summary'}</dd></dl></div> : null}
-      <div className="xdisputer-render-debugger-css"><strong>Loaded CSS files</strong><ol>{snapshot.loadedCssFiles.map((file) => <li key={file}>{file}</li>)}</ol></div>
+      <div className="xdisputer-render-debugger-heading"><strong>xDisputer debug</strong><small>Runtime proof only. Does not affect layout.</small></div>
+      <dl><dt>Route</dt><dd>{snapshot.route}</dd><dt>Shell</dt><dd>{snapshot.renderedShell}</dd><dt>Header</dt><dd>{snapshot.renderedHeader}</dd><dt>Sidebar</dt><dd>{snapshot.renderedSidebar}</dd><dt>Account</dt><dd>{snapshot.renderedAccountMenu}</dd><dt>Role</dt><dd>{snapshot.role} / {snapshot.mode}</dd><dt>Ratio</dt><dd>{snapshot.activeLayoutRatio}</dd><dt>Grid</dt><dd>{snapshot.gridTemplateColumns}</dd></dl>
+      {execution ? <div className="xdisputer-render-debugger-execution"><strong>Template execution</strong><dl><dt>Status</dt><dd>{execution.status}</dd><dt>Round</dt><dd>{execution.round}</dd><dt>Outputs</dt><dd>{execution.outputs}</dd><dt>Warnings</dt><dd>{execution.warnings}</dd><dt>Engines</dt><dd>{execution.engines.join(', ') || 'none'}</dd><dt>Missing</dt><dd>{execution.missingSlots.join(', ') || 'none'}</dd></dl></div> : null}
+      <details className="xdisputer-render-debugger-css"><summary>Loaded CSS files ({snapshot.loadedCssFiles.length})</summary><ol>{snapshot.loadedCssFiles.map((file) => <li key={file}>{file}</li>)}</ol></details>
     </section> : null}
   </aside>;
 }
