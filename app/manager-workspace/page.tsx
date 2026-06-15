@@ -1,22 +1,20 @@
 import { redirect } from 'next/navigation';
-import ManagerConsoleShell from '../../components/ManagerConsoleShell';
-import ManagerTemplateWorkspaceClient from '../../components/ManagerTemplateWorkspaceClient';
+import TemplateLibraryHub from '../../components/templates/workspace/TemplateLibraryHub';
+import TemplateWorkspaceShell from '../../components/templates/workspace/TemplateWorkspaceShell';
 import { requireAuth } from '../../lib/saas/session';
-import { navItemsForDomain } from '../../lib/console/contracts/navigation-manifest';
+import { getManagerTemplateLibraryContext } from '../../lib/templates/workspace/template-library-service';
 
 export default async function ManagerWorkspacePage() {
   const session = await requireAuth();
   if (!session.isManager && !session.isMaster) redirect(session.dashboardPath);
+  const context = await getManagerTemplateLibraryContext({ supabase: session.supabase, managerId: session.user.id });
 
-  return <ManagerConsoleShell
-    role={session.isMaster ? 'master' : 'manager'}
-    mode="workspace"
-    email={session.user.email}
-    accountName={session.profile?.full_name || session.user.user_metadata?.full_name as string | null | undefined}
-    accountLabel={session.isMaster ? 'Master template authority' : 'Manager template authority'}
-    navItems={navItemsForDomain('manager-authoring', '/manager-workspace')}
-    header={{ eyebrow: 'Manager workspace', title: 'Template Library', description: 'Authoring plane for manager-owned templates, mappings, validation, releases, and automation.' }}
+  return <TemplateWorkspaceShell
+    session={session}
+    activeHref="/manager-workspace"
+    title="Template Library"
+    description="Source-of-truth hub for manager-owned templates, round versions, readiness, and client/disputer sync."
   >
-    <ManagerTemplateWorkspaceClient />
-  </ManagerConsoleShell>;
+    <TemplateLibraryHub context={context} />
+  </TemplateWorkspaceShell>;
 }
