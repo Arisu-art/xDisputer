@@ -1,1 +1,7 @@
-export { default } from '../../../components/console/ConsolePanelRoutePage';
+import ConsolePanelRoutePage from '../../../components/console/ConsolePanelRoutePage';
+
+const routePath = '/master/deployments';
+
+export default function Page() {
+  return <ConsolePanelRoutePage route={routePath} />;
+}
