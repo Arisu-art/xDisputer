@@ -10,6 +10,7 @@ const CONSOLE_ROUTES = [
 ];
 
 const TEMPLATE_WORKSPACE_ROUTES = ['/manager-workspace', '/manager-workspace/studio', '/manager-workspace/engine'];
+const RESPONSIVE_ROUTES = [...CONSOLE_ROUTES, '/workspace', '/dashboard', '/output', '/packets'];
 
 export const UI_CONTRACTS: UIContract[] = [
   {
@@ -86,16 +87,33 @@ export const UI_CONTRACTS: UIContract[] = [
     scope: 'global',
     owner: 'system',
     label: 'Render Debugger',
-    description: 'Runtime proof panel for shell, header, account, ratio, grid, and CSS bundle detection.',
+    description: 'Runtime proof panel for shell, header, account, ratio, grid, CSS bundle, and responsive overflow detection.',
     sourceFiles: ['components/console/RenderDebugger.tsx', 'app/console-debug-overlay.css'],
-    connectedRoutes: CONSOLE_ROUTES,
-    connectedProcesses: ['runtime-inspection', 'root-cause-trace'],
-    requiredMarkers: ['window.__xdisputerDebug', 'headerAccountWidthRatio', 'detectionMode'],
-    designTokens: [],
-    dependencies: ['ConsoleShell', 'document.styleSheets'],
-    allowedCustomizations: ['debug output labels'],
+    connectedRoutes: RESPONSIVE_ROUTES,
+    connectedProcesses: ['runtime-inspection', 'root-cause-trace', 'responsive-overflow-diagnostics'],
+    requiredMarkers: ['window.__xdisputerDebug', 'headerAccountWidthRatio', 'detectionMode', 'largestOverflowSelector'],
+    designTokens: ['--xdisputer-responsive-integrity'],
+    dependencies: ['ConsoleShell', 'document.styleSheets', 'final-responsive-integrity'],
+    allowedCustomizations: ['debug output labels', 'overflow labels'],
     forbiddenPatterns: ['debugger mutates layout', 'debugger blocks route rendering'],
     propagationGroup: 'diagnostics-global'
+  },
+  {
+    id: 'responsive-integrity',
+    kind: 'layout',
+    scope: 'global',
+    owner: 'global',
+    label: 'Responsive Integrity Layer',
+    description: 'Final cross-device layout safety system for console, workspace, client runtime, template studio, and account rail.',
+    sourceFiles: ['app/final-responsive-integrity.css', 'app/globals.css', 'components/console/RenderDebugger.tsx'],
+    connectedRoutes: RESPONSIVE_ROUTES,
+    connectedProcesses: ['viewport-reflow', 'overflow-control', 'sidebar-collapse', 'account-rail-stack', 'table-scroll', 'card-grid-collapse'],
+    requiredMarkers: ['final-responsive-integrity.css', 'overflow-x: clip', 'data-client-template-runtime', 'window.__xdisputerDebug'],
+    designTokens: ['--console-sidebar', '--console-main-pad-x', '--account-dock-width', '--xdisputer-responsive-integrity'],
+    dependencies: ['ConsoleShell', 'AccountMenu', 'ClientTemplateRuntimeDashboard', 'TemplateWorkspaceShell'],
+    allowedCustomizations: ['breakpoint thresholds', 'grid minmax values', 'typography clamps'],
+    forbiddenPatterns: ['page-level min-width larger than viewport', 'horizontal body scroll', 'fixed desktop-only grid on mobile', 'account rail crushing header', 'raw default link clusters'],
+    propagationGroup: 'responsive-global'
   },
   {
     id: 'template-workspace-navigation',
@@ -156,7 +174,7 @@ export const FEATURE_CONTRACTS: FeatureContract[] = [
     sourceFiles: ['components/templates/workspace', 'lib/templates/workspace', 'components/ManagerTemplateWorkspaceClient.tsx'],
     apiRoutes: ['/api/template-assets'],
     databaseObjects: ['template_assets', 'template storage'],
-    uiContracts: ['template-workspace-navigation', 'template-execution', 'console-shell'],
+    uiContracts: ['template-workspace-navigation', 'template-execution', 'console-shell', 'responsive-integrity'],
     dependencies: ['template library service', 'template studio service', 'generation engine service'],
     fallbackBehavior: 'Route missing templates to Library, mapping issues to Studio, and release checks to Generation Engine.'
   }
