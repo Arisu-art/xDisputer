@@ -13,7 +13,7 @@ const contracts = [
     id: 'account-menu',
     label: 'Account Settings Rail',
     sourceFiles: ['components/console/AccountMenu.tsx', 'app/api/account/profile/route.ts', 'lib/saas/account-profile-settings.ts', 'app/final-console-account-rail.css', 'app/account-menu-ratio-system.css'],
-    requiredMarkers: ['data-console-account-menu="true"', 'data-manager-account-anchor="header-ratio-grid"', 'data-manager-account-popover-align="same-rail"', 'manager-account-settings-form', 'saveCurrentAccountProfile', 'createSupabaseAdminClient', 'requestOrigin', '--account-dock-width: minmax(220px, .86fr)'],
+    requiredMarkers: ['data-console-account-menu="true"', 'data-manager-account-anchor="header-ratio-grid"', 'data-manager-account-popover-align="same-rail"', 'manager-account-settings-form', 'saveCurrentAccountProfile', 'createSupabaseAdminClient', 'relativeRedirect', '--account-dock-width: minmax(220px, .86fr)'],
     forbidden: ['Manage accounts', 'System health', 'data-manager-canonical-switch="true"', '--account-dock-width: clamp(96px']
   },
   {
@@ -86,8 +86,10 @@ check(ratioCss.includes('--account-dock-width: minmax(220px, .86fr)'), 'ratio CS
 check(ratioCss.includes('grid-template-columns: minmax(0, 2.8fr) var(--account-dock-width)'), 'ratio CSS uses proportional tablet grid instead of compact icon rail', 'critical');
 
 const accountProfileRoute = read('app/api/account/profile/route.ts');
-check(accountProfileRoute.includes('requestOrigin(request)'), 'account settings redirect uses public forwarded origin, not request.url 0.0.0.0', 'critical');
+check(accountProfileRoute.includes('relativeRedirect'), 'account settings redirect is relative and stays on the active browser origin', 'critical');
+check(accountProfileRoute.includes("headers: { Location: location }"), 'account settings redirect writes relative Location header', 'critical');
 check(!accountProfileRoute.includes('new URL(next, request.url)'), 'account settings redirect never builds Location from private request.url', 'critical');
+check(!accountProfileRoute.includes('requestOrigin(request)'), 'account settings redirect does not use stale absolute-origin helper', 'critical');
 check(accountProfileRoute.includes('saveCurrentAccountProfile'), 'account settings route uses resilient shared save service', 'critical');
 
 const layout = read('app/layout.tsx');
