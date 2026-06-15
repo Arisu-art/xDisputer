@@ -56,7 +56,7 @@ export default function ConsoleShell({ role, mode, email, accountLabel, brandTit
           : <a key={item.href} className={item.active ? 'active' : ''} href={item.href}>{item.label}</a>)}
       </nav>
     </aside>
-    <section className="admin-monitor-main native-console-main" data-console-main="true" data-console-component="ConsoleMain" data-console-header-grid="true">
+    <section className="admin-monitor-main native-console-main" data-console-main="true" data-console-component="ConsoleMain" data-console-header-grid="true" data-console-has-header={header ? 'true' : 'false'}>
       <AccountMenu role={role} mode={mode} email={email} accountLabel={accountLabel} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />
       {header ? <ConsoleHeader {...header} /> : null}
       {children}
