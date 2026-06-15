@@ -6,6 +6,97 @@
   display: none !important;
 }
 
+.admin-monitor-page[data-console-shell="true"] [data-console-sidebar="true"] {
+  min-height: 100dvh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+
+.admin-monitor-page[data-console-shell="true"] [data-console-sidebar-nav="true"] {
+  flex: 0 0 auto !important;
+}
+
+.console-sidebar-mode-switch {
+  margin-top: auto !important;
+  padding-top: 1rem !important;
+  display: grid !important;
+  gap: .65rem !important;
+  border-top: 1px solid rgba(203, 213, 225, .82) !important;
+}
+
+.console-sidebar-mode-switch > div {
+  display: grid;
+  gap: .24rem;
+}
+
+.console-sidebar-mode-switch span,
+.console-sidebar-mode-switch small {
+  color: #64748b;
+}
+
+.console-sidebar-mode-switch > div > span {
+  font-size: .66rem;
+  font-weight: 900;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.console-sidebar-mode-switch strong {
+  color: #081429;
+  font-size: .9rem;
+  font-weight: 880;
+  line-height: 1.18;
+}
+
+.console-sidebar-mode-switch small {
+  max-width: 17rem;
+  font-size: .72rem;
+  font-weight: 680;
+  line-height: 1.42;
+}
+
+.console-sidebar-mode-switch-button {
+  min-height: 46px !important;
+  padding: .72rem .82rem !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: .65rem !important;
+  border: 1px solid rgba(15, 23, 42, .12) !important;
+  border-radius: 16px !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #081429, #162238) !important;
+  text-decoration: none !important;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, .16) !important;
+}
+
+.console-sidebar-mode-switch-button span {
+  color: #fff !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .82rem;
+  font-weight: 850;
+}
+
+.console-sidebar-mode-switch-button em {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #081429;
+  background: rgba(255, 255, 255, .92);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.console-sidebar-mode-switch-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 42px rgba(15, 23, 42, .2) !important;
+}
+
 .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] {
   --account-dock-width: minmax(260px, 1fr) !important;
   --account-dock-height: clamp(136px, 10vw, 152px) !important;
@@ -59,161 +150,30 @@
   transform-origin: top right !important;
 }
 
-.manager-account-function-panel {
-  display: grid;
-  gap: 8px;
-}
-
-.manager-account-function-panel > div {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(96px, .45fr) minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-  padding: 10px 12px;
-  border: 1px solid rgba(129, 140, 154, .22);
-  border-radius: 14px;
-  background: #f8fafc;
-}
-
-.manager-account-function-panel strong,
-.manager-account-function-panel span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.manager-account-function-panel strong {
-  color: #475569;
-  font-size: 11px;
-  font-weight: 850;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-}
-
-.manager-account-function-panel span {
-  color: #081429;
-  font-size: 13px;
-  font-weight: 760;
-}
-
-.manager-account-settings-form {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid rgba(129, 140, 154, .22);
-  border-radius: 18px;
-  background: #fff;
-}
-
-.manager-account-settings-form label {
-  display: grid;
-  gap: 6px;
-}
-
-.manager-account-settings-form label > span {
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 850;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-
-.manager-account-settings-form input {
-  width: 100%;
-  min-height: 42px;
-  padding: 0 12px;
-  border: 1px solid #dbe3ef;
-  border-radius: 12px;
-  color: #081429;
-  background: #f8fafc;
-  font-size: 14px;
-  font-weight: 720;
-}
-
-.manager-account-settings-form button,
-.manager-account-session-panel .manager-account-signout button {
-  width: 100%;
-  min-height: 44px;
-  border: 0;
-  border-radius: 13px;
-  color: #fff;
-  background: #081429;
-  font-size: 13px;
-  font-weight: 850;
-  cursor: pointer;
-}
-
-.manager-account-session-panel {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid rgba(129, 140, 154, .22);
-  border-radius: 18px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-}
-
-.manager-account-session-panel > div {
-  display: grid;
-  gap: 3px;
-}
-
-.manager-account-session-panel strong {
-  color: #081429;
-  font-size: 14px;
-  font-weight: 860;
-}
-
-.manager-account-session-panel span {
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.45;
-}
-
-.manager-account-session-panel .manager-account-signout {
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
+.manager-account-function-panel { display: grid; gap: 8px; }
+.manager-account-function-panel > div { min-width: 0; display: grid; grid-template-columns: minmax(96px, .45fr) minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid rgba(129, 140, 154, .22); border-radius: 14px; background: #f8fafc; }
+.manager-account-function-panel strong, .manager-account-function-panel span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.manager-account-function-panel strong { color: #475569; font-size: 11px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+.manager-account-function-panel span { color: #081429; font-size: 13px; font-weight: 760; }
+.manager-account-settings-form { display: grid; gap: 10px; padding: 12px; border: 1px solid rgba(129, 140, 154, .22); border-radius: 18px; background: #fff; }
+.manager-account-settings-form label { display: grid; gap: 6px; }
+.manager-account-settings-form label > span { color: #64748b; font-size: 11px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.manager-account-settings-form input { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid #dbe3ef; border-radius: 12px; color: #081429; background: #f8fafc; font-size: 14px; font-weight: 720; }
+.manager-account-settings-form button, .manager-account-session-panel .manager-account-signout button { width: 100%; min-height: 44px; border: 0; border-radius: 13px; color: #fff; background: #081429; font-size: 13px; font-weight: 850; cursor: pointer; }
+.manager-account-session-panel { display: grid; gap: 10px; padding: 12px; border: 1px solid rgba(129, 140, 154, .22); border-radius: 18px; background: linear-gradient(180deg, #ffffff, #f8fafc); }
+.manager-account-session-panel > div { display: grid; gap: 3px; }
+.manager-account-session-panel strong { color: #081429; font-size: 14px; font-weight: 860; }
+.manager-account-session-panel span { color: #64748b; font-size: 12px; font-weight: 650; line-height: 1.45; }
+.manager-account-session-panel .manager-account-signout { margin: 0; padding: 0; border: 0; }
 
 @media (max-width: 1100px) and (min-width: 761px) {
-  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] {
-    --account-dock-width: minmax(220px, .86fr) !important;
-    --account-dock-height: clamp(128px, 12vw, 144px) !important;
-    grid-template-columns: minmax(0, 2.8fr) var(--account-dock-width) !important;
-  }
-
-  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
-  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock {
-    min-width: 220px !important;
-  }
+  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] { --account-dock-width: minmax(220px, .86fr) !important; --account-dock-height: clamp(128px, 12vw, 144px) !important; grid-template-columns: minmax(0, 2.8fr) var(--account-dock-width) !important; }
+  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"], .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock { min-width: 220px !important; }
 }
 
 @media (max-width: 760px) {
-  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] {
-    --account-dock-width: clamp(56px, 14vw, 74px) !important;
-    --account-dock-height: clamp(56px, 14vw, 74px) !important;
-    grid-template-columns: minmax(0, 1fr) var(--account-dock-width) !important;
-    grid-template-rows: minmax(112px, auto) auto !important;
-  }
-
-  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
-  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock {
-    width: var(--account-dock-width) !important;
-    min-width: var(--account-dock-width) !important;
-    height: var(--account-dock-height) !important;
-    min-height: var(--account-dock-height) !important;
-    padding: .4rem !important;
-    justify-self: end !important;
-  }
-
-  .manager-account-popover[data-manager-account-popover-align="same-rail"],
-  .manager-account-popover {
-    top: 0 !important;
-    right: 0 !important;
-    width: min(360px, calc(100vw - 20px)) !important;
-    max-height: calc(100dvh - 20px) !important;
-  }
+  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] { --account-dock-width: clamp(56px, 14vw, 74px) !important; --account-dock-height: clamp(56px, 14vw, 74px) !important; grid-template-columns: minmax(0, 1fr) var(--account-dock-width) !important; grid-template-rows: minmax(112px, auto) auto !important; }
+  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"], .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock { width: var(--account-dock-width) !important; min-width: var(--account-dock-width) !important; height: var(--account-dock-height) !important; min-height: var(--account-dock-height) !important; padding: .4rem !important; justify-self: end !important; }
+  .manager-account-popover[data-manager-account-popover-align="same-rail"], .manager-account-popover { top: 0 !important; right: 0 !important; width: min(360px, calc(100vw - 20px)) !important; max-height: calc(100dvh - 20px) !important; }
+  .console-sidebar-mode-switch { margin-top: 1rem !important; }
 }
