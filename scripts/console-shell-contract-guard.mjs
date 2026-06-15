@@ -28,6 +28,7 @@ const managerShell = read('components/ManagerConsoleShell.tsx');
 const adminLayout = read('app/admin/layout.tsx');
 const masterLayout = read('app/master/layout.tsx');
 const adminPage = read('app/admin/page.tsx');
+const managerWorkspacePage = read('app/manager-workspace/page.tsx');
 const masterHome = read('app/master/MasterConsoleHome.tsx');
 const masterAccounts = read('app/master/accounts/page.tsx');
 const masterWorkspaces = read('app/master/workspaces/page.tsx');
@@ -57,6 +58,7 @@ has(consoleShell, 'data-console-main="true"', 'ConsoleShell owns global main mar
 has(consoleShell, 'data-console-layout-ratio="75/25"', 'ConsoleShell exposes active ratio marker');
 has(consoleShell, '<ConsoleHeader', 'ConsoleShell owns ConsoleHeader placement');
 has(consoleShell, '<AccountMenu', 'ConsoleShell owns shared AccountMenu placement');
+has(consoleShell, 'displayName={accountName}', 'ConsoleShell passes profile display name to AccountMenu');
 has(consoleShell, 'switchModeContract', 'ConsoleShell owns advanced switch mode intent logic');
 has(consoleShell, 'data-console-mode-switch="sidebar-bottom"', 'ConsoleShell renders mode switch at sidebar bottom');
 has(consoleShell, 'data-manager-switch-visible-slot="sidebar-bottom"', 'ConsoleShell exposes canonical switch only in sidebar bottom');
@@ -66,6 +68,8 @@ notHas(consoleShell, 'action="/auth/sign-out"', 'ConsoleShell does not duplicate
 has(consoleHeader, 'data-console-header="true"', 'ConsoleHeader exposes header marker');
 has(consoleHeader, 'export type ConsoleHeaderProps', 'ConsoleHeader exports typed props');
 has(accountMenu, 'data-console-account-menu="true"', 'AccountMenu exposes shared marker');
+has(accountMenu, 'displayName?: string | null', 'AccountMenu accepts profile display name');
+has(accountMenu, 'displayNameFromIdentity(displayName, email)', 'AccountMenu resolves display name from profile before email fallback');
 has(accountMenu, 'data-manager-account-anchor="header-ratio-grid"', 'AccountMenu exposes header ratio anchor marker');
 has(accountMenu, 'data-manager-account-popover-align="same-rail"', 'AccountMenu pins popover to same rail instead of dropdown');
 has(accountMenu, 'manager-account-function-panel', 'AccountMenu exposes active account function panel');
@@ -76,7 +80,9 @@ notHas(accountMenu, 'Manage accounts', 'AccountMenu does not expose global short
 notHas(accountMenu, 'Reports', 'AccountMenu does not expose report shortcut links');
 notHas(accountMenu, 'System health', 'AccountMenu does not expose system shortcut links');
 notHas(accountMenu, 'data-manager-canonical-switch="true"', 'AccountMenu no longer exposes switch shortcut in account settings');
-has(accountProfileRoute, 'update({ full_name: fullName })', 'Account profile API updates profile display name');
+has(accountProfileRoute, 'upsert({ id: user.id', 'Account profile API upserts current profile');
+has(accountProfileRoute, 'NextResponse.redirect(url, { status: 303 })', 'Account profile API uses POST-safe redirect');
+has(accountProfileRoute, "revalidatePath('/', 'layout')", 'Account profile API revalidates layout after save');
 has(accountProfileRoute, 'supabase.auth.updateUser', 'Account profile API syncs auth metadata');
 has(finalAccountRailCss, 'data-manager-account-popover-align="same-rail"', 'Final account rail CSS anchors popover on same rail');
 has(finalAccountRailCss, '.manager-account-settings-form', 'Final account rail CSS styles settings form');
@@ -84,6 +90,9 @@ has(finalAccountRailCss, '.manager-account-function-panel', 'Final account rail 
 has(finalAccountRailCss, '.console-sidebar-mode-switch', 'Final account rail CSS styles bottom sidebar mode switch');
 has(finalAccountRailCss, 'margin-top: auto !important', 'Bottom sidebar switch is pinned to bottom of side navigation');
 has(managerAccountMenu, '<AccountMenu', 'compat ManagerAccountMenu forwards to shared AccountMenu');
+has(managerShell, 'accountName?: string | null', 'Manager shell forwards account profile name');
+has(adminPage, 'accountName={profile?.full_name', 'Admin page binds account settings to profile name');
+has(managerWorkspacePage, 'accountName={session.profile?.full_name', 'Workspace page binds account settings to profile name');
 has(renderDebugger, 'window.__xdisputerDebug', 'RenderDebugger exposes debug global');
 has(renderDebugger, 'document.styleSheets', 'RenderDebugger inspects loaded CSS');
 has(layout, '<RenderDebugger />', 'root layout mounts RenderDebugger');
