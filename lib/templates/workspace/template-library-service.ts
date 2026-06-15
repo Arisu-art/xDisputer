@@ -20,6 +20,11 @@ type TemplateAssetRow = {
   created_at: string | null;
 };
 
+type TemplateAssetQuery<T> = {
+  eq(column: string, value: unknown): TemplateAssetQuery<T>;
+  order(column: string, options?: { ascending?: boolean }): Promise<{ data: T[] | null; error: { message: string } | null }>;
+};
+
 export type TemplateLibraryContext = {
   contract: TemplateWorkspaceContract;
   assets: TemplateAssetRow[];
@@ -33,10 +38,7 @@ export type TemplateLibraryContext = {
 const rounds: TemplateRound[] = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 
 function asQuery<T>(value: unknown) {
-  return value as {
-    eq(column: string, value: unknown): ReturnType<typeof asQuery<T>>;
-    order(column: string, options?: { ascending?: boolean }): Promise<{ data: T[] | null; error: { message: string } | null }>;
-  };
+  return value as TemplateAssetQuery<T>;
 }
 
 function validationList(asset: TemplateAssetRow, key: string) {
