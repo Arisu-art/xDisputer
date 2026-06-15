@@ -16,10 +16,6 @@ export default async function ManagerWorkspacePage() {
     navItems={navItemsForDomain('manager-authoring', '/manager-workspace')}
     header={{ eyebrow: 'Manager workspace', title: 'Template Library', description: 'Authoring plane for manager-owned templates, mappings, validation, releases, and automation.' }}
   >
-    <span id="template-library" />
-    <span id="template-health" />
-    <span id="template-workflow" />
-    <span id="template-upload" />
     <ManagerTemplateWorkspaceClient />
   </ManagerConsoleShell>;
 }
