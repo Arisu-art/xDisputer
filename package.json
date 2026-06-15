@@ -5,7 +5,10 @@
   "scripts": {
     "no-autowrite:guard": "node scripts/no-autowrite-ui-guard.mjs",
     "ui-shell:registry": "node scripts/ui-shell-registry-guard.mjs",
-    "ui-source:guard": "npm run no-autowrite:guard && npm run ui-shell:registry && node scripts/console-shell-contract-guard.mjs && node scripts/manager-visible-switch-contract-guard.mjs",
+    "ui-intelligence:guard": "node scripts/ui-intelligence-guard.mjs",
+    "ui-intelligence:report": "node scripts/ui-intelligence-report.mjs",
+    "ui-intelligence:map": "node scripts/ui-intelligence-map.mjs",
+    "ui-source:guard": "npm run no-autowrite:guard && npm run ui-shell:registry && npm run ui-intelligence:guard && node scripts/console-shell-contract-guard.mjs && node scripts/manager-visible-switch-contract-guard.mjs",
     "ui-shell:smoke": "npx --yes @playwright/test test tests/ui-shell-smoke.spec.ts",
     "console-roadmap:guard": "node scripts/console-roadmap-guard.mjs",
     "template-execution:guard": "node scripts/template-execution-guard.mjs",
