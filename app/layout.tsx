@@ -68,6 +68,7 @@ import './professional-console-layout.css';
 import './global-depth-system.css';
 import './account-menu-system.css';
 import './account-menu-ratio-system.css';
+import './report-workbench-system.css';
 import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebugger from '../components/console/RenderDebugger';
@@ -78,9 +79,5 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body><ControlNavGlobalTelemetry /><RenderDebugger />{children}</body>
-    </html>
-  );
+  return <html lang="en"><body><ControlNavGlobalTelemetry />{children}<RenderDebugger /></body></html>;
 }
