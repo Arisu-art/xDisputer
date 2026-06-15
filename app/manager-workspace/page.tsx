@@ -2,25 +2,19 @@ import { redirect } from 'next/navigation';
 import ManagerConsoleShell from '../../components/ManagerConsoleShell';
 import ManagerTemplateWorkspaceClient from '../../components/ManagerTemplateWorkspaceClient';
 import { requireAuth } from '../../lib/saas/session';
+import { navItemsForDomain } from '../../lib/console/contracts/navigation-manifest';
 
 export default async function ManagerWorkspacePage() {
   const session = await requireAuth();
   if (!session.isManager && !session.isMaster) redirect(session.dashboardPath);
-
-  const switchTarget = session.isMaster ? '/master' : '/admin';
 
   return <ManagerConsoleShell
     role={session.isMaster ? 'master' : 'manager'}
     mode="workspace"
     email={session.user.email}
     accountLabel={session.isMaster ? 'Master template authority' : 'Manager template authority'}
-    navItems={[
-      { href: '/manager-workspace#template-library', label: 'Template library', active: true },
-      { href: '/manager-workspace#template-workflow', label: 'Packet setup' },
-      { href: '/manager-workspace#template-upload', label: 'Upload defaults' },
-      { href: '/manager-workspace#template-health', label: 'Template health' },
-      { href: switchTarget, label: 'Switch mode', kind: 'workspace-switch' as const }
-    ]}
+    navItems={navItemsForDomain('manager-authoring', '/manager-workspace')}
+    header={{ eyebrow: 'Manager workspace', title: 'Template Library', description: 'Authoring plane for manager-owned templates, mappings, validation, releases, and automation.' }}
   >
     <span id="template-library" />
     <span id="template-health" />
