@@ -8,27 +8,47 @@ function safeRedirectTarget(value: FormDataEntryValue | null) {
   return raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 }
 
-function firstForwardedHost(value: string | null) {
+function firstHeaderValue(value: string | null) {
   return value?.split(',')[0]?.trim() || '';
 }
 
-function requestOrigin(request: NextRequest) {
-  const explicitOrigin = request.headers.get('origin');
-  if (explicitOrigin && !explicitOrigin.includes('0.0.0.0')) return explicitOrigin;
+function hostFromOrigin(value: string) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return '';
+  }
+}
 
-  const forwardedHost = firstForwardedHost(request.headers.get('x-forwarded-host'));
-  const forwardedProto = firstForwardedHost(request.headers.get('x-forwarded-proto')) || 'https';
-  if (forwardedHost && !forwardedHost.includes('0.0.0.0')) return `${forwardedProto}://${forwardedHost}`;
+function isPrivateDevHost(value: string) {
+  const host = value.includes('://') ? hostFromOrigin(value) : value;
+  const hostname = host.split(':')[0]?.toLowerCase() || '';
+  return hostname === '0.0.0.0' || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+}
+
+function publicOriginFromHeaders(request: NextRequest) {
+  const forwardedHost = firstHeaderValue(request.headers.get('x-forwarded-host'));
+  const forwardedProto = firstHeaderValue(request.headers.get('x-forwarded-proto')) || 'https';
+  if (forwardedHost && !isPrivateDevHost(forwardedHost)) return `${forwardedProto}://${forwardedHost}`;
+
+  const forwardedUrl = firstHeaderValue(request.headers.get('x-forwarded-url'));
+  if (forwardedUrl && !isPrivateDevHost(forwardedUrl)) return new URL(forwardedUrl).origin;
+
+  const referer = request.headers.get('referer');
+  if (referer && !isPrivateDevHost(referer)) return new URL(referer).origin;
+
+  const origin = request.headers.get('origin');
+  if (origin && !isPrivateDevHost(origin)) return origin;
 
   const host = request.headers.get('host') || request.nextUrl.host;
   const proto = request.nextUrl.protocol.replace(':', '') || 'https';
-  if (host && !host.includes('0.0.0.0')) return `${proto}://${host}`;
+  if (host && !isPrivateDevHost(host)) return `${proto}://${host}`;
 
   return request.nextUrl.origin;
 }
 
 function redirectBack(request: NextRequest, next: string, state: 'saved' | 'error', reason?: string | null) {
-  const url = new URL(next, requestOrigin(request));
+  const url = new URL(next, publicOriginFromHeaders(request));
   url.searchParams.set('account_settings', state);
   if (reason) url.searchParams.set('account_settings_reason', reason.slice(0, 80));
   return NextResponse.redirect(url, { status: 303 });
@@ -42,7 +62,7 @@ export async function POST(request: NextRequest) {
   const { data: userResult } = await supabase.auth.getUser();
   const user = userResult.user;
 
-  if (!user) return NextResponse.redirect(new URL('/login', requestOrigin(request)), { status: 303 });
+  if (!user) return NextResponse.redirect(new URL('/login', publicOriginFromHeaders(request)), { status: 303 });
 
   const result = await saveCurrentAccountProfile({ supabase, user, displayName: fullName });
 
