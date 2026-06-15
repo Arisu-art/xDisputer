@@ -1,0 +1,80 @@
+/* Final console account rail override.
+   Root cause fixed here: legacy account-menu-system.css still defined a compact 88-112px rail and a 1100px rule that reduced the account card to 86px. This final file loads last and restores the standard 75/25 rail. */
+
+.admin-monitor-page[data-console-shell="true"] .admin-monitor-sidebar > .admin-monitor-account,
+.admin-monitor-page[data-console-shell="true"] .admin-monitor-account {
+  display: none !important;
+}
+
+.admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] {
+  --account-dock-width: minmax(260px, 1fr) !important;
+  --account-dock-height: clamp(136px, 10vw, 152px) !important;
+  grid-template-columns: minmax(0, 3fr) var(--account-dock-width) !important;
+  grid-template-rows: var(--account-dock-height) auto !important;
+  column-gap: clamp(.8rem, 1.35vw, 1.05rem) !important;
+  align-items: start !important;
+}
+
+.admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > [data-console-header-primary="true"],
+.admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
+.admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .native-command-hero:first-of-type {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  min-height: var(--account-dock-height) !important;
+  height: var(--account-dock-height) !important;
+  max-height: var(--account-dock-height) !important;
+  margin: 0 !important;
+  align-self: start !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+.admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
+.admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 260px !important;
+  min-height: var(--account-dock-height) !important;
+  height: var(--account-dock-height) !important;
+  max-height: var(--account-dock-height) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  align-self: start !important;
+  justify-self: stretch !important;
+  border-radius: 24px !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+@media (max-width: 1100px) and (min-width: 761px) {
+  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] {
+    --account-dock-width: minmax(220px, .86fr) !important;
+    --account-dock-height: clamp(128px, 12vw, 144px) !important;
+    grid-template-columns: minmax(0, 2.8fr) var(--account-dock-width) !important;
+  }
+
+  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
+  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock {
+    min-width: 220px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] {
+    --account-dock-width: clamp(56px, 14vw, 74px) !important;
+    --account-dock-height: clamp(56px, 14vw, 74px) !important;
+    grid-template-columns: minmax(0, 1fr) var(--account-dock-width) !important;
+    grid-template-rows: minmax(112px, auto) auto !important;
+  }
+
+  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
+  .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock {
+    width: var(--account-dock-width) !important;
+    min-width: var(--account-dock-width) !important;
+    height: var(--account-dock-height) !important;
+    min-height: var(--account-dock-height) !important;
+    padding: .4rem !important;
+    justify-self: end !important;
+  }
+}
