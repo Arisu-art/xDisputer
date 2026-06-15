@@ -19,6 +19,8 @@ function notHas(path, term) { const source = read(path); if (source && source.in
   'lib/client-template-runtime/client-template-generation-orchestrator.ts',
   'lib/client-template-runtime/index.ts',
   'components/client-template-runtime/ClientTemplateRuntimeDashboard.tsx',
+  'components/LetterGeneratorWorkspaceV2.tsx',
+  'components/TemplateProgressiveWorkspace.tsx',
   'app/api/client-template-runtime/context/route.ts',
   'app/api/client-template-runtime/generate/route.ts',
   'app/client-template-runtime.css'
@@ -27,6 +29,14 @@ function notHas(path, term) { const source = read(path); if (source && source.in
 has('app/workspace/page.tsx', 'LetterGeneratorWorkspaceV2');
 notHas('app/workspace/page.tsx', 'ClientTemplateRuntimeDashboard');
 notHas('app/workspace/page.tsx', 'getClientTemplateRuntimeContext');
+has('components/TemplateProgressiveWorkspace.tsx', 'onUseRoundForSourceData');
+has('components/TemplateProgressiveWorkspace.tsx', 'Use selected template for Source Data');
+has('components/TemplateProgressiveWorkspace.tsx', 'data-client-template-source-handoff');
+has('components/LetterGeneratorWorkspaceV2.tsx', 'registryAssets');
+has('components/LetterGeneratorWorkspaceV2.tsx', 'effectiveRefs');
+has('components/LetterGeneratorWorkspaceV2.tsx', 'effectiveTemplates');
+has('components/LetterGeneratorWorkspaceV2.tsx', 'executeTemplateGeneration');
+has('components/LetterGeneratorWorkspaceV2.tsx', 'onUseRoundForSourceData');
 has('lib/client-template-runtime/client-template-context.ts', 'loadEnabledDynamicTemplateRules');
 has('lib/client-template-runtime/client-template-rule-application.ts', 'applyManagerRulesToClientData');
 has('lib/client-template-runtime/client-template-generation-gate.ts', 'assertClientCanGenerate');
@@ -34,6 +44,7 @@ has('lib/client-template-runtime/client-template-generation-orchestrator.ts', 'g
 has('app/api/client-template-runtime/generate/route.ts', 'generateClientLettersFromManagerTemplate');
 has('app/layout.tsx', "import './client-template-runtime.css';");
 has('app/layout.tsx', "import './final-responsive-integrity.css';");
+has('lib/ui-intelligence/registry.ts', 'client-template-handoff');
 has('package.json', 'client-template:guard');
 
 if (failures.length) {
