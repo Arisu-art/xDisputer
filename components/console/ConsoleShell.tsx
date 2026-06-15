@@ -17,6 +17,7 @@ type Props = {
   role: ConsoleShellRole;
   mode: ConsoleShellMode;
   email?: string | null;
+  accountName?: string | null;
   accountLabel: string;
   brandTitle?: string;
   brandSubtitle: string;
@@ -52,35 +53,15 @@ function join(...tokens: Array<string | false | null | undefined>) {
 
 function switchModeContract(role: ConsoleShellRole, mode: ConsoleShellMode, switchTargetLabel: string): SwitchModeContract {
   if (role === 'manager' && mode === 'workspace') {
-    return {
-      currentLabel: 'Workspace authoring',
-      targetLabel: switchTargetLabel || 'Operations console',
-      intent: 'Switch to monitoring',
-      helper: 'Review clients, outputs, access, reports, and audit queues.',
-      icon: '↗'
-    };
+    return { currentLabel: 'Workspace authoring', targetLabel: switchTargetLabel || 'Operations console', intent: 'Switch to monitoring', helper: 'Review clients, outputs, access, reports, and audit queues.', icon: '↗' };
   }
-
   if (role === 'manager') {
-    return {
-      currentLabel: 'Operations monitoring',
-      targetLabel: switchTargetLabel || 'Manager workspace',
-      intent: 'Switch to authoring',
-      helper: 'Open template library, mapping, validation, release, and automation tools.',
-      icon: '↔'
-    };
+    return { currentLabel: 'Operations monitoring', targetLabel: switchTargetLabel || 'Manager workspace', intent: 'Switch to authoring', helper: 'Open template library, mapping, validation, release, and automation tools.', icon: '↔' };
   }
-
-  return {
-    currentLabel: 'Master governance',
-    targetLabel: switchTargetLabel || 'Manager console',
-    intent: 'Open paired surface',
-    helper: 'Move to the paired operational surface without mixing account settings.',
-    icon: '↘'
-  };
+  return { currentLabel: 'Master governance', targetLabel: switchTargetLabel || 'Manager console', intent: 'Open paired surface', helper: 'Move to the paired operational surface without mixing account settings.', icon: '↘' };
 }
 
-export default function ConsoleShell({ role, mode, email, accountLabel, brandTitle = 'xDisputer', brandSubtitle, sidebarSectionTitle, navItems, switchTarget, switchTargetLabel, className, navAriaLabel, navContract = 'console-shell-v2', activeNavUsesConsoleLink = false, header, children }: Props) {
+export default function ConsoleShell({ role, mode, email, accountName, accountLabel, brandTitle = 'xDisputer', brandSubtitle, sidebarSectionTitle, navItems, switchTarget, switchTargetLabel, className, navAriaLabel, navContract = 'console-shell-v2', activeNavUsesConsoleLink = false, header, children }: Props) {
   const visibleNavItems = navItems.filter((item) => item.kind !== 'workspace-switch');
   const shellClassName = join('admin-monitor-page native-console', shellModeClass(role, mode), className);
   const switchMode = switchModeContract(role, mode, switchTargetLabel);
@@ -100,7 +81,7 @@ export default function ConsoleShell({ role, mode, email, accountLabel, brandTit
       </section>
     </aside>
     <section className="admin-monitor-main native-console-main" data-console-main="true" data-console-component="ConsoleMain" data-console-header-grid="true" data-console-has-header={header ? 'true' : 'false'}>
-      <AccountMenu role={role} mode={mode} email={email} accountLabel={accountLabel} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />
+      <AccountMenu role={role} mode={mode} email={email} displayName={accountName} accountLabel={accountLabel} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />
       {header ? <ConsoleHeader {...header} /> : null}
       {children}
     </section>
