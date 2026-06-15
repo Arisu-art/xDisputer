@@ -75,6 +75,7 @@ import './client-template-runtime.css';
 import './final-console-account-rail.css';
 import './final-responsive-integrity.css';
 import './console-debug-overlay.css';
+import './client-workspace-layout-lock.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebugger from '../components/console/RenderDebugger';
 
