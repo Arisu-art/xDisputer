@@ -22,8 +22,21 @@
 
 .admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
 .admin-monitor-main[data-console-header-grid="true"] > .native-command-hero:first-of-type,
-.admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type,
 .admin-monitor-main[data-console-header-grid="true"] > [data-console-header-primary="true"] {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: var(--account-dock-min-height) !important;
+  height: 100% !important;
+  margin: 0 0 var(--console-row-gap, 1rem) 0 !important;
+  display: grid !important;
+  align-items: center !important;
+  align-self: stretch !important;
+  border-radius: var(--account-dock-radius) !important;
+}
+
+.admin-monitor-main[data-console-header-grid="true"]:not([data-console-has-header="true"]) > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type {
   grid-column: 1 !important;
   grid-row: 1 !important;
   width: auto !important;
@@ -50,7 +63,8 @@
   display: contents !important;
 }
 
-.admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > :not(.admin-monitor-card:first-of-type) {
+.admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > :not(.admin-monitor-card:first-of-type),
+.admin-monitor-main[data-console-header-grid="true"][data-console-has-header="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type {
   grid-column: 1 / -1 !important;
 }
 
@@ -142,8 +156,8 @@
 
   .admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
   .admin-monitor-main[data-console-header-grid="true"] > .native-command-hero:first-of-type,
-  .admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type,
-  .admin-monitor-main[data-console-header-grid="true"] > [data-console-header-primary="true"] {
+  .admin-monitor-main[data-console-header-grid="true"] > [data-console-header-primary="true"],
+  .admin-monitor-main[data-console-header-grid="true"]:not([data-console-has-header="true"]) > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type {
     grid-column: 1 / -1 !important;
     grid-row: 1 !important;
     padding-right: calc(var(--account-dock-width) + 1rem) !important;
@@ -190,8 +204,8 @@
 
   .admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
   .admin-monitor-main[data-console-header-grid="true"] > .native-command-hero:first-of-type,
-  .admin-monitor-main[data-console-header-grid="true"] > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type,
-  .admin-monitor-main[data-console-header-grid="true"] > [data-console-header-primary="true"] {
+  .admin-monitor-main[data-console-header-grid="true"] > [data-console-header-primary="true"],
+  .admin-monitor-main[data-console-header-grid="true"]:not([data-console-has-header="true"]) > .manager-template-client-flow:first-of-type > .admin-monitor-card:first-of-type {
     padding-right: 4.5rem !important;
   }
 
