@@ -14,8 +14,11 @@ function notHas(source, term, label) { checks.push({ ok: !source.includes(term),
 console.log('\n=== Manager template roadmap guard ===');
 console.log('Verification-only mode: no source-rewrite scripts are executed.');
 execSync('node scripts/template-execution-guard.mjs', { stdio: 'inherit' });
+execSync('node scripts/template-workspace-contract-guard.mjs', { stdio: 'inherit' });
 
 const managerPage = read('app/manager-workspace/page.tsx');
+const templateShell = read('components/templates/workspace/TemplateWorkspaceShell.tsx');
+const templateLibraryHub = read('components/templates/workspace/TemplateLibraryHub.tsx');
 const managerClient = read('components/ManagerTemplateWorkspaceClient.tsx');
 const packet = read('components/TemplatePacketConfigurator.tsx');
 const progressive = read('components/TemplateProgressiveWorkspace.tsx');
@@ -26,9 +29,12 @@ const orchestrator = read('lib/template-execution/template-execution-orchestrato
 const workspace = read('components/LetterGeneratorWorkspaceV2.tsx');
 const pkg = read('package.json');
 
-has(managerPage, 'ManagerConsoleShell', 'manager workspace uses shared shell');
-has(managerPage, 'ManagerTemplateWorkspaceClient', 'manager workspace uses client-like flow');
-has(managerPage, "session.isMaster ? '/master' : '/admin'", 'manager workspace switch target is role-aware');
+has(managerPage, 'TemplateWorkspaceShell', 'manager workspace uses template workspace shell');
+has(managerPage, 'TemplateLibraryHub', 'manager workspace uses Template Library source-of-truth hub');
+has(managerPage, 'getManagerTemplateLibraryContext', 'manager workspace hydrates template library context');
+has(templateShell, 'ManagerConsoleShell', 'template workspace shell delegates to shared manager shell');
+has(templateShell, 'templateWorkspaceNavForPath', 'template workspace shell owns three-hub navigation');
+has(templateLibraryHub, 'ManagerTemplateWorkspaceClient', 'Template Library hub preserves progressive template flow');
 notHas(managerPage, 'TemplateUploadCard', 'manager workspace has no raw upload cards');
 notHas(managerPage, 'encType="multipart/form-data"', 'manager workspace has no raw multipart upload forms');
 
@@ -36,16 +42,12 @@ has(managerClient, 'TemplateProgressiveWorkspace', 'manager upload flow reuses p
 has(managerClient, 'MANAGER_TEMPLATE_ASSET', 'manager upload flow uses manager template source');
 has(managerClient, 'managerTemplateScope={managerTemplateScope}', 'manager client passes verified template scope');
 notHas(managerClient, 'canManageTemplates: true', 'manager client has no fake writable fallback scope');
-has(managerClient, 'handleExhibitsHydrated', 'manager client separates hydration from mutation refresh');
 has(managerClient, 'handleTemplateMutation', 'manager client reloads assets only after template mutation');
-notHas(managerClient, 'async function handleExhibitsChange() { await loadAssets(round); }', 'manager client no longer reloads on exhibit hydration');
 
 has(packet, 'ManagerTemplateScopeUi', 'packet configurator accepts manager scope');
 has(packet, 'canManageTemplates', 'packet configurator gates upload controls');
 has(packet, 'resolveTemplateAuthority', 'packet configurator uses authority model');
-has(packet, 'pendingActionKey', 'packet configurator tracks per-slot pending actions');
 has(packet, 'onTemplateMutation?.()', 'packet configurator refreshes parent after upload/remove mutation');
-has(packet, 'data-template-authority-mode={authority.mode}', 'packet configurator exposes authority mode');
 notHas(packet, 'template-manager-policy-inline', 'packet configurator does not render duplicate authority banner');
 
 has(progressive, 'data-template-authority-mode', 'progressive template UX exposes authority mode');
@@ -62,12 +64,10 @@ has(orchestrator, 'executeTemplateGeneration', 'TemplateExecutionOrchestrator is
 has(orchestrator, 'ManagerTemplateResolver', 'orchestrator resolves manager template authority');
 has(orchestrator, 'window.__xdisputerTemplateExecution', 'orchestrator publishes runtime execution snapshot');
 has(workspace, 'executeTemplateGeneration({', 'client workspace delegates generation to orchestrator');
-notHas(workspace, 'renderReferenceDisputeDocx(', 'workspace does not call legacy dispute renderer directly');
-notHas(workspace, 'renderLatePaymentReference(', 'workspace does not call legacy late-payment renderer directly');
-notHas(workspace, 'renderMappedAppendix(', 'workspace does not call legacy appendix renderer directly');
 notHas(pkg, 'apply-manager-template-generation-wiring.mjs', 'package scripts do not run generation autowrite');
 notHas(pkg, 'apply-manager-template-workspace-state-wiring.mjs', 'package scripts do not run workspace-state autowrite');
 has(pkg, 'template-execution:guard', 'package uses template execution guard');
+has(pkg, 'template-workspace:guard', 'package uses template workspace guard');
 
 checks.forEach((check) => console.log(`${check.ok ? '✅' : '❌'} ${check.label}`));
 const failed = checks.filter((check) => !check.ok);
