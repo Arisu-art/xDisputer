@@ -78,6 +78,14 @@ check(!ratioCss.includes('--account-dock-width: clamp(96px'), 'ratio CSS never c
 check(ratioCss.includes('--account-dock-width: minmax(220px, .86fr)'), 'ratio CSS keeps tablet account rail at minimum 220px', 'critical');
 check(ratioCss.includes('grid-template-columns: minmax(0, 2.8fr) var(--account-dock-width)'), 'ratio CSS uses proportional tablet grid instead of compact icon rail', 'critical');
 
+const layout = read('app/layout.tsx');
+const finalImportIndex = layout.indexOf("import './final-console-account-rail.css';");
+const ratioImportIndex = layout.indexOf("import './account-menu-ratio-system.css';");
+const debugImportIndex = layout.indexOf("import './console-debug-overlay.css';");
+check(finalImportIndex >= 0, 'root layout imports final console account rail override', 'critical');
+check(ratioImportIndex >= 0 && finalImportIndex > ratioImportIndex, 'final console account rail loads after ratio CSS', 'critical');
+check(debugImportIndex >= 0 && finalImportIndex < debugImportIndex, 'final console account rail loads before debugger overlay', 'critical');
+
 const adminLayout = read('app/admin/layout.tsx');
 const masterLayout = read('app/master/layout.tsx');
 check(!adminLayout.includes('ControlConsoleShell'), 'admin layout is not wrapped by legacy ControlConsoleShell', 'critical');
