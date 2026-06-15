@@ -69,6 +69,7 @@ import './global-depth-system.css';
 import './account-menu-system.css';
 import './account-menu-ratio-system.css';
 import './report-workbench-system.css';
+import './final-console-account-rail.css';
 import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebugger from '../components/console/RenderDebugger';
