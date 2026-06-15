@@ -80,33 +80,41 @@ function readLoadedCssFiles() {
 
 function pickLabel(element: Element | null, fallback: string) {
   if (!element) return 'missing';
-  return element.getAttribute('data-console-component') || fallback;
+  return element.getAttribute('data-console-component') || element.getAttribute('data-xdisputer-shell') || fallback;
+}
+
+function findClientWorkspaceShell() {
+  return document.querySelector('.app-shell');
 }
 
 function findShellElement() {
-  return document.querySelector('[data-console-shell="true"]') || document.querySelector('.admin-monitor-page.native-console');
+  return document.querySelector('[data-console-shell="true"]')
+    || document.querySelector('.admin-monitor-page.native-console')
+    || findClientWorkspaceShell();
 }
 
 function findMainElement(shell: Element | null) {
   return shell?.querySelector('[data-console-main="true"][data-console-header-grid="true"]')
     || document.querySelector('[data-console-main="true"][data-console-header-grid="true"]')
     || shell?.querySelector('.admin-monitor-main.native-console-main')
-    || document.querySelector('.admin-monitor-main.native-console-main');
+    || document.querySelector('.admin-monitor-main.native-console-main')
+    || shell?.querySelector('.main-area')
+    || document.querySelector('.app-shell > .main-area');
 }
 
 function findHeaderElement(shell: Element | null) {
-  return shell?.querySelector('[data-console-header="true"], [data-console-header-primary="true"], .admin-monitor-main > .admin-monitor-header:first-of-type, .admin-monitor-main > .native-command-hero:first-of-type')
-    || document.querySelector('[data-console-header="true"], [data-console-header-primary="true"], .admin-monitor-main > .admin-monitor-header:first-of-type, .admin-monitor-main > .native-command-hero:first-of-type');
+  return shell?.querySelector('[data-console-header="true"], [data-console-header-primary="true"], .admin-monitor-main > .admin-monitor-header:first-of-type, .admin-monitor-main > .native-command-hero:first-of-type, .main-area > .header:first-of-type')
+    || document.querySelector('[data-console-header="true"], [data-console-header-primary="true"], .admin-monitor-main > .admin-monitor-header:first-of-type, .admin-monitor-main > .native-command-hero:first-of-type, .app-shell > .main-area > .header:first-of-type');
 }
 
 function findSidebarElement(shell: Element | null) {
-  return shell?.querySelector('[data-console-sidebar="true"], .admin-monitor-sidebar.native-console-sidebar')
-    || document.querySelector('[data-console-sidebar="true"], .admin-monitor-sidebar.native-console-sidebar');
+  return shell?.querySelector('[data-console-sidebar="true"], .admin-monitor-sidebar.native-console-sidebar, .sidebar')
+    || document.querySelector('[data-console-sidebar="true"], .admin-monitor-sidebar.native-console-sidebar, .app-shell > .sidebar');
 }
 
 function findAccountElement(shell: Element | null) {
-  return shell?.querySelector('[data-console-account-menu="true"], [data-manager-account-menu="true"], .manager-header-account-dock')
-    || document.querySelector('[data-console-account-menu="true"], [data-manager-account-menu="true"], .manager-header-account-dock');
+  return shell?.querySelector('[data-console-account-menu="true"], [data-manager-account-menu="true"], .manager-header-account-dock, .workspace-account-card')
+    || document.querySelector('[data-console-account-menu="true"], [data-manager-account-menu="true"], .manager-header-account-dock, .workspace-account-card');
 }
 
 function rectSummary(element: Element | null) {
@@ -132,11 +140,9 @@ function widthRatio(header: Element | null, account: Element | null) {
 function describeElement(element: Element) {
   const tag = element.tagName.toLowerCase();
   const id = element.id ? `#${element.id}` : '';
-  const data = element.getAttribute('data-console-component') || element.getAttribute('data-template-workspace-hub') || element.getAttribute('data-client-template-runtime') || element.getAttribute('data-dynamic-template-rule-control');
+  const data = element.getAttribute('data-console-component') || element.getAttribute('data-template-workspace-hub') || element.getAttribute('data-client-template-runtime') || element.getAttribute('data-dynamic-template-rule-control') || element.getAttribute('data-client-template-source-handoff');
   const dataLabel = data ? `[${data}]` : '';
-  const className = typeof element.className === 'string' && element.className.trim()
-    ? `.${element.className.trim().split(/\s+/).slice(0, 3).join('.')}`
-    : '';
+  const className = typeof element.className === 'string' && element.className.trim() ? `.${element.className.trim().split(/\s+/).slice(0, 3).join('.')}` : '';
   return `${tag}${id}${className}${dataLabel}`;
 }
 
@@ -152,16 +158,10 @@ function detectHorizontalOverflow(): ResponsiveDebugSnapshot {
   const viewportWidth = window.innerWidth;
   const documentScrollWidth = document.documentElement.scrollWidth;
   const hasHorizontalOverflow = documentScrollWidth > viewportWidth + 2;
-  const overflowing = Array.from(document.querySelectorAll('body *'))
-    .map((element) => {
-      const rect = element.getBoundingClientRect();
-      return {
-        element,
-        overflow: Math.max(0, rect.right - viewportWidth, 0 - rect.left)
-      };
-    })
-    .filter((item) => item.overflow > 2)
-    .sort((a, b) => b.overflow - a.overflow);
+  const overflowing = Array.from(document.querySelectorAll('body *')).map((element) => {
+    const rect = element.getBoundingClientRect();
+    return { element, overflow: Math.max(0, rect.right - viewportWidth, 0 - rect.left) };
+  }).filter((item) => item.overflow > 2).sort((a, b) => b.overflow - a.overflow);
   const integrityToken = getComputedStyle(document.documentElement).getPropertyValue('--xdisputer-responsive-integrity').trim();
   return {
     viewportWidth,
@@ -173,6 +173,30 @@ function detectHorizontalOverflow(): ResponsiveDebugSnapshot {
   };
 }
 
+function shellLabel(shell: Element | null) {
+  if (!shell) return 'missing';
+  if (shell.matches('.app-shell')) return 'ClientWorkspaceShell';
+  return pickLabel(shell, shell ? 'ConsoleShell[class-fallback]' : 'ConsoleShell');
+}
+
+function shellRole(shell: Element | null) {
+  if (!shell) return 'not-available';
+  if (shell.matches('.app-shell')) return 'client';
+  return shell.getAttribute('data-console-role') || shell.getAttribute('data-control-console') || 'not-available';
+}
+
+function shellMode(shell: Element | null) {
+  if (!shell) return 'not-available';
+  if (shell.matches('.app-shell')) return 'workspace';
+  return shell.getAttribute('data-console-mode') || 'not-available';
+}
+
+function detectionLabel(shell: Element | null) {
+  if (!shell) return 'missing';
+  if (shell.matches('.app-shell')) return 'client-workspace-shell';
+  return shell.hasAttribute('data-console-shell') ? 'canonical-data-attributes' : 'class-fallback';
+}
+
 function collectSnapshot(route: string): DebugSnapshot {
   const shell = findShellElement();
   const main = findMainElement(shell);
@@ -182,15 +206,15 @@ function collectSnapshot(route: string): DebugSnapshot {
   const rootStyle = getComputedStyle(document.documentElement);
   const left = rootStyle.getPropertyValue('--console-header-ratio-left').trim() || '3fr';
   const right = rootStyle.getPropertyValue('--console-header-ratio-right').trim() || 'minmax(220px, 1fr)';
-  const gridTemplateColumns = main ? getComputedStyle(main).gridTemplateColumns : 'not-available';
+  const gridTemplateColumns = main ? getComputedStyle(main).gridTemplateColumns : shell ? getComputedStyle(shell).gridTemplateColumns : 'not-available';
   return {
     route,
-    role: shell?.getAttribute('data-console-role') || shell?.getAttribute('data-control-console') || 'not-available',
-    mode: shell?.getAttribute('data-console-mode') || 'not-available',
-    renderedShell: pickLabel(shell, shell ? 'ConsoleShell[class-fallback]' : 'ConsoleShell'),
+    role: shellRole(shell),
+    mode: shellMode(shell),
+    renderedShell: shellLabel(shell),
     renderedHeader: pickLabel(header, header ? 'ConsoleHeader[class-fallback]' : 'ConsoleHeader'),
-    renderedSidebar: pickLabel(sidebar, sidebar ? 'ConsoleSidebar[class-fallback]' : 'ConsoleSidebar'),
-    renderedAccountMenu: pickLabel(accountMenu, accountMenu ? 'AccountMenu[class-fallback]' : 'AccountMenu'),
+    renderedSidebar: pickLabel(sidebar, sidebar?.matches('.sidebar') ? 'ClientWorkspaceSidebar' : sidebar ? 'ConsoleSidebar[class-fallback]' : 'ConsoleSidebar'),
+    renderedAccountMenu: pickLabel(accountMenu, accountMenu?.matches('.workspace-account-card') ? 'ClientWorkspaceAccount' : accountMenu ? 'AccountMenu[class-fallback]' : 'AccountMenu'),
     loadedCssFiles: readLoadedCssFiles(),
     activeLayoutRatio: `${left} / ${right}`,
     gridTemplateColumns,
@@ -200,7 +224,7 @@ function collectSnapshot(route: string): DebugSnapshot {
     accountRect: rectSummary(accountMenu),
     headerAccountTopDelta: topDelta(header, accountMenu),
     headerAccountWidthRatio: widthRatio(header, accountMenu),
-    detectionMode: shell?.hasAttribute('data-console-shell') ? 'canonical-data-attributes' : shell ? 'class-fallback' : 'missing',
+    detectionMode: detectionLabel(shell),
     responsive: detectHorizontalOverflow()
   };
 }
@@ -240,7 +264,7 @@ export default function RenderDebugger() {
     sync();
     const observerRoot = document.body || document.documentElement;
     const observer = new MutationObserver(sync);
-    observer.observe(observerRoot, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style', 'data-console-shell', 'data-console-main', 'data-console-header-grid', 'data-console-component', 'data-manager-account-state'] });
+    observer.observe(observerRoot, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style', 'data-console-shell', 'data-console-main', 'data-console-header-grid', 'data-console-component', 'data-manager-account-state', 'data-client-template-source-handoff'] });
     const interval = window.setInterval(sync, 800);
     window.addEventListener('resize', sync);
     window.addEventListener('orientationchange', sync);
