@@ -39,80 +39,15 @@
   opacity: .96;
 }
 
-.console-sidebar-mode-switch > div {
-  display: grid;
-  gap: .24rem;
-}
-
-.console-sidebar-mode-switch span,
-.console-sidebar-mode-switch small {
-  color: #64748b;
-}
-
-.console-sidebar-mode-switch > div > span {
-  font-size: .66rem;
-  font-weight: 900;
-  letter-spacing: .11em;
-  text-transform: uppercase;
-}
-
-.console-sidebar-mode-switch strong {
-  color: #081429;
-  font-size: .92rem;
-  font-weight: 900;
-  line-height: 1.18;
-}
-
-.console-sidebar-mode-switch small {
-  max-width: 17rem;
-  font-size: .72rem;
-  font-weight: 700;
-  line-height: 1.42;
-}
-
-.console-sidebar-mode-switch-button {
-  min-height: 48px !important;
-  padding: .75rem .82rem !important;
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  align-items: center !important;
-  gap: .65rem !important;
-  border: 1px solid rgba(37, 99, 235, .24) !important;
-  border-radius: 16px !important;
-  color: #fff !important;
-  background: linear-gradient(135deg, #061227, #0f2f68 54%, #2563eb) !important;
-  text-decoration: none !important;
-  box-shadow: 0 16px 32px rgba(37, 99, 235, .22), 0 8px 18px rgba(15, 23, 42, .16) !important;
-  transform: translateZ(0);
-  animation: consoleSwitchPulse 2600ms ease-in-out infinite;
-}
-
-.console-sidebar-mode-switch-button span {
-  color: #fff !important;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: .82rem;
-  font-weight: 900;
-}
-
-.console-sidebar-mode-switch-button em {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  color: #081429;
-  background: rgba(255, 255, 255, .94);
-  font-style: normal;
-  font-weight: 950;
-  box-shadow: 0 8px 18px rgba(2, 6, 23, .18);
-}
-
-.console-sidebar-mode-switch-button:hover {
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: 0 22px 48px rgba(37, 99, 235, .28), 0 12px 24px rgba(15, 23, 42, .18) !important;
-}
+.console-sidebar-mode-switch > div { display: grid; gap: .24rem; }
+.console-sidebar-mode-switch span, .console-sidebar-mode-switch small { color: #64748b; }
+.console-sidebar-mode-switch > div > span { font-size: .66rem; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+.console-sidebar-mode-switch strong { color: #081429; font-size: .92rem; font-weight: 900; line-height: 1.18; }
+.console-sidebar-mode-switch small { max-width: 17rem; font-size: .72rem; font-weight: 700; line-height: 1.42; }
+.console-sidebar-mode-switch-button { min-height: 48px !important; padding: .75rem .82rem !important; display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; align-items: center !important; gap: .65rem !important; border: 1px solid rgba(37, 99, 235, .24) !important; border-radius: 16px !important; color: #fff !important; background: linear-gradient(135deg, #061227, #0f2f68 54%, #2563eb) !important; text-decoration: none !important; box-shadow: 0 16px 32px rgba(37, 99, 235, .22), 0 8px 18px rgba(15, 23, 42, .16) !important; transform: translateZ(0); animation: consoleSwitchPulse 2600ms ease-in-out infinite; }
+.console-sidebar-mode-switch-button span { color: #fff !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .82rem; font-weight: 900; }
+.console-sidebar-mode-switch-button em { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 999px; color: #081429; background: rgba(255, 255, 255, .94); font-style: normal; font-weight: 950; box-shadow: 0 8px 18px rgba(2, 6, 23, .18); }
+.console-sidebar-mode-switch-button:hover { transform: translateY(-2px) scale(1.01); box-shadow: 0 22px 48px rgba(37, 99, 235, .28), 0 12px 24px rgba(15, 23, 42, .18) !important; }
 
 .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] {
   --account-dock-width: minmax(260px, 1fr) !important;
@@ -162,11 +97,14 @@
   left: auto !important;
   width: min(420px, calc(100vw - 32px)) !important;
   max-width: calc(100vw - 32px) !important;
-  max-height: min(680px, calc(100dvh - 32px)) !important;
-  overflow: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  overflow-y: visible !important;
+  scrollbar-width: none !important;
   transform-origin: top right !important;
 }
 
+.manager-account-popover::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
 .manager-account-function-panel { display: grid; gap: 8px; }
 .manager-account-function-panel > div { min-width: 0; display: grid; grid-template-columns: minmax(96px, .45fr) minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid rgba(129, 140, 154, .22); border-radius: 14px; background: #f8fafc; }
 .manager-account-function-panel strong, .manager-account-function-panel span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -196,7 +134,7 @@
 @media (max-width: 760px) {
   .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] { --account-dock-width: clamp(56px, 14vw, 74px) !important; --account-dock-height: clamp(56px, 14vw, 74px) !important; grid-template-columns: minmax(0, 1fr) var(--account-dock-width) !important; grid-template-rows: minmax(112px, auto) auto !important; }
   .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"], .admin-monitor-page[data-console-shell="true"] [data-console-main="true"][data-console-header-grid="true"] > .manager-header-account-dock { width: var(--account-dock-width) !important; min-width: var(--account-dock-width) !important; height: var(--account-dock-height) !important; min-height: var(--account-dock-height) !important; padding: .4rem !important; justify-self: end !important; }
-  .manager-account-popover[data-manager-account-popover-align="same-rail"], .manager-account-popover { top: 0 !important; right: 0 !important; width: min(360px, calc(100vw - 20px)) !important; max-height: calc(100dvh - 20px) !important; }
+  .manager-account-popover[data-manager-account-popover-align="same-rail"], .manager-account-popover { top: 0 !important; right: 0 !important; width: min(360px, calc(100vw - 20px)) !important; max-height: none !important; overflow: visible !important; scrollbar-width: none !important; }
   .console-sidebar-mode-switch { margin-top: 1rem !important; position: relative !important; bottom: auto !important; }
 }
 
