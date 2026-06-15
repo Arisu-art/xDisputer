@@ -3,6 +3,15 @@
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+type ResponsiveDebugSnapshot = {
+  viewportWidth: number;
+  documentScrollWidth: number;
+  hasHorizontalOverflow: boolean;
+  largestOverflowSelector: string | null;
+  breakpoint: string;
+  finalResponsiveIntegrityLoaded: boolean;
+};
+
 type DebugSnapshot = {
   route: string;
   role: string;
@@ -15,10 +24,13 @@ type DebugSnapshot = {
   activeLayoutRatio: string;
   gridTemplateColumns: string;
   headerRect: string;
+  mainRect: string;
+  sidebarRect: string;
   accountRect: string;
   headerAccountTopDelta: string;
   headerAccountWidthRatio: string;
   detectionMode: string;
+  responsive: ResponsiveDebugSnapshot;
 };
 
 type TemplateExecutionSnapshot = {
@@ -117,6 +129,50 @@ function widthRatio(header: Element | null, account: Element | null) {
   return `${Math.round((headerWidth / total) * 100)} / ${Math.round((accountWidth / total) * 100)}`;
 }
 
+function describeElement(element: Element) {
+  const tag = element.tagName.toLowerCase();
+  const id = element.id ? `#${element.id}` : '';
+  const data = element.getAttribute('data-console-component') || element.getAttribute('data-template-workspace-hub') || element.getAttribute('data-client-template-runtime') || element.getAttribute('data-dynamic-template-rule-control');
+  const dataLabel = data ? `[${data}]` : '';
+  const className = typeof element.className === 'string' && element.className.trim()
+    ? `.${element.className.trim().split(/\s+/).slice(0, 3).join('.')}`
+    : '';
+  return `${tag}${id}${className}${dataLabel}`;
+}
+
+function breakpointLabel(width: number) {
+  if (width <= 420) return 'mobile-narrow';
+  if (width <= 760) return 'mobile-stack';
+  if (width <= 960) return 'tablet-stack';
+  if (width <= 1180) return 'tablet-wide';
+  return 'desktop';
+}
+
+function detectHorizontalOverflow(): ResponsiveDebugSnapshot {
+  const viewportWidth = window.innerWidth;
+  const documentScrollWidth = document.documentElement.scrollWidth;
+  const hasHorizontalOverflow = documentScrollWidth > viewportWidth + 2;
+  const overflowing = Array.from(document.querySelectorAll('body *'))
+    .map((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        element,
+        overflow: Math.max(0, rect.right - viewportWidth, 0 - rect.left)
+      };
+    })
+    .filter((item) => item.overflow > 2)
+    .sort((a, b) => b.overflow - a.overflow);
+  const integrityToken = getComputedStyle(document.documentElement).getPropertyValue('--xdisputer-responsive-integrity').trim();
+  return {
+    viewportWidth,
+    documentScrollWidth,
+    hasHorizontalOverflow,
+    largestOverflowSelector: overflowing[0] ? describeElement(overflowing[0].element) : null,
+    breakpoint: integrityToken || breakpointLabel(viewportWidth),
+    finalResponsiveIntegrityLoaded: Boolean(integrityToken)
+  };
+}
+
 function collectSnapshot(route: string): DebugSnapshot {
   const shell = findShellElement();
   const main = findMainElement(shell);
@@ -139,10 +195,13 @@ function collectSnapshot(route: string): DebugSnapshot {
     activeLayoutRatio: `${left} / ${right}`,
     gridTemplateColumns,
     headerRect: rectSummary(header),
+    mainRect: rectSummary(main),
+    sidebarRect: rectSummary(sidebar),
     accountRect: rectSummary(accountMenu),
     headerAccountTopDelta: topDelta(header, accountMenu),
     headerAccountWidthRatio: widthRatio(header, accountMenu),
-    detectionMode: shell?.hasAttribute('data-console-shell') ? 'canonical-data-attributes' : shell ? 'class-fallback' : 'missing'
+    detectionMode: shell?.hasAttribute('data-console-shell') ? 'canonical-data-attributes' : shell ? 'class-fallback' : 'missing',
+    responsive: detectHorizontalOverflow()
   };
 }
 
@@ -198,10 +257,10 @@ export default function RenderDebugger() {
 
   if (!enabled || !snapshot) return null;
   return <aside className="xdisputer-render-debugger" data-xdisputer-debugger={open ? 'open' : 'closed'} data-xdisputer-debugger-mode="compact-dock">
-    <button type="button" className="xdisputer-render-debugger-toggle" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="xdisputer-render-debugger-panel"><span>{open ? 'Hide debug' : 'Debug ready'}</span><small>{snapshot.renderedShell}</small></button>
+    <button type="button" className="xdisputer-render-debugger-toggle" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="xdisputer-render-debugger-panel"><span>{open ? 'Hide debug' : 'Debug ready'}</span><small>{snapshot.responsive.hasHorizontalOverflow ? 'OVERFLOW' : snapshot.renderedShell}</small></button>
     {open ? <section id="xdisputer-render-debugger-panel" className="xdisputer-render-debugger-panel" aria-live="polite">
       <div className="xdisputer-render-debugger-heading"><strong>xDisputer debug</strong><small>Runtime proof only. Does not affect layout.</small></div>
-      <dl><dt>Route</dt><dd>{snapshot.route}</dd><dt>Shell</dt><dd>{snapshot.renderedShell}</dd><dt>Header</dt><dd>{snapshot.renderedHeader}</dd><dt>Sidebar</dt><dd>{snapshot.renderedSidebar}</dd><dt>Account</dt><dd>{snapshot.renderedAccountMenu}</dd><dt>Role</dt><dd>{snapshot.role} / {snapshot.mode}</dd><dt>Ratio token</dt><dd>{snapshot.activeLayoutRatio}</dd><dt>Grid</dt><dd>{snapshot.gridTemplateColumns}</dd><dt>Header rect</dt><dd>{snapshot.headerRect}</dd><dt>Account rect</dt><dd>{snapshot.accountRect}</dd><dt>Top delta</dt><dd>{snapshot.headerAccountTopDelta}</dd><dt>Width ratio</dt><dd>{snapshot.headerAccountWidthRatio}</dd><dt>Detection</dt><dd>{snapshot.detectionMode}</dd></dl>
+      <dl><dt>Route</dt><dd>{snapshot.route}</dd><dt>Shell</dt><dd>{snapshot.renderedShell}</dd><dt>Header</dt><dd>{snapshot.renderedHeader}</dd><dt>Sidebar</dt><dd>{snapshot.renderedSidebar}</dd><dt>Account</dt><dd>{snapshot.renderedAccountMenu}</dd><dt>Role</dt><dd>{snapshot.role} / {snapshot.mode}</dd><dt>Ratio token</dt><dd>{snapshot.activeLayoutRatio}</dd><dt>Grid</dt><dd>{snapshot.gridTemplateColumns}</dd><dt>Main rect</dt><dd>{snapshot.mainRect}</dd><dt>Sidebar rect</dt><dd>{snapshot.sidebarRect}</dd><dt>Header rect</dt><dd>{snapshot.headerRect}</dd><dt>Account rect</dt><dd>{snapshot.accountRect}</dd><dt>Top delta</dt><dd>{snapshot.headerAccountTopDelta}</dd><dt>Width ratio</dt><dd>{snapshot.headerAccountWidthRatio}</dd><dt>Viewport</dt><dd>{snapshot.responsive.viewportWidth}px</dd><dt>Scroll width</dt><dd>{snapshot.responsive.documentScrollWidth}px</dd><dt>Overflow</dt><dd>{snapshot.responsive.hasHorizontalOverflow ? 'yes' : 'no'}</dd><dt>Largest overflow</dt><dd>{snapshot.responsive.largestOverflowSelector || 'none'}</dd><dt>Breakpoint</dt><dd>{snapshot.responsive.breakpoint}</dd><dt>Integrity CSS</dt><dd>{snapshot.responsive.finalResponsiveIntegrityLoaded ? 'loaded' : 'missing'}</dd><dt>Detection</dt><dd>{snapshot.detectionMode}</dd></dl>
       {execution ? <div className="xdisputer-render-debugger-execution"><strong>Template execution</strong><dl><dt>Status</dt><dd>{execution.status}</dd><dt>Round</dt><dd>{execution.round}</dd><dt>Outputs</dt><dd>{execution.outputs}</dd><dt>Warnings</dt><dd>{execution.warnings}</dd><dt>Engines</dt><dd>{execution.engines.join(', ') || 'none'}</dd><dt>Missing</dt><dd>{execution.missingSlots.join(', ') || 'none'}</dd></dl></div> : null}
       <details className="xdisputer-render-debugger-css"><summary>Loaded CSS files ({snapshot.loadedCssFiles.length})</summary><ol>{snapshot.loadedCssFiles.map((file) => <li key={file}>{file}</li>)}</ol></details>
     </section> : null}
