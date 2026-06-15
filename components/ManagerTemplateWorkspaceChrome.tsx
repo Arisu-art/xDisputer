@@ -1,20 +1,36 @@
 export default function ManagerTemplateWorkspaceChrome() {
   return <style>{`
+    .admin-monitor-main[data-console-header-grid="true"][data-console-has-header="true"] > .manager-template-client-flow.manager-workspace-body-shell {
+      grid-column: 1 / -1 !important;
+      grid-row: auto !important;
+      display: grid !important;
+      gap: clamp(0.85rem, 1.2vw, 1.05rem) !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      min-width: 0 !important;
+    }
     .manager-template-client-flow {
       display: grid;
-      gap: 16px;
+      gap: clamp(0.85rem, 1.2vw, 1.05rem);
+      min-width: 0;
+    }
+    .manager-template-client-flow > style {
+      display: none !important;
     }
     .merged-template-command {
+      min-height: clamp(92px, 7vw, 114px) !important;
       display: grid !important;
-      grid-template-columns: minmax(0, 1.12fr) minmax(360px, .88fr);
+      grid-template-columns: minmax(0, 1fr) !important;
       align-items: center !important;
-      gap: 20px !important;
-      padding: 22px 24px !important;
+      gap: 12px !important;
+      padding: clamp(18px, 1.6vw, 22px) clamp(20px, 1.8vw, 24px) !important;
+      border: 1px solid rgba(203, 213, 225, .86) !important;
       border-radius: 24px !important;
+      box-shadow: 0 14px 34px rgba(15, 23, 42, .055) !important;
     }
     .merged-template-command-copy {
       display: grid;
-      gap: 7px;
+      gap: 5px;
       min-width: 0;
     }
     .merged-template-command-copy .eyebrow {
@@ -23,7 +39,7 @@ export default function ManagerTemplateWorkspaceChrome() {
     .merged-template-command-copy strong {
       display: block;
       color: #0f172a;
-      font-size: clamp(24px, 2.2vw, 34px);
+      font-size: clamp(24px, 2vw, 32px);
       line-height: 1;
       letter-spacing: -0.055em;
     }
@@ -33,6 +49,51 @@ export default function ManagerTemplateWorkspaceChrome() {
       color: #50627a;
       font-size: 14px;
       line-height: 1.45;
+    }
+    .manager-workspace-body-shell .templates-progressive-workspace {
+      display: grid !important;
+      gap: clamp(0.85rem, 1.2vw, 1.05rem) !important;
+      min-width: 0 !important;
+    }
+    .manager-workspace-body-shell .template-selection-stage {
+      min-height: 0 !important;
+      padding: clamp(22px, 2vw, 28px) !important;
+      display: grid !important;
+      align-content: start !important;
+      gap: clamp(18px, 1.5vw, 24px) !important;
+      border: 1px solid rgba(203, 213, 225, .9) !important;
+      border-radius: 26px !important;
+      box-shadow: 0 14px 34px rgba(15, 23, 42, .052) !important;
+      overflow: hidden !important;
+    }
+    .manager-workspace-body-shell .template-stage-heading {
+      max-width: 760px !important;
+    }
+    .manager-workspace-body-shell .template-stage-heading h2 {
+      margin-top: 6px !important;
+      font-size: clamp(30px, 3vw, 42px) !important;
+    }
+    .manager-workspace-body-shell .template-stage-heading p:not(.eyebrow) {
+      margin-top: 10px !important;
+      max-width: 720px !important;
+    }
+    .manager-workspace-body-shell .template-round-selection-grid {
+      display: grid !important;
+      grid-template-columns: repeat(4, minmax(170px, 1fr)) !important;
+      gap: clamp(10px, 1vw, 13px) !important;
+      min-width: 0 !important;
+    }
+    .manager-workspace-body-shell .template-round-choice {
+      min-height: clamp(124px, 10vw, 146px) !important;
+      padding: clamp(16px, 1.4vw, 18px) !important;
+      border: 1px solid rgba(203, 213, 225, .95) !important;
+      border-radius: 20px !important;
+      box-shadow: none !important;
+      overflow: hidden !important;
+    }
+    .manager-workspace-body-shell .template-round-choice.current {
+      border-color: rgba(71, 85, 105, .8) !important;
+      background: rgba(241, 245, 249, .72) !important;
     }
     .merged-template-command-metrics {
       display: grid !important;
@@ -119,18 +180,24 @@ export default function ManagerTemplateWorkspaceChrome() {
     }
     @media (max-width: 1180px) {
       .merged-template-command {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
       }
       .merged-template-command-metrics {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
+      .manager-workspace-body-shell .template-round-selection-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      }
     }
     @media (max-width: 640px) {
-      .merged-template-command {
+      .merged-template-command,
+      .manager-workspace-body-shell .template-selection-stage {
         padding: 18px !important;
+        border-radius: 20px !important;
       }
-      .merged-template-command-metrics {
-        grid-template-columns: 1fr;
+      .merged-template-command-metrics,
+      .manager-workspace-body-shell .template-round-selection-grid {
+        grid-template-columns: 1fr !important;
       }
       .manager-template-direct-actions {
         justify-content: flex-start !important;
