@@ -47,6 +47,19 @@ has('app/manager-workspace/engine/page.tsx', 'GenerationEngineHub');
 notHas('app/manager-workspace/page.tsx', "navItemsForDomain('manager-authoring'");
 has('app/layout.tsx', "import './template-workspace-hubs.css';");
 
+const redirects = [
+  ['app/manager-workspace/contracts/page.tsx', '/manager-workspace/studio'],
+  ['app/manager-workspace/mappings/page.tsx', '/manager-workspace/studio'],
+  ['app/manager-workspace/quality/page.tsx', '/manager-workspace/engine'],
+  ['app/manager-workspace/releases/page.tsx', '/manager-workspace/engine'],
+  ['app/manager-workspace/automation/page.tsx', '/manager-workspace/engine']
+];
+redirects.forEach(([path, target]) => {
+  has(path, "import { redirect } from 'next/navigation';");
+  has(path, `redirect('${target}')`);
+  notHas(path, 'ConsolePanelRoutePage');
+});
+
 if (failures.length) {
   console.error('\nTemplate workspace contract guard failed.');
   for (const failure of failures) console.error(`- ${failure}`);
