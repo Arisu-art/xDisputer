@@ -8,6 +8,7 @@ type Props = {
   role?: ConsoleShellRole;
   mode: ConsoleShellMode;
   email?: string | null;
+  accountName?: string | null;
   accountLabel: string;
   navItems: ConsoleNavItem[];
   className?: string;
@@ -25,12 +26,13 @@ function labelFor(mode: ConsoleShellMode, role: ConsoleShellRole) {
   return 'Manager workspace';
 }
 
-export default function ManagerConsoleShell({ role = 'manager', mode, email, accountLabel, navItems, className, header, children }: Props) {
+export default function ManagerConsoleShell({ role = 'manager', mode, email, accountName, accountLabel, navItems, className, header, children }: Props) {
   const workspaceMode = mode === 'workspace';
   return <ConsoleShell
     role={role}
     mode={mode}
     email={email}
+    accountName={accountName}
     accountLabel={accountLabel}
     brandSubtitle={workspaceMode ? 'Manager workspace' : role === 'master' ? 'Master console' : 'Manager console'}
     sidebarSectionTitle={workspaceMode ? 'Workspace' : 'Operations'}
