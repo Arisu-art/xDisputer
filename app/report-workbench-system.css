@@ -1,5 +1,38 @@
 /* Report Workbench System — merges filters, metrics, and activity into one stable console surface. */
 
+/* Final account rail patch: this stylesheet loads after the account ratio system. It prevents /admin and other console pages from collapsing the account dock to a narrow strip at zoomed desktop/tablet CSS widths. */
+@media (max-width: 1240px) and (min-width: 861px) {
+  .admin-monitor-main[data-console-header-grid="true"] {
+    --account-dock-width: minmax(220px, .9fr) !important;
+    --account-dock-height: clamp(136px, 12vw, 148px) !important;
+    grid-template-columns: minmax(0, 3fr) var(--account-dock-width) !important;
+  }
+
+  .admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
+  .admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock {
+    min-width: 220px !important;
+    height: var(--account-dock-height) !important;
+    max-height: var(--account-dock-height) !important;
+    justify-self: stretch !important;
+  }
+}
+
+@media (max-width: 860px) and (min-width: 761px) {
+  .admin-monitor-main[data-console-header-grid="true"] {
+    --account-dock-width: minmax(190px, .8fr) !important;
+    --account-dock-height: clamp(128px, 14vw, 140px) !important;
+    grid-template-columns: minmax(0, 2.65fr) var(--account-dock-width) !important;
+  }
+
+  .admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"],
+  .admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock {
+    min-width: 190px !important;
+    height: var(--account-dock-height) !important;
+    max-height: var(--account-dock-height) !important;
+    justify-self: stretch !important;
+  }
+}
+
 .report-workbench-card {
   grid-column: 1 / -1;
   display: grid;
