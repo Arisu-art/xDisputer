@@ -40,7 +40,7 @@ has('app/manager-workspace/engine/page.tsx', 'buildDynamicTemplateExecutionModel
 has('supabase/migrations/20260616090000_dynamic_template_intelligence.sql', 'dynamic_template_inspections');
 has('supabase/migrations/20260616090000_dynamic_template_intelligence.sql', 'dynamic_template_rules');
 has('app/layout.tsx', "import './dynamic-template-intelligence.css';");
-has('package.json', 'dynamic-template:intelligence-guard');
+has('package.json', 'dti:guard');
 
 if (failures.length) {
   console.error('\nDynamic template intelligence guard failed.');
