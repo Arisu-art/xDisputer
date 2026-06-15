@@ -1,15 +1,16 @@
 import { createHash } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSessionContext } from '../../../lib/saas/session';
-import { inspectTemplateContract, templateContractGateMessage, type TemplateContract, type TemplateDocumentKind } from '../../../lib/template-contracts';
-import type { ExhibitKind } from '../../../lib/template-exhibits';
-import type { LetterType } from '../../../lib/letter-engine';
-import type { Round } from '../../../lib/reference-store';
-import { templateStoragePath, type TemplateKind } from '../../../lib/supabase/template-registry';
 import { workspaceAccessErrorResponse } from '../../../lib/saas/access-entitlement';
 import { assertCanManageManagerTemplates, managerTemplateScopePayload, resolveManagerTemplateScope, ManagerTemplateScopeError } from '../../../lib/manager-template-scope';
 import { managerTemplateStorageMode, removeManagerTemplateObjects, uploadManagerTemplateObject } from '../../../lib/supabase/template-storage-service';
 import { createSupabaseAdminClient } from '../../../lib/supabase/admin';
+import { inspectTemplateContract, templateContractGateMessage, type TemplateContract, type TemplateDocumentKind } from '../../../lib/template-contracts';
+import { inspectAndStoreDynamicTemplate } from '../../../lib/templates/intelligence';
+import type { ExhibitKind } from '../../../lib/template-exhibits';
+import type { LetterType } from '../../../lib/letter-engine';
+import type { Round } from '../../../lib/reference-store';
+import { templateStoragePath, type TemplateKind } from '../../../lib/supabase/template-registry';
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
@@ -125,8 +126,9 @@ export async function POST(request: NextRequest) {
     insertedAssetId = insert.data.id;
     const activation = await activateInsertedTemplateAsset(client, scope.managerUserId, { assetId: insert.data.id, existingAssets });
     if (activation.warning && client.mode === 'session-rls') { await removeManagerTemplateObjects({ sessionSupabase: session.supabase, bucket: 'template-assets', paths: [storagePath] }); await client.supabase.from('template_assets').delete().eq('manager_user_id', scope.managerUserId).eq('id', insert.data.id); return respond(request, 'error', activation.warning, 500); }
+    const intelligence = await inspectAndStoreDynamicTemplate({ supabase: client.supabase, managerUserId: scope.managerUserId, templateAssetId: insert.data.id, asset: { id: insert.data.id, manager_user_id: scope.managerUserId, round_label: round, original_filename: file.name, mime_type: file.type || 'application/octet-stream', validation_json: validationJson, contract_json: contract as unknown as Record<string, unknown>, rule_json: null } });
     uploadedPath = null; insertedAssetId = null;
-    return respond(request, 'ok', `${round} ${targetType} manager template saved as active version. ${activation.archived} previous active version(s) archived.`, 200, { assetId: insert.data.id, archivedVersions: activation.archived, activationMode: activation.mode, contentHash, managerTemplateScope: managerTemplateScopePayload(scope), templateStorage: { mode: managerTemplateStorageMode(), mutationMode: client.mode, warning: activation.warning }, validation: contract.validation });
+    return respond(request, 'ok', `${round} ${targetType} manager template saved as active version. ${activation.archived} previous active version(s) archived.`, 200, { assetId: insert.data.id, archivedVersions: activation.archived, activationMode: activation.mode, contentHash, managerTemplateScope: managerTemplateScopePayload(scope), templateStorage: { mode: managerTemplateStorageMode(), mutationMode: client.mode, warning: activation.warning }, validation: contract.validation, dynamicTemplateIntelligence: intelligence });
   } catch (error) {
     try { if (sessionForCleanup && uploadedPath) await removeManagerTemplateObjects({ sessionSupabase: sessionForCleanup.supabase, bucket: 'template-assets', paths: [uploadedPath] }); if (clientForCleanup && insertedAssetId) await clientForCleanup.supabase.from('template_assets').delete().eq('id', insertedAssetId); } catch {}
     if (error instanceof ManagerTemplateScopeError) return managerScopeFailure(request, error);
