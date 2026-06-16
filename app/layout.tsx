@@ -72,6 +72,7 @@ import './report-workbench-system.css';
 import './template-workspace-hubs.css';
 import './dynamic-template-intelligence.css';
 import './client-template-runtime.css';
+import './manager-owned-docx-studio.css';
 import './final-console-account-rail.css';
 import './final-responsive-integrity.css';
 import './console-debug-overlay.css';
