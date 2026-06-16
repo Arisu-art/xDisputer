@@ -78,6 +78,7 @@ import './final-responsive-integrity.css';
 import './console-debug-overlay.css';
 import './client-workspace-layout-lock.css';
 import './ui-collapse-recovery.css';
+import './ui-theme-contracts.css';
 import './ui-layout-contracts.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebugger from '../components/console/RenderDebugger';
@@ -88,5 +89,5 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body><ControlNavGlobalTelemetry />{children}<RenderDebugger /></body></html>;
+  return <html lang="en"><body data-theme-contract="xdisputer-unified"><ControlNavGlobalTelemetry />{children}<RenderDebugger /></body></html>;
 }
