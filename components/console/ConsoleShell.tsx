@@ -67,7 +67,7 @@ export default function ConsoleShell({ role, mode, email, accountName, accountLa
   const switchMode = switchModeContract(role, mode, switchTargetLabel);
 
   return <main className={shellClassName} data-console-shell="true" data-console-component="ConsoleShell" data-console-role={role} data-console-mode={mode} data-console-layout-ratio="75/25" data-console-contract={navContract} data-master-console-shell={role === 'master' ? 'true' : undefined} data-manager-console-mode={role === 'manager' ? mode : undefined}>
-    <aside className="admin-monitor-sidebar native-console-sidebar" data-console-sidebar="true" data-console-component="ConsoleSidebar">
+    <aside className="admin-monitor-sidebar native-console-sidebar" data-layout-contract="console-sidebar" data-console-sidebar="true" data-console-component="ConsoleSidebar">
       <div className="admin-monitor-brand"><span>xD</span><div><strong>{brandTitle}</strong><small>{brandSubtitle}</small></div></div>
       <div className="admin-sidebar-section-title">{sidebarSectionTitle}</div>
       <nav aria-label={navAriaLabel} data-console-sidebar-nav="true" data-manager-shell-nav={role === 'manager' ? 'true' : undefined} data-master-shell-nav={role === 'master' ? 'true' : undefined} data-manager-switch-contract={navContract}>
