@@ -1,5 +1,5 @@
-import ControlPanelSkeleton from '../../components/control/ControlPanelSkeleton';
+import ConsoleInstantLoading from '../../components/console/ConsoleInstantLoading';
 
 export default function AdminLoading() {
-  return <ControlPanelSkeleton label="Loading manager console" />;
+  return <ConsoleInstantLoading role="manager" title="Client access center." description="Loading the manager shell immediately while client metrics and datasets stream in." datasetLabel="Manager dashboard" />;
 }
