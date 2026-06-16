@@ -1,5 +1,5 @@
-import ControlPanelSkeleton from '../../../components/control/ControlPanelSkeleton';
+import ConsoleInstantLoading from '../../../components/console/ConsoleInstantLoading';
 
 export default function Loading() {
-  return <ControlPanelSkeleton label="Loading manager reports" />;
+  return <ConsoleInstantLoading role="manager" title="Client activity reports." description="Showing the manager reports shell now while report filters and recent activity load." datasetLabel="Manager reports" />;
 }
