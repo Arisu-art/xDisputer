@@ -1,6 +1,10 @@
 import type { DynamicTemplateDbClient, DynamicTemplateRule } from './dynamic-template-types';
 import { normalizeDynamicTemplateRule, validateDynamicTemplateRule } from './dynamic-template-rule-validation';
 
+type DynamicTemplateRuleLoadResult =
+  | { ok: true; error: null; rules: DynamicTemplateRule[] }
+  | { ok: false; error: string; rules: DynamicTemplateRule[] };
+
 function toDbRule(rule: DynamicTemplateRule) {
   return {
     manager_user_id: rule.managerUserId,
@@ -48,10 +52,11 @@ function fromDbRule(row: Record<string, unknown>): DynamicTemplateRule {
   };
 }
 
-export async function loadEnabledDynamicTemplateRules(input: { supabase: DynamicTemplateDbClient; managerUserId: string; templateAssetId: string }) {
+export async function loadEnabledDynamicTemplateRules(input: { supabase: DynamicTemplateDbClient; managerUserId: string; templateAssetId: string }): Promise<DynamicTemplateRuleLoadResult> {
   const { data, error } = await input.supabase.from('dynamic_template_rules').select('*').eq('manager_user_id', input.managerUserId).eq('template_asset_id', input.templateAssetId).eq('enabled', true).order('priority', { ascending: true });
-  if (error) return { ok: false as const, error: String(error.message || error), rules: [] as DynamicTemplateRule[] };
-  return { ok: true as const, error: null, rules: (data || []).map((row: Record<string, unknown>) => fromDbRule(row)) };
+  if (error) return { ok: false, error: String(error.message || error), rules: [] };
+  const rows = Array.isArray(data) ? data as Record<string, unknown>[] : [];
+  return { ok: true, error: null, rules: rows.map(fromDbRule) };
 }
 
 export async function createDynamicTemplateRule(input: { supabase: DynamicTemplateDbClient; managerUserId: string; templateAssetId: string; inspectionId: string; rule: Partial<DynamicTemplateRule> }) {
