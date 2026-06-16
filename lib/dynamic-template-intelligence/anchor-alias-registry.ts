@@ -125,6 +125,8 @@ export function tokenSimilarity(a: string, b: string) {
   const right = new Set(normalizeTemplateAnchorText(b).split(/\W+/).filter(Boolean));
   if (!left.size || !right.size) return 0;
   let overlap = 0;
-  for (const token of left) if (right.has(token)) overlap += 1;
+  Array.from(left).forEach((token) => {
+    if (right.has(token)) overlap += 1;
+  });
   return overlap / Math.max(left.size, right.size);
 }
