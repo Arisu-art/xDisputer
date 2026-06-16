@@ -4,7 +4,7 @@ import { fallbackAnswerForMode, normalizeAiMessage } from './ai-guardrails';
 import { configuredFallbackProviderResult, isAiProviderConfigured, runConfiguredAiProvider } from './ai-provider';
 import { completeAiRequestRecord, createAiRequestRecord, failAiRequestRecord } from './ai-request-repository';
 import { runCreateBackgroundJobAction, runSearchDocumentsAction } from './ai-tools';
-import type { AiAction, AiCitation, AiChunkMatch, AiRequestInput, AiResponseOutput, JsonObject, JsonValue } from './ai-types';
+import type { AiAction, AiCitation, AiChunkMatch, AiRequestInput, AiResponseOutput, AiUsage, JsonObject, JsonValue } from './ai-types';
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -13,7 +13,7 @@ export type AiServiceContext = {
   userId: string;
 };
 
-function emptyUsage() {
+function emptyUsage(): AiUsage {
   return {
     promptTokens: 0,
     completionTokens: 0,
@@ -51,7 +51,7 @@ function responsePayload(input: {
   mode: AiRequestInput['mode'];
   requestId: string | null;
   modelName: string | null;
-  usage: ReturnType<typeof emptyUsage>;
+  usage: AiUsage;
   latencyMs: number;
   citations?: AiCitation[];
   actions?: AiAction[];
@@ -107,7 +107,7 @@ export async function runAiRequest(
 
       if (!job.ok) {
         await failAiRequestRecord(context.supabase, requestRecord.id, job.error.message, Date.now() - startedAt);
-        return job;
+        return fail(job.error.code, job.error.message, job.error.details);
       }
 
       actions.push(job.data.action);
@@ -145,7 +145,7 @@ export async function runAiRequest(
         trustedContext = contextFromChunks(search.data.chunks);
       } else if (search.error.code !== 'DATABASE_ERROR') {
         await failAiRequestRecord(context.supabase, requestRecord.id, search.error.message, Date.now() - startedAt);
-        return search;
+        return fail(search.error.code, search.error.message, search.error.details);
       }
     }
 
@@ -168,7 +168,7 @@ export async function runAiRequest(
 
         if (!search.ok) {
           await failAiRequestRecord(context.supabase, requestRecord.id, search.error.message, Date.now() - startedAt);
-          return search;
+          return fail(search.error.code, search.error.message, search.error.details);
         }
 
         actions.push(search.data.action.action);
@@ -189,7 +189,7 @@ export async function runAiRequest(
 
         if (!job.ok) {
           await failAiRequestRecord(context.supabase, requestRecord.id, job.error.message, Date.now() - startedAt);
-          return job;
+          return fail(job.error.code, job.error.message, job.error.details);
         }
 
         actions.push(job.data.action);
@@ -212,7 +212,7 @@ export async function runAiRequest(
 
     if (!provider.ok) {
       await failAiRequestRecord(context.supabase, requestRecord.id, provider.error.message, Date.now() - startedAt);
-      return provider;
+      return fail(provider.error.code, provider.error.message, provider.error.details);
     }
 
     const output = responsePayload({
