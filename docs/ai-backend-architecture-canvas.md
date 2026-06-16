@@ -86,9 +86,10 @@ Run these in Supabase SQL editor or through the Supabase migration workflow:
 ```txt
 supabase/migrations/20260616000000_ai_backend_architecture_foundation.sql
 supabase/migrations/20260616001000_ai_backend_rls.sql
+supabase/migrations/20260616002000_ai_chunks_text_search_index.sql
 ```
 
-The first migration creates tables and indexes. The second migration enables ownership-scoped RLS.
+The first migration creates tables and indexes. The second migration enables ownership-scoped RLS. The third migration adds a trigram index for faster first-pass text retrieval over `ai_chunks.content`.
 
 ## Environment variables
 
@@ -124,6 +125,7 @@ lib/ai/ai-tools.ts
 lib/ai/ai-service.ts
 supabase/migrations/20260616000000_ai_backend_architecture_foundation.sql
 supabase/migrations/20260616001000_ai_backend_rls.sql
+supabase/migrations/20260616002000_ai_chunks_text_search_index.sql
 scripts/ai-backend-contract-guard.mjs
 ```
 
