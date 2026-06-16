@@ -35,7 +35,7 @@ export function resolveTemplateFieldBindings(structure: DocxStructureMap, domain
   const contract = managerTemplateDomain(domain);
   const requiredFields = new Set(contract?.requiredFields || []);
   const optionalFields = new Set(contract?.optionalFields || []);
-  const wanted = Array.from(new Set([...requiredFields, ...optionalFields]));
+  const wanted = Array.from(new Set(Array.from(requiredFields).concat(Array.from(optionalFields))));
 
   return wanted.map((fieldKey) => {
     const definition = dynamicFieldRegistry.find((field) => field.key === fieldKey);

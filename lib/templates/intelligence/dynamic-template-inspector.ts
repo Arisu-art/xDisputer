@@ -100,13 +100,13 @@ function detectTables(asset: DynamicTemplateAssetInput, variables: DynamicTempla
 }
 
 function detectParserFindings(variables: DynamicTemplateFinding[]) {
-  return variables.filter((variable) => variable.outputToken).slice(0, 12).map((variable, index) => finding({
+  return variables.filter((variable) => variable.suggestedOutputToken).slice(0, 12).map((variable, index) => finding({
     key: `parser-${variable.sourceText}`,
     type: 'parser-directive',
     scope: 'field',
     sourcePath: `parser.tokens[${index}]`,
-    sourceText: variable.outputToken || variable.sourceText,
-    suggestedOutputToken: variable.outputToken,
+    sourceText: variable.suggestedOutputToken || variable.sourceText,
+    suggestedOutputToken: variable.suggestedOutputToken,
     confidence: 0.7,
     preserve: false,
     required: variable.required,
@@ -120,9 +120,9 @@ function detectRendererFindings(variables: DynamicTemplateFinding[], tables: Dyn
     type: 'renderer-directive',
     scope: 'field',
     sourcePath: `renderer.bindings[${index}]`,
-    sourceText: variable.outputToken || variable.sourceText,
+    sourceText: variable.suggestedOutputToken || variable.sourceText,
     suggestedCanonicalField: variable.suggestedCanonicalField,
-    suggestedOutputToken: variable.outputToken,
+    suggestedOutputToken: variable.suggestedOutputToken,
     confidence: variable.suggestedCanonicalField ? 0.76 : 0.48,
     preserve: false,
     required: variable.required,

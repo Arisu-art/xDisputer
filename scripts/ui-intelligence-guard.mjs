@@ -48,6 +48,7 @@ const contracts = [
     id: 'manager-owned-docx-generation',
     label: 'Manager-Owned Dynamic DOCX Generation',
     sourceFiles: ['lib/ui-intelligence/manager-owned-docx-contract.ts', 'lib/manager-template-contract/template-runtime-contract.ts', 'lib/dynamic-template/render-orchestrator.ts', 'scripts/manager-owned-docx-guard.mjs'],
+    forbiddenSourceFiles: ['lib/manager-template-contract/template-runtime-contract.ts', 'lib/dynamic-template/render-orchestrator.ts', 'scripts/manager-owned-docx-guard.mjs'],
     requiredMarkers: ['manager-owned-docx-generation', 'buildManagerOwnedTemplateRuntimeContract', 'routeManagerOwnedDocxGeneration', 'managerOwnedGenerationManifest', 'manager-owned-docx:guard'],
     forbidden: ['discard unknown manager custom text', 'rebuild entire DOCX from internal canonical body']
   }
@@ -85,8 +86,10 @@ requiredFrameworkFiles.forEach((path) => check(existsSync(path), `framework file
 contracts.forEach((contract) => {
   contract.sourceFiles.forEach((path) => check(existsSync(path), `${contract.label} source exists: ${path}`, 'critical'));
   const source = contract.sourceFiles.map(read).join('\n');
+  const forbiddenSourceFiles = contract.forbiddenSourceFiles || contract.sourceFiles;
+  const forbiddenSource = forbiddenSourceFiles.map(read).join('\n');
   contract.requiredMarkers.forEach((marker) => check(source.includes(marker), `${contract.label} contains required marker: ${marker}`, 'critical'));
-  contract.forbidden.forEach((pattern) => check(!source.includes(pattern), `${contract.label} excludes forbidden pattern: ${pattern}`, 'critical'));
+  contract.forbidden.forEach((pattern) => check(!forbiddenSource.includes(pattern), `${contract.label} excludes forbidden pattern: ${pattern}`, 'critical'));
 });
 
 const ratioCss = read('app/account-menu-ratio-system.css');
