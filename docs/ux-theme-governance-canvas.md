@@ -75,10 +75,17 @@ Root wiring lives in:
 app/layout.tsx
 ```
 
-Theme guard lives in:
+Typed governance helpers live in:
+
+```text
+lib/ui-intelligence/theme-governance.ts
+```
+
+Theme guards live in:
 
 ```text
 scripts/theme-consistency-guard.mjs
+scripts/theme-governance-contract-guard.mjs
 ```
 
 ### Why
@@ -128,6 +135,13 @@ ELSE IF the UI issue is per-role behavior:
 
 ELSE:
   inspect the component owner first, then add the smallest scoped patch.
+```
+
+The same decision model is available in code through:
+
+```ts
+classifyThemeGovernanceIssue(input)
+themeGovernanceChecklist(role)
 ```
 
 ## Global vs customized organization
@@ -242,9 +256,10 @@ Do not break existing deterministic generation behavior for visual polish.
 6. Use layout CSS for geometry.
 7. Use component code only when state/data/render logic is wrong.
 8. Run `npm run theme:guard`.
-9. Run `npm run layout:guard`.
-10. Run `npm run responsive:guard`.
-11. Run `npm run typecheck` and `npm run build`.
+9. Run `npm run theme-governance:guard`.
+10. Run `npm run layout:guard`.
+11. Run `npm run responsive:guard`.
+12. Run `npm run typecheck` and `npm run build`.
 
 ## Ready-to-code rule for future features
 
