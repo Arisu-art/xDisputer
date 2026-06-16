@@ -29,6 +29,7 @@ function notHas(path, term) {
   'lib/manager-template-contract/template-runtime-contract.ts',
   'lib/manager-template-contract/template-generation-router.ts',
   'lib/manager-template-contract/index.ts',
+  'lib/ui-intelligence/manager-owned-docx-contract.ts',
   'supabase/migrations/20260616123000_manager_owned_docx_generation.sql'
 ].forEach(read);
 
@@ -51,6 +52,9 @@ has('lib/manager-template-contract/template-generation-router.ts', 'mergeManager
 has('lib/dynamic-template/render-orchestrator.ts', 'routeManagerOwnedDocxGeneration');
 has('lib/dynamic-template/render-orchestrator.ts', 'managerOwnedGenerationManifest');
 has('lib/dynamic-template/render-orchestrator.ts', 'managerOwnedRoute');
+has('lib/ui-intelligence/manager-owned-docx-contract.ts', 'manager-owned-docx-generation');
+has('lib/ui-intelligence/manager-owned-docx-contract.ts', 'template_static_block_rules');
+has('lib/ui-intelligence/index.ts', 'managerOwnedDocxGenerationContract');
 has('supabase/migrations/20260616123000_manager_owned_docx_generation.sql', 'template_static_block_rules');
 has('supabase/migrations/20260616123000_manager_owned_docx_generation.sql', 'template_field_bindings');
 has('supabase/migrations/20260616123000_manager_owned_docx_generation.sql', 'template_entity_block_rules');
