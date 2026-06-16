@@ -79,6 +79,7 @@ import './console-debug-overlay.css';
 import './client-workspace-layout-lock.css';
 import './ui-collapse-recovery.css';
 import './ui-theme-contracts.css';
+import './ui-theme-triad.css';
 import './ui-layout-contracts.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebugger from '../components/console/RenderDebugger';
