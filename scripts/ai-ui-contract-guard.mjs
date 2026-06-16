@@ -34,7 +34,6 @@ if (!failures.length) {
   assertIncludes('lib/ai/ai-ui-result.ts', 'export type AiUiResult', 'AI UI result contract must be exported.');
   assertIncludes('lib/ai/ai-ui-result.ts', 'replace(/<[^>]*>/g', 'AI UI text must strip HTML-like tags before rendering.');
   assertIncludes('lib/ai/ai-ui-client.ts', "fetch('/api/ai'", 'AI UI client must call the existing /api/ai route.');
-  assertIncludes('components/AiInsightPanel.tsx', 'dangerouslySetInnerHTML', 'AI insight panel check placeholder.');
 
   const insight = read('components/AiInsightPanel.tsx');
   if (insight.includes('dangerouslySetInnerHTML')) failures.push('AI UI must not render model text with dangerouslySetInnerHTML.');
