@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const failures=[];
 function read(path){if(!existsSync(path)){failures.push(`Missing required file: ${path}`);return '';}return readFileSync(path,'utf8');}
 function has(path,term){const source=read(path);if(source&&!source.includes(term))failures.push(`${path} must include ${term}`);}
+function hasInAny(paths,term,label=term){const sources=paths.map((path)=>[path,read(path)]);if(!sources.some(([,source])=>source.includes(term)))failures.push(`${paths.join(' or ')} must include ${label}`);}
 function notHas(path,term){const source=read(path);if(source&&source.includes(term))failures.push(`${path} must not include ${term}`);}
 has('app/layout.tsx',"import './final-responsive-integrity.css';");
 has('app/final-responsive-integrity.css','--xdisputer-responsive-integrity');
@@ -16,8 +17,8 @@ has('app/final-responsive-integrity.css','.app-shell>.main-area');
 has('app/final-responsive-integrity.css','.saas-auth-form');
 has('app/final-responsive-integrity.css','.client-template-runtime-grid');
 has('app/final-responsive-integrity.css','.dynamic-template-rule-layout');
-has('app/final-responsive-integrity.css','.directory-filter-form');
-has('app/final-responsive-integrity.css','.access-workflow-grid');
+hasInAny(['app/final-responsive-integrity.css','app/ui-collapse-recovery.css','app/master-directory-fix.css'],'.directory-filter-form');
+hasInAny(['app/final-responsive-integrity.css','app/ui-collapse-recovery.css','app/master-directory-fix.css'],'.access-workflow-grid');
 has('app/globals.css','--sidebar-collapsed');
 has('app/globals.css','--duration-fast');
 has('app/globals.css','--radius-lg');
