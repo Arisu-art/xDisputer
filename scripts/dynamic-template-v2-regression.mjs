@@ -32,6 +32,13 @@ const readinessControl = assertFile('lib/readiness-checklist-control.ts');
 const preflight = assertFile('lib/preflight-validation.ts');
 const supplemental = assertFile('lib/supplemental-template-renderer.ts');
 const ftcWorkflow = assertFile('lib/ftc-workflow.ts');
+const anchorRegistry = assertFile('lib/dynamic-template-intelligence/anchor-alias-registry.ts');
+const structureReader = assertFile('lib/dynamic-template-intelligence/docx-structure-reader.ts');
+const sectionDetector = assertFile('lib/dynamic-template-intelligence/semantic-section-detector.ts');
+const zoneResolver = assertFile('lib/dynamic-template-intelligence/insertion-zone-resolver.ts');
+const anchorValidator = assertFile('lib/dynamic-template-intelligence/template-contract-validator.ts');
+const repairPlanner = assertFile('lib/dynamic-template-intelligence/generation-repair-planner.ts');
+const anchorMigration = assertFile('supabase/migrations/20260616120000_dynamic_template_anchor_intelligence.sql');
 
 for (const term of ['DISPUTE_LETTER', 'LATE_PAYMENT_LETTER', 'AFFIDAVIT', 'FTC', 'FCRA', 'ATTACHMENT']) {
   assertIncludes(registry, term, `field registry covers ${term}`);
@@ -75,6 +82,28 @@ for (const term of ['renderDynamicDocxTemplateV2', 'inspectDynamicTemplateContra
 
 for (const term of ['tryRenderDynamicAppendixTemplateV2', 'AFFIDAVIT', 'FTC', 'ftcRoute', 'shouldUseDynamicDocxLayoutV2', 'renderDynamicDocxTemplateV2']) {
   assertIncludes(appendixBridge, term, `appendix bridge connects ${term}`);
+}
+
+for (const term of ['TEMPLATE_ANCHOR_ALIAS_REGISTRY', 'FRAUDULENT ACCOUNTS FOR IMMEDIATE BLOCKING AND DELETION', 'ACCOUNT NAME:']) {
+  assertIncludes(anchorRegistry, term, `anchor registry covers ${term}`);
+}
+for (const term of ['readDocxStructure', 'word/document.xml', 'bookmarkNames', 'contentControlTags']) {
+  assertIncludes(structureReader, term, `DOCX structure reader includes ${term}`);
+}
+for (const term of ['detectTemplateAnchors', 'paragraph-pattern', 'manager-rule', 'fallback-created']) {
+  assertIncludes(sectionDetector, term, `semantic detector includes ${term}`);
+}
+for (const term of ['resolveInsertionZone', 'replace-detected-items', 'append-before-signature']) {
+  assertIncludes(zoneResolver, term, `insertion zone resolver includes ${term}`);
+}
+for (const term of ['validateDynamicDocxAnchorContract', 'repair-needed', 'auto-created']) {
+  assertIncludes(anchorValidator, term, `anchor contract validator includes ${term}`);
+}
+for (const term of ['ANCHOR_REPAIR_REQUIRED', 'TemplateRepairRequiredError', 'auto-create-section']) {
+  assertIncludes(repairPlanner, term, `repair planner includes ${term}`);
+}
+for (const term of ['template_anchor_rules', 'template_validation_events', 'enable row level security']) {
+  assertIncludes(anchorMigration, term, `anchor migration includes ${term}`);
 }
 
 assertIncludes(rendererMode, "'CONTRACT_V2_DIAGNOSTIC'", 'renderer mode defaults to diagnostics path');
