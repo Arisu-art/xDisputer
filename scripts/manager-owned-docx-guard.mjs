@@ -30,6 +30,10 @@ function notHas(path, term) {
   'lib/manager-template-contract/template-generation-router.ts',
   'lib/manager-template-contract/index.ts',
   'lib/ui-intelligence/manager-owned-docx-contract.ts',
+  'components/ManagerOwnedDocxStudioPanel.tsx',
+  'components/ManagerTemplateWorkspaceClient.tsx',
+  'app/api/template-contract-rules/route.ts',
+  'app/manager-owned-docx-studio.css',
   'supabase/migrations/20260616123000_manager_owned_docx_generation.sql'
 ].forEach(read);
 
@@ -55,6 +59,20 @@ has('lib/dynamic-template/render-orchestrator.ts', 'managerOwnedRoute');
 has('lib/ui-intelligence/manager-owned-docx-contract.ts', 'manager-owned-docx-generation');
 has('lib/ui-intelligence/manager-owned-docx-contract.ts', 'template_static_block_rules');
 has('lib/ui-intelligence/index.ts', 'managerOwnedDocxGenerationContract');
+has('components/ManagerOwnedDocxStudioPanel.tsx', 'data-manager-owned-docx-studio="true"');
+has('components/ManagerOwnedDocxStudioPanel.tsx', 'PRESERVE');
+has('components/ManagerOwnedDocxStudioPanel.tsx', 'REMOVE');
+has('components/ManagerOwnedDocxStudioPanel.tsx', 'MAKE_DYNAMIC');
+has('components/ManagerOwnedDocxStudioPanel.tsx', 'REPEAT_FOR_ENTITY');
+has('components/ManagerOwnedDocxStudioPanel.tsx', 'USE_AS_STYLE_SEED');
+has('components/ManagerOwnedDocxStudioPanel.tsx', 'Review affidavit mapping');
+has('components/ManagerTemplateWorkspaceClient.tsx', 'ManagerOwnedDocxStudioPanel');
+has('app/api/template-contract-rules/route.ts', 'template_static_block_rules');
+has('app/api/template-contract-rules/route.ts', 'template_field_bindings');
+has('app/api/template-contract-rules/route.ts', 'template_entity_block_rules');
+has('app/api/template-contract-rules/route.ts', 'template_domain_contracts');
+has('app/manager-owned-docx-studio.css', 'manager-owned-docx-studio-panel');
+has('app/layout.tsx', "import './manager-owned-docx-studio.css';");
 has('supabase/migrations/20260616123000_manager_owned_docx_generation.sql', 'template_static_block_rules');
 has('supabase/migrations/20260616123000_manager_owned_docx_generation.sql', 'template_field_bindings');
 has('supabase/migrations/20260616123000_manager_owned_docx_generation.sql', 'template_entity_block_rules');
