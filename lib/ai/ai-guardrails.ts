@@ -42,5 +42,13 @@ export function fallbackAnswerForMode(mode: AiMode): string {
     return 'The RAG request was accepted. Apply the AI backend migration and ingest ai_documents/ai_chunks to enable grounded retrieval.';
   }
 
+  if (mode === 'source_review') {
+    return 'Source Review is wired to the AI backend. Deterministic blockers remain the source of truth and AI only explains readiness, missing data, and next safe steps.';
+  }
+
+  if (mode === 'template_intelligence') {
+    return 'Template Intelligence is wired to the AI backend. AI can explain slot coverage and template risks, but it cannot activate, archive, or mutate templates automatically.';
+  }
+
   return 'The AI backend route is wired, authenticated, validated, rate-limited, and ready. Configure AI_MODEL_NAME and OPENAI_API_KEY to enable live model answers.';
 }
