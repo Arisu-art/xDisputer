@@ -8,12 +8,14 @@ import { validateDynamicTemplateRender, dynamicTemplateRenderValidationManifest,
 import { gradeDynamicTemplateRender, dynamicTemplateQualityManifest, type DynamicTemplateQualityGrade } from './quality-framework';
 import { evaluateDynamicTemplateAdvancedZones, dynamicTemplateAdvancedZoneManifest, type DynamicTemplateAdvancedZoneDecision } from './advanced-zone-policy';
 import { resolveDynamicTemplateRendererMode, type DynamicTemplateRendererMode } from './renderer-mode';
+import { managerOwnedGenerationManifest, mergeManagerOwnedWarningsIntoPlan, routeManagerOwnedDocxGeneration, type ManagerOwnedGenerationRoute } from '../manager-template-contract';
 
 export type DynamicTemplateEngineV2Result = {
   version: 1;
   status: 'RENDERED' | 'BLOCKED';
   blob: Blob;
   contract: DynamicTemplateContractV2;
+  managerOwnedRoute: ManagerOwnedGenerationRoute;
   advancedZones: DynamicTemplateAdvancedZoneDecision;
   plan: DynamicRenderPlan;
   renderResult: DocxLayoutRendererV2Result;
@@ -37,14 +39,16 @@ export async function renderDynamicDocxTemplateV2(input: {
 }): Promise<DynamicTemplateEngineV2Result> {
   const rendererMode = resolveDynamicTemplateRendererMode({ explicitMode: input.rendererMode });
   const contract = await inspectDynamicTemplateContractV2(input.template, input.kind, input.round);
+  const managerOwnedRoute = await routeManagerOwnedDocxGeneration({ template: input.template, kind: input.kind });
   const advancedZones = evaluateDynamicTemplateAdvancedZones(contract);
-  const plan = buildDynamicTemplateRenderPlan({
+  const basePlan = buildDynamicTemplateRenderPlan({
     contract,
     parsed: input.parsed,
     round: input.round,
     route: input.route,
     documentDate: input.documentDate
   });
+  const plan = mergeManagerOwnedWarningsIntoPlan(basePlan, managerOwnedRoute);
 
   if (contract.status === 'BLOCKED' || plan.status === 'BLOCKED' || advancedZones.status === 'BLOCKED') {
     const reason = [
@@ -73,6 +77,7 @@ export async function renderDynamicDocxTemplateV2(input: {
     status: 'RENDERED',
     blob: renderResult.blob,
     contract,
+    managerOwnedRoute,
     advancedZones,
     plan,
     renderResult,
@@ -91,6 +96,7 @@ export async function renderDynamicDocxTemplateV2(input: {
           warnings: contract.warnings,
           diagnostics: contract.diagnostics
         },
+        ...managerOwnedGenerationManifest(managerOwnedRoute),
         ...dynamicTemplateAdvancedZoneManifest(advancedZones),
         renderPlan: dynamicRenderPlanSummary(plan),
         ...dynamicTemplateRenderValidationManifest(validation),
