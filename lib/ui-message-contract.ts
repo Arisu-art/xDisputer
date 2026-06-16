@@ -7,6 +7,7 @@ export type UiMessageCode =
   | 'SOURCE_STANDARDIZED'
   | 'TEMPLATE_MISSING'
   | 'TEMPLATE_UPLOADED'
+  | 'TEMPLATE_ANCHOR_REPAIR_REQUIRED'
   | 'EVIDENCE_MISSING'
   | 'PREFLIGHT_BLOCKED'
   | 'GENERATION_STARTED'
@@ -30,7 +31,19 @@ type UiMessageInput = {
   detail?: string;
 };
 
+const anchorRepairMessage: UiMessage = {
+  code: 'TEMPLATE_ANCHOR_REPAIR_REQUIRED',
+  tone: 'warning',
+  title: 'Template needs anchor mapping',
+  body: 'The manager edited this DOCX and the account insertion zone is no longer pinned. Open Template Studio to confirm the correct insertion zone or allow the system to auto-create the missing account section.',
+  action: 'Open Template Studio'
+};
+
 const rules: Array<{ pattern: RegExp; message: UiMessage }> = [
+  {
+    pattern: /ANCHOR_REPAIR_REQUIRED|anchor.*not found|Disputed accounts anchor|account insertion zone|Template needs anchor mapping/i,
+    message: anchorRepairMessage
+  },
   {
     pattern: /DOCX reference is missing|letter template/i,
     message: { code: 'TEMPLATE_MISSING', tone: 'error', title: 'Template needed', body: 'Upload the required letter template before generating.', action: 'Open Templates' }
@@ -72,6 +85,7 @@ const catalog: Record<UiMessageCode, UiMessage> = {
   SOURCE_STANDARDIZED: { code: 'SOURCE_STANDARDIZED', tone: 'success', title: 'Source data standardized', body: 'The working source draft has been cleaned and protected.' },
   TEMPLATE_MISSING: { code: 'TEMPLATE_MISSING', tone: 'error', title: 'Template needed', body: 'Upload the required template before generating.', action: 'Open Templates' },
   TEMPLATE_UPLOADED: { code: 'TEMPLATE_UPLOADED', tone: 'success', title: 'Template saved', body: 'The template has been added to the active workflow.' },
+  TEMPLATE_ANCHOR_REPAIR_REQUIRED: anchorRepairMessage,
   EVIDENCE_MISSING: { code: 'EVIDENCE_MISSING', tone: 'error', title: 'Supporting documents needed', body: 'Add at least one supporting document image before generating.', action: 'Add Evidence' },
   PREFLIGHT_BLOCKED: { code: 'PREFLIGHT_BLOCKED', tone: 'error', title: 'Packet is not ready yet', body: 'Complete the highlighted readiness items before generating.', action: 'Review Readiness' },
   GENERATION_STARTED: { code: 'GENERATION_STARTED', tone: 'info', title: 'Generating packet', body: 'The ordered packet package is being prepared.' },
