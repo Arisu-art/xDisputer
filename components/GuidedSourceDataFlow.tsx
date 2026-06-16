@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import SupportingDocumentsSetup from './SupportingDocumentsSetup';
+import SourceReviewAiPanel from './SourceReviewAiPanel';
 import { bureaus, type LetterRoute, type ParsedSource, type SourceItem } from '../lib/letter-engine';
 import type { PacketAssets } from '../lib/packet-assets';
 import type { TemplateFieldContract } from '../lib/template-contracts';
@@ -164,6 +165,16 @@ export default function GuidedSourceDataFlow({
   const customReady = customFields.every((field) => !field.required || Boolean(parsed.templateFields[field.key]?.trim()));
   const strictTemplateReady = !strict || missingLetters.length === 0;
   const packetReady = canGenerate && evidenceReady && affidavitReady && customReady && strictTemplateReady && scopeConfirmed;
+  const generationBlockReasons = Array.from(new Set([
+    ...generationBlockers,
+    ...(!scopeConfirmed ? ['Confirm packet scope before generation.'] : []),
+    ...(!evidenceReady ? ['Upload at least one supporting document image.'] : []),
+    ...(!affidavitReady ? ['Review affidavit state and county before generating.'] : []),
+    ...(!customReady ? ['Complete required template fields before generating.'] : []),
+    ...(!strictTemplateReady ? [`Required letter template missing: ${missingLetters.join(', ')}.`] : []),
+    ...sourceWarnings.slice(0, 3).map((warning) => warning.message)
+  ].map((reason) => reason.trim()).filter(Boolean))).slice(0, 8);
+  const generateDescribedBy = !packetReady && generationBlockReasons.length ? 'generation-blocked-reasons' : undefined;
   const showStage = (next: Stage) => runSharedTransition(() => setStage(next), 'stage');
 
   const visibleBureaus = useMemo(() => {
@@ -183,6 +194,20 @@ export default function GuidedSourceDataFlow({
     const ssn = parsed.ssn || 'SSN unavailable';
     return `${parsed.name || 'Client name unavailable'} · ${address} · DOB ${dob} · SSN ${ssn}`;
   }, [parsed.address, parsed.dob, parsed.name, parsed.ssn]);
+
+  const sourceReviewProps = {
+    parsed,
+    routes,
+    evidence,
+    sourceWarnings,
+    generationBlockers,
+    missingLetters,
+    affidavitReady,
+    customFields,
+    packetReady,
+    scopeConfirmed,
+    strict
+  };
 
   useEffect(() => {
     setStage('SOURCE');
@@ -273,14 +298,7 @@ export default function GuidedSourceDataFlow({
       return;
     }
     if (!packetReady) {
-      const blockers = [
-        ...generationBlockers,
-        ...(!scopeConfirmed ? ['Confirm packet scope before generation.'] : []),
-        ...(!customReady ? ['Complete template-required fields.'] : []),
-        ...(!strictTemplateReady ? [`Required template missing: ${missingLetters.join(', ')}.`] : []),
-        ...sourceWarnings.slice(0, 3).map((warning) => warning.message)
-      ];
-      onMessage(blockers[0] || 'Review packet scope, required templates, and supporting documents before generating.');
+      onMessage(generationBlockReasons[0] || 'Review packet scope, required templates, and supporting documents before generating.');
       return;
     }
     void onGenerate();
@@ -347,6 +365,7 @@ export default function GuidedSourceDataFlow({
           <SourceStageHeader eyebrow="Step 02 · Review packet scope" title="Confirm accounts by bureau" description={clientSummary}>
             <div className="packet-review-metrics"><span>{reviewTotals.activeBureaus} bureau groups</span><span>{reviewTotals.routes} output routes</span><span>{reviewTotals.dispute} dispute</span><span>{reviewTotals.inquiry} inquiry</span><span>{reviewTotals.late} late</span></div>
           </SourceStageHeader>
+          <SourceReviewAiPanel {...sourceReviewProps} />
           <div className="packet-review-grid">
             {visibleBureaus.map((bureau) => (
               <article className="packet-review-bureau-card" key={bureau}>
@@ -364,8 +383,10 @@ export default function GuidedSourceDataFlow({
       {stage === 'EVIDENCE' && (
         <section className="guided-evidence-stage source-progressive-evidence required-evidence-stage shared-stage-surface" style={{ viewTransitionName: 'source-work-stage' }}>
           <SourceStageHeader eyebrow="Step 03 · Required evidence" title="Supporting documents" description="Upload and arrange evidence for packet position 02. The resulting PDF is included in every applicable final packet.">
-            <div className="source-stage-actions"><button type="button" className="secondary-button" onClick={() => showStage('REVIEW')}>Back to Review</button><button type="button" className="action-button" aria-disabled={!packetReady || busy} disabled={busy || !evidenceReady} onClick={confirmEvidence}>{busy ? 'Generating packet…' : 'Generate Ordered Review Package'}</button></div>
+            <div className="source-stage-actions"><button type="button" className="secondary-button" onClick={() => showStage('REVIEW')}>Back to Review</button><button type="button" className="action-button" aria-describedby={generateDescribedBy} aria-disabled={!packetReady || busy} disabled={busy || !packetReady} onClick={confirmEvidence}>{busy ? 'Generating packet…' : 'Generate Ordered Review Package'}</button></div>
           </SourceStageHeader>
+          {!packetReady && generationBlockReasons.length > 0 && <section id="generation-blocked-reasons" className="source-review generation-blocked-reasons" role="alert" aria-live="polite"><strong>Generation blocked</strong>{generationBlockReasons.map((reason, index) => <p key={`generation-blocker-${index}`}>{reason}</p>)}</section>}
+          <SourceReviewAiPanel {...sourceReviewProps} />
           {evidenceKey && <SupportingDocumentsSetup embedded storageKey={evidenceKey} clientName={parsed.name} onChanged={onEvidenceChanged} onMessage={onMessage} />}
         </section>
       )}
