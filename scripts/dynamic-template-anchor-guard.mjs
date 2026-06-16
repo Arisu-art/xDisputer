@@ -30,6 +30,7 @@ function notHas(path, term) {
   'lib/dynamic-template-intelligence/docx-paragraph-inserter.ts',
   'lib/dynamic-template-intelligence/template-version-policy.ts',
   'lib/dynamic-template-intelligence/index.ts',
+  'lib/ui-intelligence/dynamic-template-anchor-contract.ts',
   'supabase/migrations/20260616120000_dynamic_template_anchor_intelligence.sql'
 ].forEach(read);
 
@@ -52,6 +53,9 @@ has('lib/docx-anchor-binder.ts', 'anchorPolicy');
 has('lib/docx-anchor-binder.ts', 'inventWhenMissing');
 has('lib/ui-message-contract.ts', 'TEMPLATE_ANCHOR_REPAIR_REQUIRED');
 has('lib/ui-message-contract.ts', 'Template needs anchor mapping');
+has('lib/ui-intelligence/dynamic-template-anchor-contract.ts', 'dynamic-template-anchor-intelligence');
+has('lib/ui-intelligence/dynamic-template-anchor-contract.ts', 'template_anchor_rules');
+has('lib/ui-intelligence/index.ts', 'dynamicTemplateAnchorIntelligenceContract');
 has('supabase/migrations/20260616120000_dynamic_template_anchor_intelligence.sql', 'template_anchor_rules');
 has('supabase/migrations/20260616120000_dynamic_template_anchor_intelligence.sql', 'template_validation_events');
 has('supabase/migrations/20260616120000_dynamic_template_anchor_intelligence.sql', 'enable row level security');
