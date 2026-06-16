@@ -20,8 +20,11 @@ has('app/instant-interaction-performance.css', 'min-width: 0 !important', 'overf
 has('components/console/ConsoleInstantLoading.tsx', 'data-console-instant-loading', 'shared console loading component missing instant marker');
 has('app/admin/loading.tsx', 'ConsoleInstantLoading', 'manager route loading must use instant loading shell');
 has('app/admin/access/loading.tsx', 'ConsoleInstantLoading', 'manager access loading must use instant loading shell');
+has('app/admin/reports/loading.tsx', 'ConsoleInstantLoading', 'manager reports loading must use instant loading shell');
 has('app/master/loading.tsx', 'ConsoleInstantLoading', 'master route loading must use instant loading shell');
 has('app/master/accounts/loading.tsx', 'ConsoleInstantLoading', 'master accounts loading must use instant loading shell');
+has('app/master/reports/loading.tsx', 'ConsoleInstantLoading', 'master reports loading must use instant loading shell');
+has('app/master/workspaces/loading.tsx', 'ConsoleInstantLoading', 'master workspaces loading must use instant loading shell');
 has('app/ui-theme-triad.css', 'xTriadSurfaceEnter', 'triad theme should remain present');
 not('app/instant-interaction-performance.css', 'transition-property: all', 'instant layer must not transition all properties');
 not('app/instant-interaction-performance.css', 'filter: blur', 'instant layer must not add blur');
