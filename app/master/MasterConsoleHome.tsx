@@ -22,6 +22,7 @@ const masterNavItems = [
   { href: '/master', label: 'Monitoring', active: true },
   { href: '/master/accounts', label: 'All accounts' },
   { href: '/master/workspaces', label: 'Workspaces' },
+  { href: '/master/ui-workspace', label: 'UI workspace' },
   { href: '/master/reports', label: 'Reports' },
   { href: '/master/audit', label: 'Audit log' },
   { href: '/master/system', label: 'System health' }
