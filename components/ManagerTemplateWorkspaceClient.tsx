@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import TemplateProgressiveWorkspace from './TemplateProgressiveWorkspace';
 import ManagerTemplateWorkspaceChrome from './ManagerTemplateWorkspaceChrome';
+import ManagerOwnedDocxStudioPanel from './ManagerOwnedDocxStudioPanel';
 import { defaultReferences, type LetterReference, type Round } from '../lib/reference-store';
 import { exhibitModes, exhibitTitles, type ExhibitAsset, type ExhibitKind, type TemplateExhibits } from '../lib/template-exhibits';
 import type { ManagerTemplateScopeUi } from '../lib/manager-template-ui';
@@ -70,7 +71,7 @@ export default function ManagerTemplateWorkspaceClient() {
       if (!response.ok) throw new Error(payload?.error || payload?.message || 'Could not load manager templates.');
       setAssets(Array.isArray(payload.assets) ? payload.assets : []);
       setManagerTemplateScope(payload.managerTemplateScope || null);
-      setMessage(payload.managerTemplateScope?.canManageTemplates ? `${selectedRound} manager template authority verified. Upload controls are enabled.` : 'Manager template authority is read-only or unavailable. Upload controls are locked.');
+      setMessage(payload.managerTemplateScope?.canManageTemplates ? `${selectedRound} manager template authority verified. Upload controls and manager-owned DOCX rules are enabled.` : 'Manager template authority is read-only or unavailable. Upload controls are locked.');
     } catch (error) {
       const nextMessage = error instanceof Error ? error.message : 'Could not load manager templates.';
       setLoadError(nextMessage);
@@ -106,6 +107,7 @@ export default function ManagerTemplateWorkspaceClient() {
         <span>{statusMessage}</span>
       </div>
     </section>
+    <ManagerOwnedDocxStudioPanel assets={assets} round={round} canManageTemplates={Boolean(managerTemplateScope?.canManageTemplates)} onMessage={setMessage} />
     <TemplateProgressiveWorkspace round={round} slots={slots} supportingReady={false} managerTemplateScope={managerTemplateScope} managedExhibits={exhibits} onSelectRound={(next) => { setRound(next); setMessage(`${next} selected for manager default template setup.`); }} onUploadLetter={handleUploadLetter} onRemoveLetter={handleRemoveLetter} onExhibitsChange={handleExhibitsHydrated} onTemplateMutation={handleTemplateMutation} onMessage={setMessage} />
   </section>;
 }
