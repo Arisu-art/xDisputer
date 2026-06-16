@@ -133,7 +133,7 @@ Run locally:
 
 ```bash
 npm install
-npm run ai-backend:guard
+node scripts/ai-backend-contract-guard.mjs
 npm run typecheck
 npm run build
 ```
