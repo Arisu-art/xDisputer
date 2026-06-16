@@ -1,0 +1,130 @@
+/* xDisputer Console Instant Feedback
+   Visual-only performance layer for manager/master/client interactions.
+*/
+
+:root {
+  --x-instant-feedback: ready;
+  --x-float-duration: 150ms;
+  --x-float-ease: cubic-bezier(.2, .8, .2, 1);
+  --x-loading-pulse: 980ms;
+}
+
+body[data-theme-contract="xdisputer-unified"] .action-button,
+body[data-theme-contract="xdisputer-unified"] .primary-action-button,
+body[data-theme-contract="xdisputer-unified"] .secondary-button,
+body[data-theme-contract="xdisputer-unified"] .admin-action-button,
+body[data-theme-contract="xdisputer-unified"] .dashboard-card-link,
+body[data-theme-contract="xdisputer-unified"] .progressive-dataset-card,
+body[data-theme-contract="xdisputer-unified"] .access-workflow-card,
+body[data-theme-contract="xdisputer-unified"] .admin-monitor-card,
+body[data-theme-contract="xdisputer-unified"] .panel,
+body[data-theme-contract="xdisputer-unified"] .console-sidebar-mode-switch-button,
+body[data-theme-contract="xdisputer-unified"] .directory-header-action,
+body[data-theme-contract="xdisputer-unified"] .account-control-row-trigger {
+  transition-property: transform, opacity, background-color, border-color, color !important;
+  transition-duration: var(--x-float-duration) !important;
+  transition-timing-function: var(--x-float-ease) !important;
+  transform: translate3d(0, 0, 0);
+}
+
+body[data-theme-contract="xdisputer-unified"] .action-button:hover,
+body[data-theme-contract="xdisputer-unified"] .primary-action-button:hover,
+body[data-theme-contract="xdisputer-unified"] .secondary-button:hover,
+body[data-theme-contract="xdisputer-unified"] .admin-action-button:hover,
+body[data-theme-contract="xdisputer-unified"] .dashboard-card-link:hover,
+body[data-theme-contract="xdisputer-unified"] .progressive-dataset-card:hover,
+body[data-theme-contract="xdisputer-unified"] .access-workflow-card:hover,
+body[data-theme-contract="xdisputer-unified"] .console-sidebar-mode-switch-button:hover,
+body[data-theme-contract="xdisputer-unified"] .directory-header-action:hover,
+body[data-theme-contract="xdisputer-unified"] .account-control-row-trigger:hover {
+  transform: translate3d(0, -1px, 0) !important;
+}
+
+body[data-theme-contract="xdisputer-unified"] .admin-monitor-header:hover,
+body[data-theme-contract="xdisputer-unified"] .console-header-card:hover,
+body[data-theme-contract="xdisputer-unified"] .source-progressive-stage:hover,
+body[data-theme-contract="xdisputer-unified"] .template-selection-stage:hover,
+body[data-theme-contract="xdisputer-unified"] .saas-auth-panel:hover,
+body[data-theme-contract="xdisputer-unified"] .saas-auth-hero:hover {
+  transform: translate3d(0, 0, 0) !important;
+}
+
+.console-instant-loading {
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+.console-loading-hero,
+.console-loading-card {
+  animation: xInstantConsoleEnter 180ms var(--x-float-ease) both !important;
+}
+
+.console-loading-line,
+.console-loading-nav-item {
+  display: block;
+  min-height: 12px;
+  border-radius: 999px;
+  color: transparent !important;
+}
+
+.console-loading-line { width: 46%; }
+.console-loading-line.wide { width: 78%; }
+
+.console-loading-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+  width: 100%;
+}
+
+.console-loading-card {
+  display: grid;
+  gap: .85rem;
+  min-height: 172px;
+  padding: 1.1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(203, 213, 225, .82);
+  background: rgba(255, 255, 255, .92);
+}
+
+.console-loading-nav-item {
+  width: 100%;
+  min-height: 38px;
+  margin-bottom: .45rem;
+}
+
+@keyframes xInstantConsoleEnter {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+body[data-theme-contract="xdisputer-unified"] .admin-power-grid,
+body[data-theme-contract="xdisputer-unified"] .admin-monitor-stats,
+body[data-theme-contract="xdisputer-unified"] .dashboard-snapshot-list,
+body[data-theme-contract="xdisputer-unified"] .account-control-list,
+body[data-theme-contract="xdisputer-unified"] .master-access-stack,
+body[data-theme-contract="xdisputer-unified"] .single-header-dataset,
+body[data-theme-contract="xdisputer-unified"] .directory-filter-form,
+body[data-theme-contract="xdisputer-unified"] .directory-pager {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-x: clip !important;
+}
+
+@media (prefers-reduced-motion: reduce), (update: slow) {
+  body[data-theme-contract="xdisputer-unified"] .action-button,
+  body[data-theme-contract="xdisputer-unified"] .primary-action-button,
+  body[data-theme-contract="xdisputer-unified"] .secondary-button,
+  body[data-theme-contract="xdisputer-unified"] .admin-action-button,
+  body[data-theme-contract="xdisputer-unified"] .dashboard-card-link,
+  body[data-theme-contract="xdisputer-unified"] .progressive-dataset-card,
+  body[data-theme-contract="xdisputer-unified"] .access-workflow-card,
+  body[data-theme-contract="xdisputer-unified"] .admin-monitor-card,
+  body[data-theme-contract="xdisputer-unified"] .panel,
+  .console-loading-hero,
+  .console-loading-card {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+    transform: none !important;
+  }
+}
