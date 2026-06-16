@@ -4,7 +4,9 @@ export const AI_MODES = [
   'tool_action',
   'planner',
   'background_job',
-  'admin_review'
+  'admin_review',
+  'source_review',
+  'template_intelligence'
 ] as const;
 
 export type AiMode = typeof AI_MODES[number];
