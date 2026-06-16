@@ -17,15 +17,17 @@ export type AppError = {
   details?: unknown;
 };
 
+export type FailureResult = { ok: false; error: AppError };
+
 export type Result<T> =
   | { ok: true; data: T }
-  | { ok: false; error: AppError };
+  | FailureResult;
 
 export function ok<T>(data: T): Result<T> {
   return { ok: true, data };
 }
 
-export function fail(code: AppErrorCode, message: string, details?: unknown): Result<never> {
+export function fail(code: AppErrorCode, message: string, details?: unknown): FailureResult {
   return { ok: false, error: { code, message, details } };
 }
 
