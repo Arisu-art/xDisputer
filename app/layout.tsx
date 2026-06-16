@@ -89,5 +89,5 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body data-theme-contract="xdisputer-unified"><ControlNavGlobalTelemetry />{children}<RenderDebugger /></body></html>;
+  return <html lang="en"><body data-theme-contract="xdisputer-unified" data-ui-scope="global" data-ui-quality="production" data-motion-contract="safe"><ControlNavGlobalTelemetry />{children}<RenderDebugger /></body></html>;
 }
