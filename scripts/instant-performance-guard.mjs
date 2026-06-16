@@ -21,10 +21,15 @@ has('components/console/ConsoleInstantLoading.tsx', 'data-console-instant-loadin
 has('app/admin/loading.tsx', 'ConsoleInstantLoading', 'manager route loading must use instant loading shell');
 has('app/admin/access/loading.tsx', 'ConsoleInstantLoading', 'manager access loading must use instant loading shell');
 has('app/admin/reports/loading.tsx', 'ConsoleInstantLoading', 'manager reports loading must use instant loading shell');
+has('app/admin/audit/loading.tsx', 'ConsoleInstantLoading', 'manager audit loading must use instant loading shell');
+has('app/admin/lifecycle/loading.tsx', 'ConsoleInstantLoading', 'manager lifecycle loading must use instant loading shell');
+has('app/admin/exceptions/loading.tsx', 'ConsoleInstantLoading', 'manager exceptions loading must use instant loading shell');
 has('app/master/loading.tsx', 'ConsoleInstantLoading', 'master route loading must use instant loading shell');
 has('app/master/accounts/loading.tsx', 'ConsoleInstantLoading', 'master accounts loading must use instant loading shell');
 has('app/master/reports/loading.tsx', 'ConsoleInstantLoading', 'master reports loading must use instant loading shell');
+has('app/master/audit/loading.tsx', 'ConsoleInstantLoading', 'master audit loading must use instant loading shell');
 has('app/master/workspaces/loading.tsx', 'ConsoleInstantLoading', 'master workspaces loading must use instant loading shell');
+has('app/master/system/loading.tsx', 'ConsoleInstantLoading', 'master health loading must use instant loading shell');
 has('app/ui-theme-triad.css', 'xTriadSurfaceEnter', 'triad theme should remain present');
 not('app/instant-interaction-performance.css', 'transition-property: all', 'instant layer must not transition all properties');
 not('app/instant-interaction-performance.css', 'filter: blur', 'instant layer must not add blur');
