@@ -87,6 +87,14 @@ function normalizeAction(value: unknown): AiUiSuggestedAction | null {
   return { id, label, requiresApproval };
 }
 
+function isFinding(value: AiUiFinding | null): value is AiUiFinding {
+  return Boolean(value);
+}
+
+function isAction(value: AiUiSuggestedAction | null): value is AiUiSuggestedAction {
+  return Boolean(value);
+}
+
 function uniqueFindings(findings: AiUiFinding[]) {
   const seen = new Set<string>();
   return findings.filter((finding) => {
@@ -130,11 +138,13 @@ export function aiUiResultFromApi(payload: unknown, fallback: Pick<AiUiRequest, 
   const answer = cleanSummary(data.answer || object.summary || 'AI review completed.');
   const rawFindings = Array.isArray(object.findings) ? object.findings : [];
   const rawActions = Array.isArray(object.suggestedActions) ? object.suggestedActions : [];
+  const providerFindings = rawFindings.map(normalizeFinding).filter(isFinding);
+  const providerActions = rawActions.map(normalizeAction).filter(isAction);
 
   return mergeAiUiResult({
     summary: answer,
-    findings: [...(fallback.deterministicFindings || []), ...rawFindings.map(normalizeFinding).filter(Boolean) as AiUiFinding[]],
-    suggestedActions: [...(fallback.deterministicActions || []), ...rawActions.map(normalizeAction).filter(Boolean) as AiUiSuggestedAction[]],
+    findings: [...(fallback.deterministicFindings || []), ...providerFindings],
+    suggestedActions: [...(fallback.deterministicActions || []), ...providerActions],
     requestId: stringValue(data.requestId) || null,
     modelName: stringValue(data.modelName) || null,
     latencyMs: numberValue(data.latencyMs)
