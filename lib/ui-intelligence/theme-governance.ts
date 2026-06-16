@@ -2,6 +2,7 @@ export type ThemeGovernanceRole = 'global' | 'client' | 'manager' | 'master' | '
 
 export type ThemeGovernanceIssueKind =
   | 'theme'
+  | 'triad'
   | 'layout'
   | 'loading'
   | 'backend'
@@ -39,10 +40,11 @@ export type ThemeGovernanceCanvas = {
 export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
   id: 'xdisputer-unified-ux-theme-governance',
   title: 'xDisputer Unified UX Theme Governance Canvas',
-  goal: 'Keep client, manager, master, auth, template, source, output, and AI surfaces visually consistent while allowing safe function-specific customization.',
+  goal: 'Keep client, manager, master, auth, template, source, output, and AI surfaces visually consistent while allowing safe function-specific customization through one base theme and three professional surfaces.',
   sourceOfTruth: [
     'app/layout.tsx',
     'app/ui-theme-contracts.css',
+    'app/ui-theme-triad.css',
     'app/ui-layout-contracts.css',
     'scripts/theme-consistency-guard.mjs',
     'docs/ux-theme-governance-canvas.md'
@@ -58,7 +60,10 @@ export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
     '--x-color-danger',
     '--x-radius-lg',
     '--x-space-4',
-    '--x-transition-fast'
+    '--x-transition-fast',
+    '--x-triad-client-accent',
+    '--x-triad-manager-accent',
+    '--x-triad-master-accent'
   ],
   customizationHooks: [
     'data-theme-contract="xdisputer-unified"',
@@ -76,13 +81,14 @@ export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
   workflow: [
     'Classify the UI problem before coding.',
     'Use ui-theme-contracts.css for visual tone: color, typography, radius, shadows, buttons, inputs, status, loading, motion.',
+    'Use ui-theme-triad.css for broad visible role/surface identity: client-aurora, manager-graphite, and master-executive.',
     'Use ui-layout-contracts.css for geometry: grid, flex, sidebars, headers, overflow, responsive order.',
     'Use component code only when render state, data shape, or interaction logic is wrong.',
     'Use Supabase/route code only when auth, data, RLS, storage, or backend permissions are the root cause.',
     'Run theme, layout, responsive, typecheck, and build guards after changes.'
   ],
   performanceModel: {
-    loadsFirst: ['root layout', 'global CSS tokens', 'layout contracts', 'visible route shell'],
+    loadsFirst: ['root layout', 'global CSS tokens', 'triad visual system', 'layout contracts', 'visible route shell'],
     loadsLater: ['role-specific data', 'dashboard counts', 'paginated datasets', 'AI reviews', 'generated outputs'],
     cached: ['static CSS', 'static JS chunks', 'deterministic shell markup'],
     paginated: ['account directories', 'client datasets', 'manager outputs', 'audit logs'],
@@ -96,12 +102,23 @@ export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
     'Do not hardcode random one-off colors when a token exists.',
     'Do not solve backend/auth/RLS errors with CSS.',
     'Do not put layout geometry into the theme contract.',
-    'Do not make client, manager, master, and auth surfaces feel like separate products.'
+    'Do not make client, manager, master, and auth surfaces feel like separate products.',
+    'Do not use triad theme as a substitute for fixing broken component markup.'
   ]
 };
 
 export function classifyThemeGovernanceIssue(input: string): ThemeGovernanceDecision {
   const normalized = input.toLowerCase();
+
+  if (/(surface identity|three theme|3 theme|triad|client aurora|manager graphite|master executive|role visual|surface visual)/.test(normalized)) {
+    return {
+      kind: 'triad',
+      ownerFile: 'app/ui-theme-triad.css',
+      reason: 'The issue changes the broad professional identity for a major product surface, so it belongs to the triad theme layer.',
+      requiredGuards: ['npm run theme:guard', 'npm run responsive:guard', 'npm run typecheck', 'npm run build'],
+      shouldNotDo: ['Do not create a route-specific theme file.', 'Do not override layout geometry here.', 'Do not hide backend or auth problems with visual styling.']
+    };
+  }
 
   if (/(color|theme|button|input|card|surface|shadow|radius|typography|font|status|badge|loading|skeleton|motion|transition)/.test(normalized)) {
     return {
@@ -165,6 +182,7 @@ export function classifyThemeGovernanceIssue(input: string): ThemeGovernanceDeci
 export function themeGovernanceChecklist(role: ThemeGovernanceRole) {
   return [
     `Use the global xDisputer theme contract for ${role}.`,
+    'Use the correct triad surface before adding one-off role styling.',
     'Use approved theme tokens for color, spacing, depth, typography, and motion.',
     'Use data-theme-custom only for local role emphasis.',
     'Use ui-layout-contracts.css for geometry changes.',
