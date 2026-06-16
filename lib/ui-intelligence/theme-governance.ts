@@ -3,6 +3,7 @@ export type ThemeGovernanceRole = 'global' | 'client' | 'manager' | 'master' | '
 export type ThemeGovernanceIssueKind =
   | 'theme'
   | 'triad'
+  | 'surface'
   | 'interaction-performance'
   | 'layout'
   | 'loading'
@@ -41,15 +42,18 @@ export type ThemeGovernanceCanvas = {
 export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
   id: 'xdisputer-unified-ux-theme-governance',
   title: 'xDisputer Unified UX Theme Governance Canvas',
-  goal: 'Keep client, manager, master, auth, template, source, output, and AI surfaces visually consistent while allowing safe function-specific customization through one base theme, three professional surfaces, and one instant interaction layer.',
+  goal: 'Keep client, manager, master, auth, template, source, output, and AI surfaces visually consistent while allowing safe function-specific customization through one base theme, three professional surfaces, one unified surface behavior layer, and one instant interaction layer.',
   sourceOfTruth: [
     'app/layout.tsx',
     'app/ui-theme-contracts.css',
     'app/ui-theme-triad.css',
+    'app/unified-surface-contracts.css',
     'app/instant-interaction-performance.css',
     'app/ui-layout-contracts.css',
     'scripts/theme-consistency-guard.mjs',
+    'scripts/unified-surface-contract-guard.mjs',
     'docs/ux-theme-governance-canvas.md',
+    'docs/unified-triad-surface-canvas.md',
     'docs/instant-interaction-performance-canvas.md'
   ],
   roles: ['global', 'client', 'manager', 'master', 'auth'],
@@ -67,6 +71,10 @@ export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
     '--x-triad-client-accent',
     '--x-triad-manager-accent',
     '--x-triad-master-accent',
+    '--x-unified-surface-contract',
+    '--x-shell-sidebar-width',
+    '--x-console-sidebar-width',
+    '--x-surface-radius',
     '--x-instant-duration',
     '--x-float-y'
   ],
@@ -81,20 +89,22 @@ export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
     'data-theme-control="input"',
     'data-theme-status="success|warning|danger"',
     'data-theme-loading="skeleton"',
-    'data-theme-custom="client|manager|master|auth"'
+    'data-theme-custom="client|manager|master|auth"',
+    'data-console-role="manager|master"'
   ],
   workflow: [
     'Classify the UI problem before coding.',
-    'Use ui-theme-contracts.css for visual tone: color, typography, radius, shadows, buttons, inputs, status, loading, motion.',
+    'Use ui-theme-contracts.css for visual tone: color, typography, radius, shadows, buttons, inputs, status, loading, and motion tokens.',
     'Use ui-theme-triad.css for broad visible role/surface identity: client-aurora, manager-graphite, and master-executive.',
+    'Use unified-surface-contracts.css for shared surface behavior: sidebars, headers, cards, chips, borders, filters, tables, and overflow containment.',
     'Use instant-interaction-performance.css for hover float, tap feedback, dense console animation reduction, and sluggishness fixes.',
-    'Use ui-layout-contracts.css for geometry: grid, flex, sidebars, headers, overflow, responsive order.',
+    'Use ui-layout-contracts.css for final geometry: grid, flex, sidebars, headers, overflow, responsive order.',
     'Use component code only when render state, data shape, or interaction logic is wrong.',
     'Use Supabase/route code only when auth, data, RLS, storage, or backend permissions are the root cause.',
-    'Run theme, layout, responsive, typecheck, and build guards after changes.'
+    'Run theme, surface, layout, responsive, typecheck, and build guards after changes.'
   ],
   performanceModel: {
-    loadsFirst: ['root layout', 'global CSS tokens', 'triad visual system', 'instant interaction layer', 'layout contracts', 'visible route shell'],
+    loadsFirst: ['root layout', 'global CSS tokens', 'triad visual system', 'unified surface behavior', 'instant interaction layer', 'layout contracts', 'visible route shell'],
     loadsLater: ['role-specific data', 'dashboard counts', 'paginated datasets', 'AI reviews', 'generated outputs'],
     cached: ['static CSS', 'static JS chunks', 'deterministic shell markup'],
     paginated: ['account directories', 'client datasets', 'manager outputs', 'audit logs'],
@@ -107,10 +117,11 @@ export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
     'Do not rely on expensive backdrop-filter or heavy blur for core cards.',
     'Do not hardcode random one-off colors when a token exists.',
     'Do not solve backend/auth/RLS errors with CSS.',
-    'Do not put layout geometry into the theme contract.',
+    'Do not put final layout geometry into the theme contract.',
     'Do not make client, manager, master, and auth surfaces feel like separate products.',
     'Do not use triad theme as a substitute for fixing broken component markup.',
-    'Do not animate every dense manager/master card on page load.'
+    'Do not animate every dense manager/master card on page load.',
+    'Do not create different sidebar/header/card/chip behavior per role unless the function requires it.'
   ]
 };
 
@@ -127,6 +138,16 @@ export function classifyThemeGovernanceIssue(input: string): ThemeGovernanceDeci
     };
   }
 
+  if (/(surface behavior|side navigation|sidebar behavior|header orientation|borders|border overlap|card behavior|chips|badges|labels|compact|filter toolbar|pager|table overflow|zero overflow|overflow drift|one layout behaviour|one layout behavior|unified surface)/.test(normalized)) {
+    return {
+      kind: 'surface',
+      ownerFile: 'app/unified-surface-contracts.css',
+      reason: 'The issue changes shared UI behavior across roles, so it belongs to the unified surface contract layer between triad identity and final layout geometry.',
+      requiredGuards: ['node scripts/unified-surface-contract-guard.mjs', 'npm run responsive:guard', 'npm run typecheck', 'npm run build'],
+      shouldNotDo: ['Do not create a role-specific duplicate surface system.', 'Do not hide backend/auth/RLS problems with CSS.', 'Do not override final grid ownership here.']
+    };
+  }
+
   if (/(surface identity|three theme|3 theme|triad|client aurora|manager graphite|master executive|role visual|surface visual)/.test(normalized)) {
     return {
       kind: 'triad',
@@ -137,7 +158,7 @@ export function classifyThemeGovernanceIssue(input: string): ThemeGovernanceDeci
     };
   }
 
-  if (/(color|theme|button|input|card|surface|shadow|radius|typography|font|status|badge|loading|skeleton|motion|transition)/.test(normalized)) {
+  if (/(color|theme|button|input|shadow|radius|typography|font|status|loading|skeleton|motion|transition)/.test(normalized)) {
     return {
       kind: 'theme',
       ownerFile: 'app/ui-theme-contracts.css',
@@ -147,17 +168,17 @@ export function classifyThemeGovernanceIssue(input: string): ThemeGovernanceDeci
     };
   }
 
-  if (/(grid|layout|sidebar|header|overflow|clip|responsive|column|row|width|height|position|spacing collapse)/.test(normalized)) {
+  if (/(grid|layout|flex|position|responsive|column|row|width|height|spacing collapse)/.test(normalized)) {
     return {
       kind: 'layout',
       ownerFile: 'app/ui-layout-contracts.css',
-      reason: 'The issue changes geometry or responsive structure, so it belongs to the final layout contract.',
+      reason: 'The issue changes final geometry or responsive structure, so it belongs to the final layout contract.',
       requiredGuards: ['npm run layout:guard', 'npm run responsive:guard', 'npm run typecheck', 'npm run build'],
       shouldNotDo: ['Do not hide overflow as a substitute for fixing layout ownership.', 'Do not add fixed desktop-only widths.', 'Do not move business logic into CSS.']
     };
   }
 
-  if (/(spinner|skeleton|pending|loading|optimistic|refresh)/.test(normalized)) {
+  if (/(spinner|pending|optimistic|refresh)/.test(normalized)) {
     return {
       kind: 'loading',
       ownerFile: 'component owner + app/ui-theme-contracts.css',
@@ -191,7 +212,7 @@ export function classifyThemeGovernanceIssue(input: string): ThemeGovernanceDeci
     kind: 'unknown',
     ownerFile: 'inspect current component owner first',
     reason: 'The issue is not yet classified. Inspect the route, component, CSS owner, and runtime state before coding.',
-    requiredGuards: ['npm run theme:guard', 'npm run layout:guard', 'npm run responsive:guard', 'npm run typecheck', 'npm run build'],
+    requiredGuards: ['npm run theme:guard', 'node scripts/unified-surface-contract-guard.mjs', 'npm run layout:guard', 'npm run responsive:guard', 'npm run typecheck', 'npm run build'],
     shouldNotDo: ['Do not guess the owner file.', 'Do not rewrite working components blindly.', 'Do not skip validation.']
   };
 }
@@ -200,11 +221,12 @@ export function themeGovernanceChecklist(role: ThemeGovernanceRole) {
   return [
     `Use the global xDisputer theme contract for ${role}.`,
     'Use the correct triad surface before adding one-off role styling.',
+    'Use the unified surface contract for shared sidebars, headers, cards, chips, filters, tables, borders, and overflow behavior.',
     'Use the instant interaction layer for float, tap feedback, and sluggishness fixes.',
     'Use approved theme tokens for color, spacing, depth, typography, and motion.',
     'Use data-theme-custom only for local role emphasis.',
-    'Use ui-layout-contracts.css for geometry changes.',
+    'Use ui-layout-contracts.css for final geometry changes.',
     'Keep loading feedback instant and lightweight.',
-    'Run npm run theme:guard before accepting the change.'
+    'Run node scripts/unified-surface-contract-guard.mjs and npm run theme:guard before accepting the change.'
   ];
 }
