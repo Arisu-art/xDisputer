@@ -1,5 +1,6 @@
 export type * from './types';
 export { UI_CONTRACTS, FEATURE_CONTRACTS, contractsByPropagationGroup, getUIContract } from './registry';
+export { dynamicTemplateAnchorFeatureContract, dynamicTemplateAnchorIntelligenceContract } from './dynamic-template-anchor-contract';
 export { classifyChange, classifyContract, isForbiddenGlobalBypass } from './classifiers/global-custom-classifier';
 export { inspectDesignContracts } from './inspectors/design-inspector';
 export { inspectLayoutContracts, expectedHeaderRatio } from './inspectors/layout-inspector';
