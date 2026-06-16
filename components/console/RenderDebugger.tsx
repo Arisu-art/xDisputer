@@ -2,6 +2,7 @@
 
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import type { TemplateExecutionDebugSnapshot } from '../../lib/template-execution/template-execution-orchestrator';
 
 type ResponsiveDebugSnapshot = {
   viewportWidth: number;
@@ -33,21 +34,10 @@ type DebugSnapshot = {
   responsive: ResponsiveDebugSnapshot;
 };
 
-type TemplateExecutionSnapshot = {
-  status: string;
-  round: string;
-  outputs: number;
-  warnings: number;
-  engines: string[];
-  missingSlots: string[];
-  generatedAt: string;
-  summary?: string;
-};
-
 declare global {
   interface Window {
     __xdisputerDebug?: DebugSnapshot;
-    __xdisputerTemplateExecution?: TemplateExecutionSnapshot;
+    __xdisputerTemplateExecution?: TemplateExecutionDebugSnapshot;
   }
 }
 
@@ -246,7 +236,7 @@ export default function RenderDebugger() {
   const queryOpen = debuggerShouldOpen(searchParams);
   const [open, setOpen] = useState(queryOpen);
   const [snapshot, setSnapshot] = useState<DebugSnapshot | null>(null);
-  const [execution, setExecution] = useState<TemplateExecutionSnapshot | null>(null);
+  const [execution, setExecution] = useState<TemplateExecutionDebugSnapshot | null>(null);
 
   useEffect(() => { setOpen(queryOpen); }, [queryOpen, pathname]);
 
