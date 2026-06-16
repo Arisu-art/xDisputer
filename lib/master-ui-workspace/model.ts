@@ -1,6 +1,29 @@
 export type HologramRole = 'client' | 'manager' | 'master';
-export type HologramMode = 'live' | 'edit' | 'navigation' | 'theme' | 'publish';
+export type HologramMode = 'live' | 'edit' | 'navigation' | 'theme' | 'content' | 'behavior' | 'ai' | 'publish';
 export type HologramImpact = 'low' | 'medium' | 'high';
+export type HologramViewport = 'desktop' | 'tablet' | 'mobile';
+export type HologramDensity = 'compact' | 'comfortable' | 'spacious';
+export type HologramAlignment = 'left' | 'center';
+export type HologramColumnPreset = '1' | '2' | '3' | 'auto';
+export type HologramInteraction = 'static' | 'link' | 'action' | 'dataset';
+
+export type HologramBlockProps = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  density: HologramDensity;
+  alignment: HologramAlignment;
+  columns: HologramColumnPreset;
+  accent: string;
+};
+
+export type HologramBlockBehavior = {
+  draggable: boolean;
+  resizable: boolean;
+  hideOnMobile: boolean;
+  interaction: HologramInteraction;
+  dataSource: string;
+};
 
 export type HologramBlock = {
   id: string;
@@ -10,6 +33,8 @@ export type HologramBlock = {
   description: string;
   roles: HologramRole[];
   impact: HologramImpact;
+  props: HologramBlockProps;
+  behavior: HologramBlockBehavior;
   locked?: boolean;
   status: 'published' | 'draft-ready' | 'guarded';
 };
@@ -48,13 +73,13 @@ export const HOLOGRAM_MODES: HologramModeDefinition[] = [
   {
     id: 'edit',
     label: 'Edit Canvas',
-    purpose: 'Move approved UI blocks, reorder sections, and shape each page without unsafe code injection.',
+    purpose: 'Drag approved UI blocks like Word paragraphs and preview the reordered layout instantly.',
     guardrail: 'Local draft only until the publish gate validates it.'
   },
   {
     id: 'navigation',
     label: 'Navigation Builder',
-    purpose: 'Preview role-scoped side navigation and plan add/remove/reorder actions.',
+    purpose: 'Add, enable, disable, and inspect role-scoped side navigation.',
     guardrail: 'Routes must remain approved and role-gated.'
   },
   {
@@ -64,12 +89,52 @@ export const HOLOGRAM_MODES: HologramModeDefinition[] = [
     guardrail: 'Only allowlisted tokens may be changed.'
   },
   {
+    id: 'content',
+    label: 'Content Studio',
+    purpose: 'Edit UI wording like a document: eyebrow, title, description, labels, and helper copy.',
+    guardrail: 'Presentation copy only. Never hide backend/auth/RLS errors.'
+  },
+  {
+    id: 'behavior',
+    label: 'Behavior Studio',
+    purpose: 'Control safe UI behavior like interaction type, data source, mobile visibility, and resize readiness.',
+    guardrail: 'No unsafe JavaScript, no bypassing permissions, no production publish from local state.'
+  },
+  {
+    id: 'ai',
+    label: 'AI Proposal Gate',
+    purpose: 'Convert natural-language UI requests into guarded JSON patch proposals.',
+    guardrail: 'AI proposes. Master approves. Guards validate.'
+  },
+  {
     id: 'publish',
     label: 'Publish Center',
     purpose: 'Review draft changes, required guards, risk score, rollback plan, and publish readiness.',
-    guardrail: 'AI can propose. Master approves. Guards decide readiness.'
+    guardrail: 'Backend draft/publish/rollback comes in the persistence phase.'
   }
 ];
+
+function blockProps(title: string, description: string, eyebrow: string, accent: string, density: HologramDensity = 'comfortable'): HologramBlockProps {
+  return {
+    eyebrow,
+    title,
+    description,
+    density,
+    alignment: 'left',
+    columns: 'auto',
+    accent
+  };
+}
+
+function blockBehavior(dataSource: string, interaction: HologramInteraction, draggable = true): HologramBlockBehavior {
+  return {
+    draggable,
+    resizable: false,
+    hideOnMobile: false,
+    interaction,
+    dataSource
+  };
+}
 
 export const INITIAL_HOLOGRAM_BLOCKS: HologramBlock[] = [
   {
@@ -80,6 +145,8 @@ export const INITIAL_HOLOGRAM_BLOCKS: HologramBlock[] = [
     description: 'Controls the primary page title, context, action zone, and role-aware visual identity.',
     roles: ['client', 'manager', 'master'],
     impact: 'high',
+    props: blockProps('Command hero', 'Controls the primary page title, context, action zone, and role-aware visual identity.', 'Hero', 'master', 'comfortable'),
+    behavior: blockBehavior('route.header', 'static', false),
     status: 'published',
     locked: true
   },
@@ -91,6 +158,8 @@ export const INITIAL_HOLOGRAM_BLOCKS: HologramBlock[] = [
     description: 'Controls side navigation order, labels, route visibility, and role-scoped destinations.',
     roles: ['client', 'manager', 'master'],
     impact: 'high',
+    props: blockProps('Role navigation rail', 'Controls side navigation order, labels, route visibility, and role-scoped destinations.', 'Navigation', 'global', 'compact'),
+    behavior: blockBehavior('runtime.navigation', 'link'),
     status: 'guarded'
   },
   {
@@ -101,6 +170,8 @@ export const INITIAL_HOLOGRAM_BLOCKS: HologramBlock[] = [
     description: 'Master account table, filter toolbar, chips, status labels, and pagination surface.',
     roles: ['master'],
     impact: 'high',
+    props: blockProps('Account directory', 'Master account table, filter toolbar, chips, status labels, and pagination surface.', 'Dataset', 'master', 'compact'),
+    behavior: blockBehavior('master.accountDirectory', 'dataset'),
     status: 'draft-ready'
   },
   {
@@ -111,6 +182,8 @@ export const INITIAL_HOLOGRAM_BLOCKS: HologramBlock[] = [
     description: 'Manager client queues, lifecycle states, exceptions, and reports shell.',
     roles: ['manager', 'master'],
     impact: 'medium',
+    props: blockProps('Manager workflow queue', 'Manager client queues, lifecycle states, exceptions, and reports shell.', 'Workflow', 'manager', 'comfortable'),
+    behavior: blockBehavior('manager.clientQueue', 'dataset'),
     status: 'draft-ready'
   },
   {
@@ -121,6 +194,8 @@ export const INITIAL_HOLOGRAM_BLOCKS: HologramBlock[] = [
     description: 'Client packet generation, document flow, guidance, and output review surfaces.',
     roles: ['client', 'manager', 'master'],
     impact: 'medium',
+    props: blockProps('Client workbench', 'Client packet generation, document flow, guidance, and output review surfaces.', 'Workspace', 'client', 'comfortable'),
+    behavior: blockBehavior('client.packetWorkspace', 'action'),
     status: 'draft-ready'
   },
   {
@@ -131,6 +206,8 @@ export const INITIAL_HOLOGRAM_BLOCKS: HologramBlock[] = [
     description: 'Controls approved token families for Client/Auth Aurora, Manager Graphite, and Master Executive.',
     roles: ['master'],
     impact: 'medium',
+    props: blockProps('Triad theme token strip', 'Controls approved token families for Client/Auth Aurora, Manager Graphite, and Master Executive.', 'Theme', 'master', 'compact'),
+    behavior: blockBehavior('theme.tokens', 'static'),
     status: 'guarded'
   },
   {
@@ -141,6 +218,8 @@ export const INITIAL_HOLOGRAM_BLOCKS: HologramBlock[] = [
     description: 'Turns AI requests into risk-scored draft proposals with rollback metadata and guard requirements.',
     roles: ['master'],
     impact: 'high',
+    props: blockProps('AI proposal gate', 'Turns AI requests into risk-scored draft proposals with rollback metadata and guard requirements.', 'AI Gate', 'master', 'comfortable'),
+    behavior: blockBehavior('ai.changeRequests', 'action', false),
     status: 'guarded',
     locked: true
   }
@@ -162,7 +241,9 @@ export const HOLOGRAM_THEME_TOKENS: HologramThemeToken[] = [
   { key: '--x-triad-master-accent', label: 'Master Executive accent', value: '#4f46e5', scope: 'master', editable: true },
   { key: '--x-surface-radius', label: 'Unified card radius', value: '24px', scope: 'global', editable: true },
   { key: '--x-chip-height', label: 'Compact chip height', value: '32px', scope: 'global', editable: true },
-  { key: '--x-float-y', label: 'Global float lift', value: '-1px', scope: 'global', editable: true }
+  { key: '--x-float-y', label: 'Global float lift', value: '-1px', scope: 'global', editable: true },
+  { key: '--x-shell-sidebar-width', label: 'Client sidebar width', value: 'clamp(244px, 17vw, 296px)', scope: 'global', editable: true },
+  { key: '--x-console-sidebar-width', label: 'Console sidebar width', value: 'clamp(216px, 18vw, 260px)', scope: 'global', editable: true }
 ];
 
 export const HOLOGRAM_GUARD_COMMANDS = [
@@ -182,9 +263,19 @@ export function moveHologramBlock(blocks: HologramBlock[], activeId: string, ove
   const overIndex = blocks.findIndex((block) => block.id === overId);
   if (activeIndex < 0 || overIndex < 0) return blocks;
   const active = blocks[activeIndex];
-  if (active.locked) return blocks;
+  if (active.locked || !active.behavior.draggable) return blocks;
   const next = [...blocks];
   next.splice(activeIndex, 1);
   next.splice(overIndex, 0, active);
   return next;
+}
+
+export function createSuggestedNavItem(count: number): HologramNavItem {
+  return {
+    id: `nav-custom-${count + 1}`,
+    label: `Custom workspace ${count + 1}`,
+    route: `/master/custom-${count + 1}`,
+    roles: ['master'],
+    enabled: true
+  };
 }
