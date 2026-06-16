@@ -28,14 +28,13 @@ export async function searchDocumentChunksText(input: {
     .from('ai_chunks')
     .select('id,document_id,content,metadata')
     .eq('owner_id', input.ownerId)
-    .ilike('content', likePattern)
-    .limit(limit);
+    .ilike('content', likePattern);
 
   if (input.documentIds.length > 0) {
     query = query.in('document_id', input.documentIds);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query.limit(limit);
 
   if (error) {
     return {
