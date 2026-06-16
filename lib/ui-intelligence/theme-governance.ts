@@ -3,6 +3,7 @@ export type ThemeGovernanceRole = 'global' | 'client' | 'manager' | 'master' | '
 export type ThemeGovernanceIssueKind =
   | 'theme'
   | 'triad'
+  | 'interaction-performance'
   | 'layout'
   | 'loading'
   | 'backend'
@@ -40,14 +41,16 @@ export type ThemeGovernanceCanvas = {
 export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
   id: 'xdisputer-unified-ux-theme-governance',
   title: 'xDisputer Unified UX Theme Governance Canvas',
-  goal: 'Keep client, manager, master, auth, template, source, output, and AI surfaces visually consistent while allowing safe function-specific customization through one base theme and three professional surfaces.',
+  goal: 'Keep client, manager, master, auth, template, source, output, and AI surfaces visually consistent while allowing safe function-specific customization through one base theme, three professional surfaces, and one instant interaction layer.',
   sourceOfTruth: [
     'app/layout.tsx',
     'app/ui-theme-contracts.css',
     'app/ui-theme-triad.css',
+    'app/instant-interaction-performance.css',
     'app/ui-layout-contracts.css',
     'scripts/theme-consistency-guard.mjs',
-    'docs/ux-theme-governance-canvas.md'
+    'docs/ux-theme-governance-canvas.md',
+    'docs/instant-interaction-performance-canvas.md'
   ],
   roles: ['global', 'client', 'manager', 'master', 'auth'],
   globalTokens: [
@@ -63,7 +66,9 @@ export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
     '--x-transition-fast',
     '--x-triad-client-accent',
     '--x-triad-manager-accent',
-    '--x-triad-master-accent'
+    '--x-triad-master-accent',
+    '--x-instant-duration',
+    '--x-float-y'
   ],
   customizationHooks: [
     'data-theme-contract="xdisputer-unified"',
@@ -82,13 +87,14 @@ export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
     'Classify the UI problem before coding.',
     'Use ui-theme-contracts.css for visual tone: color, typography, radius, shadows, buttons, inputs, status, loading, motion.',
     'Use ui-theme-triad.css for broad visible role/surface identity: client-aurora, manager-graphite, and master-executive.',
+    'Use instant-interaction-performance.css for hover float, tap feedback, dense console animation reduction, and sluggishness fixes.',
     'Use ui-layout-contracts.css for geometry: grid, flex, sidebars, headers, overflow, responsive order.',
     'Use component code only when render state, data shape, or interaction logic is wrong.',
     'Use Supabase/route code only when auth, data, RLS, storage, or backend permissions are the root cause.',
     'Run theme, layout, responsive, typecheck, and build guards after changes.'
   ],
   performanceModel: {
-    loadsFirst: ['root layout', 'global CSS tokens', 'triad visual system', 'layout contracts', 'visible route shell'],
+    loadsFirst: ['root layout', 'global CSS tokens', 'triad visual system', 'instant interaction layer', 'layout contracts', 'visible route shell'],
     loadsLater: ['role-specific data', 'dashboard counts', 'paginated datasets', 'AI reviews', 'generated outputs'],
     cached: ['static CSS', 'static JS chunks', 'deterministic shell markup'],
     paginated: ['account directories', 'client datasets', 'manager outputs', 'audit logs'],
@@ -103,12 +109,23 @@ export const XDISPUTER_THEME_GOVERNANCE_CANVAS: ThemeGovernanceCanvas = {
     'Do not solve backend/auth/RLS errors with CSS.',
     'Do not put layout geometry into the theme contract.',
     'Do not make client, manager, master, and auth surfaces feel like separate products.',
-    'Do not use triad theme as a substitute for fixing broken component markup.'
+    'Do not use triad theme as a substitute for fixing broken component markup.',
+    'Do not animate every dense manager/master card on page load.'
   ]
 };
 
 export function classifyThemeGovernanceIssue(input: string): ThemeGovernanceDecision {
   const normalized = input.toLowerCase();
+
+  if (/(sluggish|lag|float|hover|tap|instant|delay|0 delay|zero delay|interaction performance|slow animation|manager slow|master slow)/.test(normalized)) {
+    return {
+      kind: 'interaction-performance',
+      ownerFile: 'app/instant-interaction-performance.css',
+      reason: 'The issue changes perceived interaction speed, float behavior, or dense console motion, so it belongs to the instant interaction layer.',
+      requiredGuards: ['node scripts/instant-performance-guard.mjs', 'npm run responsive:guard', 'npm run typecheck', 'npm run build'],
+      shouldNotDo: ['Do not animate every dense console card.', 'Do not use transition-property: all.', 'Do not add JavaScript animation for simple hover feedback.']
+    };
+  }
 
   if (/(surface identity|three theme|3 theme|triad|client aurora|manager graphite|master executive|role visual|surface visual)/.test(normalized)) {
     return {
@@ -140,7 +157,7 @@ export function classifyThemeGovernanceIssue(input: string): ThemeGovernanceDeci
     };
   }
 
-  if (/(delay|lag|slow|spinner|skeleton|pending|loading|optimistic|refresh)/.test(normalized)) {
+  if (/(spinner|skeleton|pending|loading|optimistic|refresh)/.test(normalized)) {
     return {
       kind: 'loading',
       ownerFile: 'component owner + app/ui-theme-contracts.css',
@@ -183,6 +200,7 @@ export function themeGovernanceChecklist(role: ThemeGovernanceRole) {
   return [
     `Use the global xDisputer theme contract for ${role}.`,
     'Use the correct triad surface before adding one-off role styling.',
+    'Use the instant interaction layer for float, tap feedback, and sluggishness fixes.',
     'Use approved theme tokens for color, spacing, depth, typography, and motion.',
     'Use data-theme-custom only for local role emphasis.',
     'Use ui-layout-contracts.css for geometry changes.',
