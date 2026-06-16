@@ -43,12 +43,21 @@ const contracts = [
     sourceFiles: ['components/ManagerTemplateWorkspaceClient.tsx', 'scripts/template-execution-guard.mjs'],
     requiredMarkers: ['ManagerTemplateWorkspaceClient', 'template'],
     forbidden: []
+  },
+  {
+    id: 'manager-owned-docx-generation',
+    label: 'Manager-Owned Dynamic DOCX Generation',
+    sourceFiles: ['lib/ui-intelligence/manager-owned-docx-contract.ts', 'lib/manager-template-contract/template-runtime-contract.ts', 'lib/dynamic-template/render-orchestrator.ts', 'scripts/manager-owned-docx-guard.mjs'],
+    requiredMarkers: ['manager-owned-docx-generation', 'buildManagerOwnedTemplateRuntimeContract', 'routeManagerOwnedDocxGeneration', 'managerOwnedGenerationManifest', 'manager-owned-docx:guard'],
+    forbidden: ['discard unknown manager custom text', 'rebuild entire DOCX from internal canonical body']
   }
 ];
 
 const requiredFrameworkFiles = [
   'lib/ui-intelligence/types.ts',
   'lib/ui-intelligence/registry.ts',
+  'lib/ui-intelligence/dynamic-template-anchor-contract.ts',
+  'lib/ui-intelligence/manager-owned-docx-contract.ts',
   'lib/ui-intelligence/classifiers/global-custom-classifier.ts',
   'lib/ui-intelligence/inspectors/design-inspector.ts',
   'lib/ui-intelligence/inspectors/layout-inspector.ts',
@@ -111,6 +120,7 @@ const pkg = read('package.json');
 check(pkg.includes('"ui-intelligence:guard"'), 'package exposes ui-intelligence:guard script', 'critical');
 check(pkg.includes('"ui-intelligence:report"'), 'package exposes ui-intelligence:report script', 'critical');
 check(pkg.includes('"ui-intelligence:map"'), 'package exposes ui-intelligence:map script', 'critical');
+check(pkg.includes('"manager-owned-docx:guard"'), 'package exposes manager-owned-docx:guard script', 'critical');
 
 checks.forEach((item) => console.log(`${item.ok ? '✅' : '❌'} ${item.label}`));
 const failed = checks.filter((item) => !item.ok && item.severity === 'critical');
