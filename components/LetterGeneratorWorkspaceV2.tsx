@@ -33,29 +33,13 @@ import type { ManagerTemplateScopeUi } from '../lib/manager-template-ui';
 import { explainWebsiteError, type UserFacingError } from '../lib/user-facing-error';
 import { executeTemplateGeneration } from '../lib/template-execution/template-execution-orchestrator';
 
-// Keep this import live for downstream bundling where review markers are applied by output editor flows.
 void highlightTextInDocx;
 
 type Panel = 'Dashboard' | 'Templates' | 'Source Data' | 'Outputs' | 'Client Center' | 'Settings';
 type SourceDraftSnapshot = { text: string; normalized: boolean; label: string; capturedAt: string };
 type StatusTone = 'info' | 'success' | 'error';
 
-type RegistryTemplateAsset = {
-  id: string;
-  round_label: Round;
-  template_kind: 'LETTER' | 'EXHIBIT';
-  letter_type: LetterType | null;
-  exhibit_kind: ExhibitKind | null;
-  original_filename: string;
-  mime_type: string;
-  file_size: number | null;
-  contract_json: unknown;
-  validation_json?: Record<string, unknown> | null;
-  content_hash?: string | null;
-  version_number?: number | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
+type RegistryTemplateAsset = { id: string; round_label: Round; template_kind: 'LETTER' | 'EXHIBIT'; letter_type: LetterType | null; exhibit_kind: ExhibitKind | null; original_filename: string; mime_type: string; file_size: number | null; contract_json: unknown; validation_json?: Record<string, unknown> | null; content_hash?: string | null; version_number?: number | null; created_at?: string | null; updated_at?: string | null };
 
 const panels: Panel[] = ['Dashboard', 'Templates', 'Source Data', 'Outputs', 'Client Center', 'Settings'];
 const labels: Record<LetterType, string> = { DISPUTE: 'Dispute Letter', LATE_PAYMENT: 'Late Payment Letter' };
@@ -67,26 +51,11 @@ const clean = (value: string) => (value || 'CLIENT').replace(/[\/:*?"<>|]+/g, ''
 const order = (type: LetterType) => packetOrderLabels(type);
 const ARCHIVE_TIMEOUT_MS = 120_000;
 
-function download(name: string, blob: Blob) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = name;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-async function withTimeout<T>(phase: string, operation: () => Promise<T>, timeoutMs = 90_000): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      operation(),
-      new Promise<T>((_, reject) => { timer = setTimeout(() => reject(new Error(`${phase} timed out after ${Math.round(timeoutMs / 1000)} seconds.`)), timeoutMs); })
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
+function download(name: string, blob: Blob) { const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click(); URL.revokeObjectURL(url); }
+async function withTimeout<T>(phase: string, operation: () => Promise<T>, timeoutMs = 90_000): Promise<T> { let timer: ReturnType<typeof setTimeout> | undefined; try { return await Promise.race([operation(), new Promise<T>((_, reject) => { timer = setTimeout(() => reject(new Error(`${phase} timed out after ${Math.round(timeoutMs / 1000)} seconds.`)), timeoutMs); })]); } finally { if (timer) clearTimeout(timer); } }
 function errorMessage(error: unknown) { return error instanceof Error && error.message ? error.message : 'An unknown error occurred.'; }
+function managerLetterReference(slot: LetterReference, asset: RegistryTemplateAsset): LetterReference { return { ...slot, file: asset.original_filename, size: asset.file_size || undefined, contract: asset.contract_json as any, assetId: asset.id, source: 'MANAGER_TEMPLATE_ASSET', versionNumber: asset.version_number || null, contentHash: asset.content_hash || null, validationJson: asset.validation_json || null }; }
+function managerExhibitAsset(kind: ExhibitKind, asset: RegistryTemplateAsset) { return { id: asset.id, kind, mode: kind === 'FCRA' || kind === 'ATTACHMENT' ? 'STATIC_PDF' as const : 'GENERATED_DOCX' as const, name: asset.original_filename, type: asset.mime_type, size: asset.file_size || 0, contract: asset.contract_json as any, assetId: asset.id, source: 'MANAGER_TEMPLATE_ASSET', versionNumber: asset.version_number || null, contentHash: asset.content_hash || null, validationJson: asset.validation_json || null }; }
 
 export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole = 'client' }: { accountEmail?: string | null; accountRole?: 'admin' | 'client' }) {
   const [panel, setPanel] = useState<Panel>('Dashboard');
@@ -120,7 +89,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   useEffect(() => setTemplates(loadTemplateExhibits(round)), [round]);
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/template-assets?round=${encodeURIComponent(round)}`)
+    fetch(`/api/template-assets?round=${encodeURIComponent(round)}&sync=${Date.now()}`, { cache: 'no-store', headers: { accept: 'application/json', 'cache-control': 'no-store' } })
       .then((response) => response.ok ? response.json() : { assets: [] })
       .then((payload) => { if (!cancelled) { setRegistryAssets(Array.isArray(payload.assets) ? payload.assets : []); setManagerTemplateScope(payload.managerTemplateScope || null); } })
       .catch(() => { if (!cancelled) { setRegistryAssets([]); setManagerTemplateScope(null); } });
@@ -130,16 +99,14 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   const refs = references.filter((item) => item.round === round);
   const effectiveRefs = useMemo(() => refs.map((slot) => {
     const registryAsset = registryAssets.find((asset) => asset.template_kind === 'LETTER' && asset.letter_type === slot.type);
-    if (!registryAsset || slot.file) return slot;
-    return { ...slot, file: registryAsset.original_filename, size: registryAsset.file_size || undefined, contract: registryAsset.contract_json as any, assetId: registryAsset.id, source: 'MANAGER_TEMPLATE_ASSET', versionNumber: registryAsset.version_number || null, contentHash: registryAsset.content_hash || null, validationJson: registryAsset.validation_json || null };
+    return registryAsset ? managerLetterReference(slot, registryAsset) : slot;
   }), [refs, registryAssets]);
 
   const effectiveTemplates = useMemo(() => {
     const next = { ...templates };
     (['FCRA', 'AFFIDAVIT', 'ATTACHMENT', 'FTC'] as ExhibitKind[]).forEach((kind) => {
       const registryAsset = registryAssets.find((asset) => asset.template_kind === 'EXHIBIT' && asset.exhibit_kind === kind);
-      if (!registryAsset || next[kind]) return;
-      next[kind] = { id: registryAsset.id, kind, mode: kind === 'FCRA' || kind === 'ATTACHMENT' ? 'STATIC_PDF' : 'GENERATED_DOCX', name: registryAsset.original_filename, type: registryAsset.mime_type, size: registryAsset.file_size || 0, contract: registryAsset.contract_json as any, assetId: registryAsset.id, source: 'MANAGER_TEMPLATE_ASSET', versionNumber: registryAsset.version_number || null, contentHash: registryAsset.content_hash || null, validationJson: registryAsset.validation_json || null };
+      if (registryAsset) next[kind] = managerExhibitAsset(kind, registryAsset);
     });
     return next;
   }, [templates, registryAssets]);
@@ -174,7 +141,7 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   function captureDraft(label: string) { if (source.trim()) setRecoveryDraft({ text: source, normalized, label, capturedAt: new Date().toISOString() }); }
   function saveCase(statusValue: ClientCaseStatus, data: Partial<ClientCaseRecord> = {}) { const id = data.id || caseId; const name = data.clientName || parsed.name; if (!id || !name) return null; const previous = cases.find((item) => item.id === id); const record: ClientCaseRecord = { id, clientName: name, round, routeCount: routes.length, bureaus: Array.from(new Set(routes.map((route) => route.bureau))), evidenceCount: evidence.supporting.length, editableCount: docs.length, pdfCount: 0, status: statusValue, updatedAt: new Date().toISOString(), ...previous, ...data }; const next = upsertClientCase(record); setCases(next); return record; }
   function begin() { const id = crypto.randomUUID(); setCaseId(id); setSource(''); setOriginalSource(''); setNormalized(false); clearOutputs(); setPanel('Templates'); report('New case started. Choose or verify templates first.', 'success'); }
-  async function uploadRef(slot: LetterReference, file: File) { const contract = await saveReferenceFile(slot, file); const next = loadReferenceMeta().map((item) => item.id === slot.id ? { ...item, file: file.name, size: file.size, contract } : item); setReferences(next); clearOutputs(); report(labels[slot.type] + ' uploaded for ' + round + '.', 'success'); }
+  async function uploadRef(slot: LetterReference, file: File) { const contract = await saveReferenceFile(slot, file); const next = loadReferenceMeta().map((item) => item.id === slot.id ? { ...item, file: file.name, size: file.size, contract, source: 'LOCAL_BROWSER' } : item); setReferences(next); clearOutputs(); report(labels[slot.type] + ' uploaded for ' + round + '.', 'success'); }
   async function removeRef(slot: LetterReference) { await removeReferenceFile(slot.id); const next = loadReferenceMeta().map((item) => item.id === slot.id ? { ...item, file: '', size: undefined, contract: undefined } : item); setReferences(next); clearOutputs(); report(labels[slot.type] + ' removed for ' + round + '.'); }
   function importSource(value: string, action: string) { captureDraft(action); setSource(value); setOriginalSource(value); setNormalized(false); clearOutputs(); setCaseId(crypto.randomUUID()); report(action + ' imported. Standardize it before generation.', 'success'); setPanel('Source Data'); }
   function standardizeDraft(value = source) { const next = createNormalizedSourceCopy(value); setSource(next.text); setNormalized(true); setRecoveryDraft(null); saveCase('SOURCE_LOCKED'); report('Source data standardized and locked for generation.', 'success'); }
@@ -183,58 +150,24 @@ export default function LetterGeneratorWorkspaceV2({ accountEmail, accountRole =
   function restoreOriginal() { setSource(originalSource || source); setNormalized(false); report('Original source copy restored. Standardize again before generation.'); }
   function recoverDraft() { if (!recoveryDraft) return; setSource(recoveryDraft.text); setNormalized(recoveryDraft.normalized); report(`${recoveryDraft.label} draft restored.`, 'success'); }
 
-  async function makeZip(files: ReviewOutput[], notes: string[], date: string) {
-    const zip = new JSZip();
-    const manifestJson = generationManifestText(buildGenerationManifest({ round, parsed, routes, references: effectiveRefs, templates: effectiveTemplates, outputs: files.map((item, index) => normalizeGeneratedOutputForManifest({ id: item.id, path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count }, index)), warnings: notes }));
-    await addOrderedPacketFolders(zip, files, round, evidenceKey, parsed.name || 'Client', routes.map((route) => ({ type: route.type, bureau: route.bureau })));
-    zip.file('generation-manifest.json', manifestJson);
-    return await zip.generateAsync({ type: 'blob' });
-  }
+  async function makeZip(files: ReviewOutput[], notes: string[], date: string) { const zip = new JSZip(); const manifestJson = generationManifestText(buildGenerationManifest({ round, parsed, routes, references: effectiveRefs, templates: effectiveTemplates, outputs: files.map((item, index) => normalizeGeneratedOutputForManifest({ id: item.id, path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count }, index)), warnings: notes })); await addOrderedPacketFolders(zip, files, round, evidenceKey, parsed.name || 'Client', routes.map((route) => ({ type: route.type, bureau: route.bureau }))); zip.file('generation-manifest.json', manifestJson); return await zip.generateAsync({ type: 'blob' }); }
 
   async function generate() {
-    setGenerateAttempted(true);
-    setActiveError(null);
+    setGenerateAttempted(true); setActiveError(null);
     if (!preflight.ready) { report(preflightFailureMessage(preflight), 'error'); return; }
     setBusy(true); setWarnings([]); setOrderedZip(null); setDocDate(dateNow());
     try {
       const date = dateNow();
-      const orchestrated = await executeTemplateGeneration({
-        round,
-        source,
-        normalized,
-        parsed: affidavitRequired ? affidavitSource : parsed,
-        routes,
-        references: effectiveRefs,
-        templates: effectiveTemplates,
-        registryAssets,
-        managerTemplateScope,
-        documentDate: date,
-        cleanName: clean,
-        packetStepsForType: order,
-        requestedRendererMode: process.env.NEXT_PUBLIC_DYNAMIC_TEMPLATE_RENDERER_MODE || null,
-        onStatus: (message) => report(message)
-      });
-
+      const orchestrated = await executeTemplateGeneration({ round, source, normalized, parsed: affidavitRequired ? affidavitSource : parsed, routes, references: effectiveRefs, templates: effectiveTemplates, registryAssets, managerTemplateScope, documentDate: date, cleanName: clean, packetStepsForType: order, requestedRendererMode: process.env.NEXT_PUBLIC_DYNAMIC_TEMPLATE_RENDERER_MODE || null, onStatus: (message) => report(message) });
       const letterCoverage = assessRouteCoverage(routes, orchestrated.outputs);
-      if (!letterCoverage.complete) {
-        setWarnings(orchestrated.warnings);
-        report(requiredGenerationFailureMessage(letterCoverage, 'TemplateExecutionOrchestrator did not produce every required letter output.'), 'error');
-        return;
-      }
-
+      if (!letterCoverage.complete) { setWarnings(orchestrated.warnings); report(requiredGenerationFailureMessage(letterCoverage, 'TemplateExecutionOrchestrator did not produce every required letter output.'), 'error'); return; }
       report('Preparing complete ordered component package…');
       const zip = await withTimeout('Preparing ordered package ZIP', () => makeZip(orchestrated.outputs, orchestrated.warnings, date), ARCHIVE_TIMEOUT_MS);
       const persistedManifest = buildGenerationManifest({ round, parsed, routes, references: effectiveRefs, templates: effectiveTemplates, outputs: orchestrated.outputs.map((item, index) => normalizeGeneratedOutputForManifest({ id: item.id, path: item.path, type: item.type, role: item.role, bureau: item.bureau, sequence: item.sequence, count: item.count }, index)), warnings: orchestrated.warnings });
       void persistGenerationRun({ ...persistedManifest, proof: { ...(persistedManifest as any).proof, templateExecution: orchestrated.executionManifest } } as GenerationManifest);
       const zipName = `${clean(parsed.name)}.zip`;
-      setDocs(orchestrated.outputs); setWarnings(orchestrated.warnings); setOrderedZip({ name: zipName, blob: zip }); setDocDate(date);
-      saveCase('REVIEW_READY', { editableCount: orchestrated.outputs.length, evidenceCount: evidence.supporting.length, pdfCount: 0 });
-      report('Complete ordered packet package is ready for review and download.', 'success');
-      setPanel('Outputs');
-    } catch (error) {
-      const message = `Ordered package generation failed: ${errorMessage(error)}`;
-      setWarnings([message]); setOrderedZip(null); report(message, 'error');
-    } finally { setBusy(false); }
+      setDocs(orchestrated.outputs); setWarnings(orchestrated.warnings); setOrderedZip({ name: zipName, blob: zip }); setDocDate(date); saveCase('REVIEW_READY', { editableCount: orchestrated.outputs.length, evidenceCount: evidence.supporting.length, pdfCount: 0 }); report('Complete ordered packet package is ready for review and download.', 'success'); setPanel('Outputs');
+    } catch (error) { const message = `Ordered package generation failed: ${errorMessage(error)}`; setWarnings([message]); setOrderedZip(null); report(message, 'error'); } finally { setBusy(false); }
   }
 
   async function saveEdited(output: ReviewOutput, file: File) { const next = docs.map((item) => item.path === output.path ? { ...item, blob: file } : item); try { const zip = await withTimeout('Rebuilding ordered component package', () => makeZip(next, warnings, docDate || dateNow()), ARCHIVE_TIMEOUT_MS); setDocs(next); setOrderedZip({ name: orderedZip?.name || 'ORDERED_PACKET_PACKAGE.zip', blob: zip }); report('Document edit saved and ordered package rebuilt.', 'success'); } catch (error) { report(`Package rebuild failed: ${errorMessage(error)}`, 'error'); } }
