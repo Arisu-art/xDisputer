@@ -75,11 +75,12 @@ function displayNameFromIdentity(displayName?: string | null, email?: string | n
 }
 
 function roleLabel(role: ConsoleRole, mode: ConsoleMode) {
-  if (role === 'master') return 'Master account';
+  if (role === 'master') return mode === 'workspace' ? 'Master UI workspace account' : 'Master governance account';
   return mode === 'workspace' ? 'Manager workspace account' : 'Manager operations account';
 }
 
-function surfaceLabel(mode: ConsoleMode) {
+function surfaceLabel(role: ConsoleRole, mode: ConsoleMode) {
+  if (role === 'master') return mode === 'workspace' ? 'UI workspace control' : 'Governance monitoring';
   return mode === 'workspace' ? 'Workspace authoring' : 'Operations monitoring';
 }
 
@@ -117,7 +118,7 @@ export default function AccountMenu({ role, mode, email, displayName, accountLab
       <div className="manager-account-popover-topline"><span>{email || accountLabel}</span><button type="button" className="manager-account-close" aria-label="Close account settings" onClick={() => setOpen(false)}>×</button></div>
       <section className="manager-account-identity-panel"><div className="manager-account-avatar-large" aria-hidden="true">{initial}</div><h2>{resolvedDisplayName}</h2><p>{roleLabel(role, mode)}</p></section>
       <section className="manager-account-function-panel" aria-label="Current account context">
-        <div><strong>Current surface</strong><span>{surfaceLabel(mode)}</span></div>
+        <div><strong>Current surface</strong><span>{surfaceLabel(role, mode)}</span></div>
         <div><strong>Access role</strong><span>{role}</span></div>
         <div><strong>Account email</strong><span>{email || 'Not available'}</span></div>
       </section>
