@@ -8,8 +8,7 @@ import type {
   ComponentIdentity,
   DesignToken,
   SystemCoreSnapshot,
-  WorkspaceContext,
-  WorkspaceContext as ActiveWorkspaceContext
+  WorkspaceContext
 } from './types';
 
 export type SystemCoreInput = {
@@ -29,7 +28,7 @@ export class SystemCore {
   readonly designTokens: DesignTokenRegistry;
   readonly components: ComponentIdentityRegistry;
 
-  private workspaceContext: ActiveWorkspaceContext;
+  private workspaceContext: WorkspaceContext;
 
   constructor(input: SystemCoreInput) {
     this.events = createSystemEventBus();
