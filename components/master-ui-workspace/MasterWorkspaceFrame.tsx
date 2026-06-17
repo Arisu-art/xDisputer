@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import ConsoleNavLink from '../ConsoleNavLink';
-import AccountMenu from '../console/AccountMenu';
+import NotificationBell from '../notifications/NotificationBell';
 
 const workspaceNav = [
   { href: '/master/ui-workspace', label: 'UI Workspace', active: true },
@@ -17,6 +17,10 @@ type Props = {
   children: ReactNode;
 };
 
+function initialFromEmail(email: string) {
+  return (email.trim()[0] || 'm').toLowerCase();
+}
+
 export default function MasterWorkspaceFrame({ email, children }: Props) {
   return <main className="admin-monitor-page native-console master-ui-workspace-route" data-master-workspace-frame="true" data-console-role="master" data-console-mode="workspace">
     <aside className="admin-monitor-sidebar native-console-sidebar master-ui-workspace-sidebar" data-master-workspace-sidebar="true" data-console-sidebar="true">
@@ -31,7 +35,7 @@ export default function MasterWorkspaceFrame({ email, children }: Props) {
       </section>
     </aside>
     <section className="admin-monitor-main native-console-main master-ui-workspace-main" data-console-main="true" data-console-component="MasterWorkspaceMain" data-console-header-grid="true">
-      <AccountMenu role="master" mode="workspace" email={email} accountLabel="Master account" switchTarget="/master" switchTargetLabel="Master Console" />
+      <div className="manager-header-account-dock master-workspace-account-rail" data-manager-account-anchor="header-ratio-grid" data-master-workspace-account-rail="true"><NotificationBell /><div className="manager-header-account-avatar" aria-label="Master account avatar">{initialFromEmail(email)}</div></div>
       <header className="admin-monitor-header native-command-hero master-ui-workspace-hero" data-console-header-primary="true"><div><p>Master workspace</p><h1>UI Workspace.</h1><span>Dedicated master workspace for global controls, UI content, layout behavior, elements, inspection, and publishing.</span></div></header>
       {children}
     </section>
