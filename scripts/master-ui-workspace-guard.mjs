@@ -9,7 +9,14 @@ has('package.json', '"@dnd-kit/core"', 'package.json must install @dnd-kit/core'
 has('package.json', '"@dnd-kit/sortable"', 'package.json must install @dnd-kit/sortable');
 has('package.json', '"@dnd-kit/modifiers"', 'package.json must install @dnd-kit/modifiers');
 has('package.json', '"master-ui-workspace:guard"', 'package.json must expose master UI workspace guard');
+has('components/console/ConsoleShell.tsx', 'resolvedSwitchTarget', 'ConsoleShell must own canonical switch target resolution');
+has('components/console/ConsoleShell.tsx', "return '/master/ui-workspace'", 'master operations bottom switch must target UI workspace');
+has('components/console/ConsoleShell.tsx', "return '/master'", 'master workspace bottom switch must target master console');
+has('components/console/ConsoleShell.tsx', 'Master UI workspace', 'master workspace switch card copy missing');
+has('components/console/ConsoleShell.tsx', 'Switch to UI workspace', 'master governance switch card copy missing');
 has('app/master/ui-workspace/page.tsx', "requireRole('master')", 'master UI workspace must require master role');
+has('app/master/ui-workspace/page.tsx', 'mode={currentMode}', 'master UI workspace route must render in workspace switch mode');
+has('app/master/ui-workspace/page.tsx', 'switchTarget="/master"', 'master UI workspace bottom switch must return to master console');
 has('app/master/ui-workspace/page.tsx', 'MasterHologramWorkspaceShell', 'master UI workspace route must render the workspace shell');
 has('app/master/ui-workspace/loading.tsx', 'ConsoleInstantLoading', 'master UI workspace must use instant loading shell');
 has('app/layout.tsx', "import './master-hologram-workspace.css';", 'root layout must import hologram workspace CSS');
