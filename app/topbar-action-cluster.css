@@ -11,14 +11,15 @@ body[data-theme-contract="xdisputer-unified"] .topbar-action-cluster {
 
 body[data-theme-contract="xdisputer-unified"] .global-topbar-actions-mount {
   position: fixed;
-  top: max(.75rem, env(safe-area-inset-top));
-  right: max(.75rem, env(safe-area-inset-right));
-  z-index: 80;
+  top: -999px;
+  right: -999px;
+  z-index: -1;
   pointer-events: none;
+  opacity: 0;
 }
 
 body[data-theme-contract="xdisputer-unified"] .global-topbar-actions-mount > * {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 body[data-theme-contract="xdisputer-unified"] .topbar-action-cluster > .manager-header-account-dock {
@@ -30,6 +31,14 @@ body[data-theme-contract="xdisputer-unified"] .topbar-action-cluster > .manager-
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
+}
+
+body[data-theme-contract="xdisputer-unified"] .account-rail-action-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .55rem;
+  width: 100%;
 }
 
 body[data-theme-contract="xdisputer-unified"] .topbar-icon-button {
@@ -125,7 +134,7 @@ body[data-theme-contract="xdisputer-unified"] .client-topbar-action-cluster {
 
 @media (max-width: 760px) {
   body[data-theme-contract="xdisputer-unified"] .global-topbar-actions-mount {
-    top: .55rem;
-    right: .55rem;
+    top: -999px;
+    right: -999px;
   }
 }
