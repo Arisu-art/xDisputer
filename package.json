@@ -40,8 +40,8 @@
     "build": "next build",
     "start": "next start",
     "console-shell:guard": "node scripts/console-shell-contract-guard.mjs",
-    "quality:check": "npm run ui-source:guard && npm run console-roadmap:guard && npm run template-execution:guard && npm run manager-template:roadmap && npm run manager-template:db-guard && npm run typecheck && npm run build",
-    "repo:guard": "npm run ui-source:guard && npm run console-roadmap:guard && npm run template-execution:guard && npm run manager-template:roadmap && npm run manager-template:db-guard && npm run typecheck && npm run build",
+    "quality:check": "npm run connections:doctor && npm run ui-source:guard && npm run console-roadmap:guard && npm run template-execution:guard && npm run manager-template:roadmap && npm run manager-template:db-guard && npm run typecheck && npm run build",
+    "repo:guard": "npm run connections:doctor && npm run ui-source:guard && npm run console-roadmap:guard && npm run template-execution:guard && npm run manager-template:roadmap && npm run manager-template:db-guard && npm run typecheck && npm run build",
     "codespace:verify": "npm run repo:guard",
     "manager-template:guard": "npm run template-workspace:guard && npm run template-execution:guard && npm run manager-template:roadmap",
     "manager-template:db-guard": "node scripts/manager-template-database-guard.mjs",
@@ -49,10 +49,11 @@
     "dynamic-template:v2:regression": "node scripts/dynamic-template-v2-regression.mjs",
     "safe:sync": "bash scripts/safe-sync-guard.sh",
     "init:connections": "npm run connections:doctor",
-    "connections:doctor": "node scripts/check-env-contract.mjs",
-    "supabase:doctor": "node scripts/check-env-contract.mjs",
-    "active:sync": "npm run codespace:verify",
-    "active:sync:db": "npm run supabase:doctor && npm run codespace:verify"
+    "connections:doctor": "node scripts/check-env-contract.mjs && npm run connection-inheritance:guard",
+    "connection-inheritance:guard": "node scripts/connector-inheritance-guard.mjs",
+    "supabase:doctor": "npm run connections:doctor",
+    "active:sync": "bash scripts/xdisputer-active-sync.sh",
+    "active:sync:db": "npm run active:sync -- --sync-db --verify"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
