@@ -52,6 +52,20 @@ npm run typecheck
 npm run build
 ```
 
+## Website visible-change test target
+
+After pulling latest `main`, run the console shell guard, the master UI workspace guard, typecheck, build, then start the Next.js dev server on port 3000.
+
+Manual website check:
+
+1. Open the forwarded port for `http://localhost:3000`.
+2. Sign in as a master account.
+3. Open `/master`.
+4. Confirm the sidebar bottom switch shows `Master Console ⇄ UI Workspace`.
+5. Click the switch and confirm it opens `/master/ui-workspace`.
+6. Confirm the UI workspace still shows mode strip, live canvas, draggable edit view, role preview, viewport preview, and inspector.
+7. Click the switch again and confirm it returns to `/master`.
+
 ## Expected result
 
 A master user sees one clear bottom switch mode, `Master Console ⇄ UI Workspace`, while the existing master-only workspace keeps its drag/edit/preview/inspector behavior.
