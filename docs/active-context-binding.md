@@ -15,6 +15,7 @@ _Last updated: 2026-06-15_
 - Supabase packages are installed through `@supabase/ssr` and `@supabase/supabase-js`.
 - Active package scripts now route connection checks through `npm run connections:doctor`.
 - Connection doctor exists at `scripts/check-env-contract.mjs`.
+- Connection inheritance: see `docs/active-connector-inheritance.md`.
 
 ## Active Supabase/RPC layer
 
