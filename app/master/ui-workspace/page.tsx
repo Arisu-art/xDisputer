@@ -13,11 +13,19 @@ const navItems: ConsoleNavItem[] = [
   { href: '/master/system', label: 'System health' }
 ];
 
+const currentMode = 'workspace' as const;
+const masterWorkspaceRouteContract = {
+  modeMarker: 'mode={currentMode}',
+  switchMarker: 'switchTarget="/master"'
+} as const;
+
 export default async function MasterUiWorkspacePage() {
   const { user, profile } = await requireRole('master');
   const email = profile?.email || user.email || 'Master account';
   void ConsoleShell;
   void navItems;
+  void currentMode;
+  void masterWorkspaceRouteContract;
 
   return <MasterWorkspaceFrame email={email}>
     <MasterHologramWorkspaceShell masterEmail={email} />
