@@ -1,6 +1,6 @@
 # Template Contract Activation Tracker
 
-_Last updated: 2026-06-13 Asia/Manila_
+_Last updated: 2026-06-17 Asia/Tokyo_
 
 ## Goal
 
@@ -15,6 +15,8 @@ Preserve user-uploaded template layout while making generated output consistent 
 - `app/api/template-assets/route.ts` now inspects uploaded template contracts, blocks `BLOCKED` contracts before storage, computes `content_hash`, stores `validation_json`, detects duplicate active uploads, and archives superseded versions instead of immediately deleting them.
 - `app/api/template-assets/manifest/route.ts` now resolves one latest active template per owner + round + slot and reports duplicate active slot diagnostics.
 - `lib/generation-manifest.ts` now supports source hash, source summary, template provenance, template validation state, template versions, content hashes, outputs, warnings, and packet order.
+- `components/LetterGeneratorWorkspaceV2.tsx` now hydrates browser generation manifests from effective Supabase-backed letter references and exhibit templates.
+- `scripts/template-provenance-workspace-guard.mjs` guards that workspace manifest provenance keeps asset ID, version, content hash, validation JSON, effective references, and effective templates wired.
 - `supabase/migrations/20260613062000_template_asset_active_slot_guard.sql` adds database-level duplicate active-slot cleanup plus a unique active-slot guard.
 - `supabase/migrations/20260613062500_template_asset_retention_candidates.sql` adds a read-only retention candidate view for archived templates beyond the newest two archived versions per slot.
 - `app/api/template-assets/retention/route.ts` exposes read-only owner-scoped retention candidates for future cleanup UI.
@@ -30,7 +32,8 @@ Preserve user-uploaded template layout while making generated output consistent 
 | 5 | Coded | Latest-active slot resolver | Manifest hydration now selects the latest active asset per owner + round + slot. |
 | 6 | Mostly coded | Restore-window retention | Superseded versions are archived; retention candidates are visible. Destructive cleanup remains manual/pending. |
 | 7 | Coded | Preflight contract checks | Generation now blocks active templates with missing canonical fields or unknown required fields. |
-| 8 | Partially coded | Generation manifest | Builder records source hash and template provenance; workspace component still needs effective asset metadata wiring. |
+| 8 | Coded | Generation manifest | Browser ZIP and persisted generation manifests receive effective Supabase-backed template metadata. |
+| 9 | Coded | Workspace provenance guard | Repo checks can now verify the browser workspace keeps template provenance wired. |
 
 ## Production rules
 
@@ -41,6 +44,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 5. User-owned templates must never bleed across users or rounds.
 6. Generation should either produce deterministic output or block with a clear reason.
 7. Storage should keep active template plus archived metadata; destructive cleanup should run only through an explicit manual or database-backed retention policy.
+8. Browser-generated manifests must preserve Supabase-backed template proof when manager template assets override local browser templates.
 
 ## What-if matrix
 
@@ -57,7 +61,7 @@ Preserve user-uploaded template layout while making generated output consistent 
 | New upload is invalid | Keep previous active version. | Coded because invalid upload is blocked before storage/insert. |
 | Multiple active rows exist for one slot | Manifest chooses latest active; SQL migration normalizes duplicates and adds a unique active-slot guard. | Coded. |
 | Old active template lacks contract metadata | Generation preflight warns and asks for re-upload/rescan before production use. | Coded. |
-| Generated output must be explainable later | Manifest builder records source and template proof fields. | Partially coded. |
+| Generated output must be explainable later | Manifest builder records source and template proof fields. | Coded and guarded. |
 | Many old versions exist | Archive superseded versions; retention view/API shows cleanup candidates beyond the newest two archived versions per slot. | Mostly coded. |
 
 ## Expected implementation outcome
@@ -75,4 +79,4 @@ canonical source packet
 
 ## Next coding step
 
-Finish workspace manifest wiring so generated manifests receive effective template metadata from Supabase-backed templates. Atomic activation RPC and destructive storage cleanup remain optional Supabase hardening steps.
+Atomic activation RPC and destructive storage cleanup remain optional Supabase hardening steps. The browser workspace manifest wiring is now coded and protected by `scripts/template-provenance-workspace-guard.mjs`.
