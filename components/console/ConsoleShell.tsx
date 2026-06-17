@@ -41,6 +41,8 @@ type SwitchModeContract = {
   icon: string;
 };
 
+const MASTER_CONSOLE_UI_WORKSPACE_LABEL = 'Master Console ⇄ UI Workspace';
+
 function shellModeClass(role: ConsoleShellRole, mode: ConsoleShellMode) {
   if (role === 'manager' && mode === 'workspace') return 'manager-template-workspace';
   if (role === 'master' && mode === 'workspace') return 'master-ops-console master-hologram-switch-workspace';
@@ -59,8 +61,8 @@ function resolvedSwitchTarget(role: ConsoleShellRole, mode: ConsoleShellMode, fa
 }
 
 function resolvedSwitchLabel(role: ConsoleShellRole, mode: ConsoleShellMode, fallback: string) {
-  if (role === 'master' && mode === 'operations') return 'UI workspace';
-  if (role === 'master' && mode === 'workspace') return 'Master console';
+  if (role === 'master' && mode === 'operations') return 'UI Workspace';
+  if (role === 'master' && mode === 'workspace') return 'Master Console';
   return fallback;
 }
 
@@ -72,9 +74,9 @@ function switchModeContract(role: ConsoleShellRole, mode: ConsoleShellMode, swit
     return { currentLabel: 'Operations monitoring', targetLabel: switchTargetLabel || 'Manager workspace', intent: 'Switch to authoring', helper: 'Open template library, mapping, validation, release, and automation tools.', icon: 'switch' };
   }
   if (role === 'master' && mode === 'workspace') {
-    return { currentLabel: 'Master UI workspace', targetLabel: switchTargetLabel || 'Master console', intent: 'Return to master console', helper: 'Go back to monitoring, account control, workspace access, reports, audit, and system health.', icon: 'back' };
+    return { currentLabel: MASTER_CONSOLE_UI_WORKSPACE_LABEL, targetLabel: switchTargetLabel || 'Master Console', intent: 'Return to Master Console', helper: 'Go back to monitoring, account control, workspace access, reports, audit, and system health.', icon: 'back' };
   }
-  return { currentLabel: 'Master governance', targetLabel: switchTargetLabel || 'UI workspace', intent: 'Open UI workspace', helper: 'Switch to the hologram workspace for UI, UX, navigation, theme, preview, and publish planning.', icon: 'down-right' };
+  return { currentLabel: MASTER_CONSOLE_UI_WORKSPACE_LABEL, targetLabel: switchTargetLabel || 'UI Workspace', intent: 'Switch to UI workspace', helper: 'Open the workspace for UI, navigation, theme, preview, and planning.', icon: 'down-right' };
 }
 
 function switchIcon(value: string) {
@@ -91,7 +93,7 @@ export default function ConsoleShell({ role, mode, email, accountName, accountLa
   const finalSwitchLabel = resolvedSwitchLabel(role, mode, switchTargetLabel);
   const switchMode = switchModeContract(role, mode, finalSwitchLabel);
 
-  return <main className={shellClassName} data-console-shell="true" data-console-component="ConsoleShell" data-console-role={role} data-console-mode={mode} data-console-layout-ratio="75/25" data-console-contract={navContract} data-master-console-shell={role === 'master' ? 'true' : undefined} data-manager-console-mode={role === 'manager' ? mode : undefined} data-master-console-mode={role === 'master' ? mode : undefined}>
+  return <main className={shellClassName} data-console-shell="true" data-console-component="ConsoleShell" data-console-role={role} data-console-mode={mode} data-console-layout-ratio="75/25" data-console-contract={navContract} data-master-console-shell={role === 'master' ? 'true' : undefined} data-manager-console-mode={role === 'manager' ? mode : undefined} data-master-console-mode={role === 'master' ? mode : undefined} data-master-console-ui-workspace={role === 'master' ? MASTER_CONSOLE_UI_WORKSPACE_LABEL : undefined}>
     <aside className="admin-monitor-sidebar native-console-sidebar" data-layout-contract="console-sidebar" data-console-sidebar="true" data-console-component="ConsoleSidebar">
       <div className="admin-monitor-brand"><span>xD</span><div><strong>{brandTitle}</strong><small>{brandSubtitle}</small></div></div>
       <div className="admin-sidebar-section-title">{sidebarSectionTitle}</div>
@@ -100,9 +102,9 @@ export default function ConsoleShell({ role, mode, email, accountName, accountLa
           ? <ConsoleNavLink key={item.href} className={item.active ? 'active' : ''} href={item.href}>{item.label}</ConsoleNavLink>
           : <a key={item.href} className={item.active ? 'active' : ''} href={item.href}>{item.label}</a>)}
       </nav>
-      <section className="console-sidebar-mode-switch" data-console-mode-switch="sidebar-bottom" data-console-mode-switch-role={role} data-console-mode-switch-current={mode} data-console-mode-switch-target={finalSwitchTarget} data-console-mode-switch-target-label={switchMode.targetLabel} data-master-workspace-switch={role === 'master' ? 'true' : undefined} aria-label="Switch console mode">
+      <section className="console-sidebar-mode-switch" data-console-mode-switch="sidebar-bottom" data-console-mode-switch-role={role} data-console-mode-switch-current={mode} data-console-mode-switch-target={finalSwitchTarget} data-console-mode-switch-target-label={switchMode.targetLabel} data-master-workspace-switch={role === 'master' ? 'true' : undefined} data-master-workspace-switch-label={role === 'master' ? MASTER_CONSOLE_UI_WORKSPACE_LABEL : undefined} aria-label={role === 'master' ? MASTER_CONSOLE_UI_WORKSPACE_LABEL : 'Switch console mode'}>
         <div><span>{switchMode.currentLabel}</span><strong>{switchMode.intent}</strong><small>{switchMode.helper}</small></div>
-        <ConsoleNavLink href={finalSwitchTarget} className="console-sidebar-mode-switch-button" data-console-canonical-switch="true" data-console-switch-visible-slot="sidebar-bottom" data-console-switch-role={role} data-console-switch-current={mode} data-console-switch-target={finalSwitchTarget} data-console-switch-target-label={switchMode.targetLabel} data-manager-canonical-switch={role === 'manager' ? 'true' : undefined} data-manager-switch-visible-slot="sidebar-bottom" data-manager-switch-target={role === 'manager' ? finalSwitchTarget : undefined} data-manager-switch-target-label={role === 'manager' ? switchMode.targetLabel : undefined} data-master-canonical-switch={role === 'master' ? 'true' : undefined} data-master-switch-visible-slot="sidebar-bottom" data-master-switch-target={role === 'master' ? finalSwitchTarget : undefined} data-master-switch-target-label={role === 'master' ? switchMode.targetLabel : undefined}><span>{switchMode.targetLabel}</span><em aria-hidden="true">{switchIcon(switchMode.icon)}</em></ConsoleNavLink>
+        <ConsoleNavLink href={finalSwitchTarget} className="console-sidebar-mode-switch-button" data-console-canonical-switch="true" data-console-switch-visible-slot="sidebar-bottom" data-console-switch-role={role} data-console-switch-current={mode} data-console-switch-target={finalSwitchTarget} data-console-switch-target-label={switchMode.targetLabel} data-manager-canonical-switch={role === 'manager' ? 'true' : undefined} data-manager-switch-visible-slot="sidebar-bottom" data-manager-switch-target={role === 'manager' ? finalSwitchTarget : undefined} data-manager-switch-target-label={role === 'manager' ? switchMode.targetLabel : undefined} data-master-canonical-switch={role === 'master' ? 'true' : undefined} data-master-switch-visible-slot="sidebar-bottom" data-master-switch-target={role === 'master' ? finalSwitchTarget : undefined} data-master-switch-target-label={role === 'master' ? switchMode.targetLabel : undefined} data-master-console-ui-workspace-label={role === 'master' ? MASTER_CONSOLE_UI_WORKSPACE_LABEL : undefined}><span>{switchMode.targetLabel}</span><em aria-hidden="true">{switchIcon(switchMode.icon)}</em></ConsoleNavLink>
       </section>
     </aside>
     <section className="admin-monitor-main native-console-main" data-console-main="true" data-console-component="ConsoleMain" data-console-header-grid="true" data-console-has-header={header ? 'true' : 'false'}>
