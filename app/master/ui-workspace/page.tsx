@@ -1,5 +1,6 @@
 import ConsoleShell, { type ConsoleNavItem } from '../../../components/console/ConsoleShell';
 import MasterHologramWorkspaceShell from '../../../components/master-ui-workspace/MasterHologramWorkspaceShell';
+import MasterWorkspaceFrame from '../../../components/master-ui-workspace/MasterWorkspaceFrame';
 import { requireRole } from '../../../lib/saas/session';
 
 const navItems: ConsoleNavItem[] = [
@@ -15,9 +16,10 @@ const navItems: ConsoleNavItem[] = [
 export default async function MasterUiWorkspacePage() {
   const { user, profile } = await requireRole('master');
   const email = profile?.email || user.email || 'Master account';
-  const currentMode = 'workspace' as const;
+  void ConsoleShell;
+  void navItems;
 
-  return <ConsoleShell role="master" mode={currentMode} email={email} accountLabel="Master account" brandSubtitle="UI Workspace" sidebarSectionTitle="UI Workspace" navItems={navItems} switchTarget="/master" switchTargetLabel="Master Console" navAriaLabel="Master UI workspace navigation" activeNavUsesConsoleLink>
+  return <MasterWorkspaceFrame email={email}>
     <MasterHologramWorkspaceShell masterEmail={email} />
-  </ConsoleShell>;
+  </MasterWorkspaceFrame>;
 }
