@@ -14,9 +14,10 @@ const navItems: ConsoleNavItem[] = [
 
 export default async function MasterUiWorkspacePage() {
   const { user, profile } = await requireRole('master');
-  const email = profile?.email || user.email || 'Master user';
+  const email = profile?.email || user.email || 'Master account';
+  const currentMode = 'workspace' as const;
 
-  return <ConsoleShell role="master" mode="operations" email={email} accountLabel="Master user" brandSubtitle="UI workspace" sidebarSectionTitle="Governance" navItems={navItems} switchTarget="/admin" switchTargetLabel="Manager console" navAriaLabel="Master navigation" activeNavUsesConsoleLink>
+  return <ConsoleShell role="master" mode={currentMode} email={email} accountLabel="Master account" brandSubtitle="UI workspace" sidebarSectionTitle="Workspace" navItems={navItems} switchTarget="/master" switchTargetLabel="Master console" navAriaLabel="Master UI workspace navigation" activeNavUsesConsoleLink>
     <MasterHologramWorkspaceShell masterEmail={email} />
   </ConsoleShell>;
 }
