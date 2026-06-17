@@ -199,6 +199,7 @@ body {
    ============================================================ */
 
 [data-layout-contract="dataset-card"],
+.access-workflow-grid,
 .single-header-dataset .admin-monitor-card,
 .native-operation-card {
   display: grid !important;
