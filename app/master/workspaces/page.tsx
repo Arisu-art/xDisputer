@@ -35,6 +35,7 @@ const masterWorkspaceNavItems = [
   { href: '/master', label: 'Monitoring' },
   { href: '/master/accounts', label: 'All accounts' },
   { href: '/master/workspaces', label: 'Workspaces', active: true },
+  { href: '/master/ui-workspace', label: 'UI workspace' },
   { href: '/master/reports', label: 'Reports' },
   { href: '/master/audit', label: 'Audit log' },
   { href: '/master/system', label: 'System health' }
@@ -51,7 +52,7 @@ export default async function MasterWorkspacesPage({ searchParams }: PageProps) 
   const nextHref = page < pageCount ? `${base}${workspaceDirectoryQueryString({ ...filters, page: page + 1 })}` : null;
   const email = profile?.email || user.email || 'Master account';
 
-  return <ConsoleShell role="master" mode="operations" email={email} accountLabel="Master account" brandSubtitle="Workspace access" sidebarSectionTitle="Operations" navItems={masterWorkspaceNavItems} switchTarget="/admin" switchTargetLabel="Manager console" navAriaLabel="Master workspace navigation" activeNavUsesConsoleLink>
+  return <ConsoleShell role="master" mode="operations" email={email} accountLabel="Master account" brandSubtitle="Workspace access" sidebarSectionTitle="Operations" navItems={masterWorkspaceNavItems} switchTarget="/master/ui-workspace" switchTargetLabel="UI workspace" navAriaLabel="Master workspace navigation" activeNavUsesConsoleLink>
     <header className="admin-monitor-header native-command-hero master-compact-hero">
       <div><p>Workspace access</p><h1>Tenant-scoped account control.</h1><span>Inspect account visibility through the Phase 11 workspace membership and assignment framework.</span></div>
     </header>
