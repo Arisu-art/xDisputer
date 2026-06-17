@@ -57,7 +57,7 @@
   --x-letter-tight: -.055em;
   --x-letter-label: .16em;
 
-  /* Motion tokens. Keep transitions targeted; never use transition-property: all. */
+  /* Motion tokens. Keep transitions targeted; do not animate every CSS property. */
   --x-transition-fast: 160ms ease;
   --x-transition-base: 220ms ease;
   --x-transition-slow: 320ms cubic-bezier(.2, .8, .2, 1);
