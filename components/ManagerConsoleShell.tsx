@@ -18,12 +18,12 @@ type Props = {
 
 function targetFor(mode: ConsoleShellMode, role: ConsoleShellRole) {
   if (mode === 'workspace') return role === 'master' ? '/master' : '/admin';
-  return '/manager-workspace';
+  return role === 'master' ? '/master/ui-workspace' : '/manager-workspace';
 }
 
 function labelFor(mode: ConsoleShellMode, role: ConsoleShellRole) {
   if (mode === 'workspace') return role === 'master' ? 'Master console' : 'Operations console';
-  return 'Manager workspace';
+  return role === 'master' ? 'UI workspace' : 'Manager workspace';
 }
 
 export default function ManagerConsoleShell({ role = 'manager', mode, email, accountName, accountLabel, navItems, className, header, children }: Props) {
@@ -34,13 +34,13 @@ export default function ManagerConsoleShell({ role = 'manager', mode, email, acc
     email={email}
     accountName={accountName}
     accountLabel={accountLabel}
-    brandSubtitle={workspaceMode ? 'Manager workspace' : role === 'master' ? 'Master console' : 'Manager console'}
+    brandSubtitle={workspaceMode ? role === 'master' ? 'UI workspace' : 'Manager workspace' : role === 'master' ? 'Master console' : 'Manager console'}
     sidebarSectionTitle={workspaceMode ? 'Workspace' : 'Operations'}
     navItems={navItems}
     switchTarget={targetFor(mode, role)}
     switchTargetLabel={labelFor(mode, role)}
     className={className}
-    navAriaLabel={workspaceMode ? 'Template workspace navigation' : 'Manager operations navigation'}
+    navAriaLabel={workspaceMode ? role === 'master' ? 'Master UI workspace navigation' : 'Template workspace navigation' : role === 'master' ? 'Master operations navigation' : 'Manager operations navigation'}
     navContract={MANAGER_SWITCH_CONTRACT_VERSION}
     activeNavUsesConsoleLink
     header={header}
