@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "system-core:guard": "node scripts/system-core-guard.mjs",
     "no-autowrite:guard": "node scripts/no-autowrite-ui-guard.mjs",
     "ui-shell:registry": "node scripts/ui-shell-registry-guard.mjs",
     "ui-intelligence:guard": "node scripts/ui-intelligence-guard.mjs",
