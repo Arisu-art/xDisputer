@@ -33,12 +33,17 @@ body[data-theme-contract="xdisputer-unified"] .topbar-action-cluster > .manager-
   box-shadow: none !important;
 }
 
-body[data-theme-contract="xdisputer-unified"] .account-rail-action-row {
+body[data-theme-contract="xdisputer-unified"] .account-rail-action-row,
+body[data-theme-contract="xdisputer-unified"] .master-workspace-account-rail {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
   gap: .55rem;
   width: 100%;
+}
+
+body[data-theme-contract="xdisputer-unified"] .master-workspace-account-rail {
+  padding: .85rem !important;
 }
 
 body[data-theme-contract="xdisputer-unified"] .topbar-icon-button {
