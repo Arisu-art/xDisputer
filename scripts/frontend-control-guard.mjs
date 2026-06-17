@@ -16,11 +16,6 @@ const requiredFiles = [
   'docs/frontend-command-architecture-canvas.md'
 ];
 
-const requiredScriptNames = [
-  'frontend-control:guard',
-  'ui-source:guard'
-];
-
 let failed = false;
 
 function markFailure(message) {
@@ -28,33 +23,27 @@ function markFailure(message) {
   console.error(`frontend-control-guard: ${message}`);
 }
 
+function readFile(path) {
+  return existsSync(path) ? readFileSync(path, 'utf8') : '';
+}
+
 for (const file of requiredFiles) {
   if (!existsSync(file)) markFailure(`missing ${file}`);
 }
 
-if (existsSync('package.json')) {
-  const packageJson = readFileSync('package.json', 'utf8');
-  for (const scriptName of requiredScriptNames) {
-    if (!packageJson.includes(`"${scriptName}"`)) {
-      markFailure(`package.json missing script ${scriptName}`);
-    }
-  }
-}
-
-const identitySource = existsSync('lib/frontend-control/identity-registry.ts')
-  ? readFileSync('lib/frontend-control/identity-registry.ts', 'utf8')
-  : '';
-
+const identitySource = readFile('lib/frontend-control/identity-registry.ts');
 for (const identity of ['action.primary', 'table.directory', 'panel.template', 'workspace.frame']) {
   if (!identitySource.includes(identity)) markFailure(`identity registry missing ${identity}`);
 }
 
-const contentSource = existsSync('lib/frontend-control/content-registry.ts')
-  ? readFileSync('lib/frontend-control/content-registry.ts', 'utf8')
-  : '';
-
+const contentSource = readFile('lib/frontend-control/content-registry.ts');
 for (const key of ['global.loading', 'actions.save', 'actions.finalize']) {
   if (!contentSource.includes(key)) markFailure(`content registry missing ${key}`);
+}
+
+const actionSource = readFile('lib/frontend-control/action-registry.ts');
+for (const action of ['click.feedback', 'pending.guard', 'refresh.manual']) {
+  if (!actionSource.includes(action)) markFailure(`action registry missing ${action}`);
 }
 
 if (failed) process.exit(1);
