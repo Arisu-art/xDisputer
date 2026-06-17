@@ -52,6 +52,18 @@ function join(...tokens: Array<string | false | null | undefined>) {
   return tokens.filter(Boolean).join(' ');
 }
 
+function resolvedSwitchTarget(role: ConsoleShellRole, mode: ConsoleShellMode, fallback: string) {
+  if (role === 'master' && mode === 'operations') return '/master/ui-workspace';
+  if (role === 'master' && mode === 'workspace') return '/master';
+  return fallback;
+}
+
+function resolvedSwitchLabel(role: ConsoleShellRole, mode: ConsoleShellMode, fallback: string) {
+  if (role === 'master' && mode === 'operations') return 'UI workspace';
+  if (role === 'master' && mode === 'workspace') return 'Master console';
+  return fallback;
+}
+
 function switchModeContract(role: ConsoleShellRole, mode: ConsoleShellMode, switchTargetLabel: string): SwitchModeContract {
   if (role === 'manager' && mode === 'workspace') {
     return { currentLabel: 'Workspace authoring', targetLabel: switchTargetLabel || 'Operations console', intent: 'Switch to monitoring', helper: 'Review clients, outputs, access, reports, and audit queues.', icon: 'up-right' };
@@ -75,7 +87,9 @@ function switchIcon(value: string) {
 export default function ConsoleShell({ role, mode, email, accountName, accountLabel, brandTitle = 'xDisputer', brandSubtitle, sidebarSectionTitle, navItems, switchTarget, switchTargetLabel, className, navAriaLabel, navContract = 'console-shell-v2', activeNavUsesConsoleLink = false, header, children }: Props) {
   const visibleNavItems = navItems.filter((item) => item.kind !== 'workspace-switch');
   const shellClassName = join('admin-monitor-page native-console', shellModeClass(role, mode), className);
-  const switchMode = switchModeContract(role, mode, switchTargetLabel);
+  const finalSwitchTarget = resolvedSwitchTarget(role, mode, switchTarget);
+  const finalSwitchLabel = resolvedSwitchLabel(role, mode, switchTargetLabel);
+  const switchMode = switchModeContract(role, mode, finalSwitchLabel);
 
   return <main className={shellClassName} data-console-shell="true" data-console-component="ConsoleShell" data-console-role={role} data-console-mode={mode} data-console-layout-ratio="75/25" data-console-contract={navContract} data-master-console-shell={role === 'master' ? 'true' : undefined} data-manager-console-mode={role === 'manager' ? mode : undefined} data-master-console-mode={role === 'master' ? mode : undefined}>
     <aside className="admin-monitor-sidebar native-console-sidebar" data-layout-contract="console-sidebar" data-console-sidebar="true" data-console-component="ConsoleSidebar">
@@ -88,11 +102,11 @@ export default function ConsoleShell({ role, mode, email, accountName, accountLa
       </nav>
       <section className="console-sidebar-mode-switch" data-console-mode-switch="sidebar-bottom" data-console-mode-switch-role={role} data-console-mode-switch-current={mode} aria-label="Switch console mode">
         <div><span>{switchMode.currentLabel}</span><strong>{switchMode.intent}</strong><small>{switchMode.helper}</small></div>
-        <ConsoleNavLink href={switchTarget} className="console-sidebar-mode-switch-button" data-manager-canonical-switch="true" data-manager-switch-visible-slot="sidebar-bottom" data-manager-switch-target={switchTarget} data-manager-switch-target-label={switchMode.targetLabel}><span>{switchMode.targetLabel}</span><em aria-hidden="true">{switchIcon(switchMode.icon)}</em></ConsoleNavLink>
+        <ConsoleNavLink href={finalSwitchTarget} className="console-sidebar-mode-switch-button" data-manager-canonical-switch="true" data-manager-switch-visible-slot="sidebar-bottom" data-manager-switch-target={finalSwitchTarget} data-manager-switch-target-label={switchMode.targetLabel}><span>{switchMode.targetLabel}</span><em aria-hidden="true">{switchIcon(switchMode.icon)}</em></ConsoleNavLink>
       </section>
     </aside>
     <section className="admin-monitor-main native-console-main" data-console-main="true" data-console-component="ConsoleMain" data-console-header-grid="true" data-console-has-header={header ? 'true' : 'false'}>
-      <AccountMenu role={role} mode={mode} email={email} displayName={accountName} accountLabel={accountLabel} switchTarget={switchTarget} switchTargetLabel={switchTargetLabel} />
+      <AccountMenu role={role} mode={mode} email={email} displayName={accountName} accountLabel={accountLabel} switchTarget={finalSwitchTarget} switchTargetLabel={finalSwitchLabel} />
       {header ? <ConsoleHeader {...header} /> : null}
       {children}
     </section>
