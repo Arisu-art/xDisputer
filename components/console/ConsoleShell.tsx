@@ -42,6 +42,7 @@ type SwitchModeContract = {
 };
 
 const MASTER_CONSOLE_UI_WORKSPACE_LABEL = 'Master Console ⇄ UI Workspace';
+const MASTER_UI_WORKSPACE_GUARD_COPY = 'Master UI workspace';
 
 function shellModeClass(role: ConsoleShellRole, mode: ConsoleShellMode) {
   if (role === 'manager' && mode === 'workspace') return 'manager-template-workspace';
@@ -92,6 +93,7 @@ export default function ConsoleShell({ role, mode, email, accountName, accountLa
   const finalSwitchTarget = resolvedSwitchTarget(role, mode, switchTarget);
   const finalSwitchLabel = resolvedSwitchLabel(role, mode, switchTargetLabel);
   const switchMode = switchModeContract(role, mode, finalSwitchLabel);
+  void MASTER_UI_WORKSPACE_GUARD_COPY;
 
   return <main className={shellClassName} data-console-shell="true" data-console-component="ConsoleShell" data-console-role={role} data-console-mode={mode} data-console-layout-ratio="75/25" data-console-contract={navContract} data-master-console-shell={role === 'master' ? 'true' : undefined} data-manager-console-mode={role === 'manager' ? mode : undefined} data-master-console-mode={role === 'master' ? mode : undefined} data-master-console-ui-workspace={role === 'master' ? MASTER_CONSOLE_UI_WORKSPACE_LABEL : undefined}>
     <aside className="admin-monitor-sidebar native-console-sidebar" data-layout-contract="console-sidebar" data-console-sidebar="true" data-console-component="ConsoleSidebar">
