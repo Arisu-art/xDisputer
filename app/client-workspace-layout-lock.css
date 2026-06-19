@@ -10,6 +10,8 @@
   --client-workspace-content-max: 1320px;
   --client-workspace-page-pad: clamp(20px, 2.1vw, 32px);
   --client-workspace-gap: clamp(12px, 1.3vw, 18px);
+  --client-clean-line: rgba(148, 163, 184, .24);
+  --client-clean-shadow: 0 22px 64px rgba(15, 23, 42, .08);
 }
 
 body:has(.app-shell > .sidebar + .main-area) {
@@ -59,11 +61,73 @@ body:has(.app-shell > .sidebar + .main-area) {
   margin: 0 !important;
   padding: var(--client-workspace-page-pad) !important;
   overflow-x: clip !important;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(37, 99, 235, .08), transparent 34%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%) !important;
 }
 
 .app-shell:has(> .sidebar + .main-area) .header {
-  width: min(100%, var(--client-workspace-content-max));
-  margin-inline: auto;
+  width: min(100%, var(--client-workspace-content-max)) !important;
+  min-height: 118px !important;
+  margin: 0 auto clamp(18px, 1.6vw, 24px) !important;
+  padding: 22px clamp(340px, 28vw, 440px) 22px 28px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px) !important;
+  align-items: center !important;
+  gap: 20px !important;
+  border: 1px solid var(--client-clean-line) !important;
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, .94) !important;
+  box-shadow: var(--client-clean-shadow) !important;
+  overflow: visible !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .header h1 {
+  margin: 0 !important;
+  font-size: clamp(30px, 2.4vw, 44px) !important;
+  line-height: .96 !important;
+  letter-spacing: -.06em !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .header .eyebrow {
+  margin-bottom: 7px !important;
+  letter-spacing: .18em !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .workspace-header-actions {
+  grid-column: 2 !important;
+  min-width: 0 !important;
+  align-self: center !important;
+  justify-self: stretch !important;
+  padding-top: 0 !important;
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .header .output-limit-reset-chip {
+  min-height: 76px !important;
+  width: 100% !important;
+  max-width: 300px !important;
+  padding: 11px 12px !important;
+  border-radius: 18px !important;
+  grid-template-columns: minmax(0, 1fr) minmax(74px, .6fr) !important;
+  gap: 9px !important;
+  box-shadow: none !important;
+  background: rgba(239, 246, 255, .76) !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .header .output-limit-reset-chip span,
+.app-shell:has(> .sidebar + .main-area) .header .output-limit-reset-chip small {
+  font-size: 9px !important;
+  line-height: 1.15 !important;
+  letter-spacing: .08em !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .header .output-limit-reset-chip strong {
+  font-size: clamp(15px, 1.05vw, 19px) !important;
+  line-height: .95 !important;
+  letter-spacing: -.04em !important;
+  overflow-wrap: normal !important;
 }
 
 .app-shell:has(> .sidebar + .main-area) .saas-dashboard-workspace,
@@ -89,16 +153,19 @@ body:has(.app-shell > .sidebar + .main-area) {
 }
 
 .app-shell:has(> .sidebar + .main-area) .dashboard-command-card {
-  min-height: 0 !important;
-  padding: clamp(20px, 2.4vw, 28px) !important;
-  border-radius: 24px !important;
+  min-height: 210px !important;
+  padding: clamp(24px, 2.6vw, 34px) !important;
+  border-radius: 28px !important;
+  border: 1px solid rgba(37, 99, 235, .22) !important;
+  box-shadow: 0 24px 70px rgba(37, 99, 235, .08) !important;
+  overflow: hidden !important;
 }
 
 .app-shell:has(> .sidebar + .main-area) .dashboard-command-header-row {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 370px) !important;
-  align-items: stretch !important;
-  gap: clamp(14px, 1.7vw, 22px) !important;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px) !important;
+  align-items: center !important;
+  gap: clamp(18px, 2.2vw, 30px) !important;
 }
 
 .app-shell:has(> .sidebar + .main-area) .dashboard-command-header-row > div {
@@ -107,9 +174,9 @@ body:has(.app-shell > .sidebar + .main-area) {
 
 .app-shell:has(> .sidebar + .main-area) .dashboard-command-card h2 {
   max-width: 760px !important;
-  font-size: clamp(34px, 4vw, 52px) !important;
-  line-height: .94 !important;
-  letter-spacing: -.075em !important;
+  font-size: clamp(38px, 3.8vw, 58px) !important;
+  line-height: .92 !important;
+  letter-spacing: -.08em !important;
   overflow-wrap: normal !important;
 }
 
@@ -131,33 +198,32 @@ body:has(.app-shell > .sidebar + .main-area) {
   min-height: 52px !important;
 }
 
-.app-shell:has(> .sidebar + .main-area) .output-limit-reset-chip {
-  min-height: 118px !important;
-  padding: 16px 18px !important;
-  border-radius: 22px !important;
-  grid-template-columns: minmax(0, 1fr) minmax(118px, .82fr) !important;
-  gap: 12px !important;
-}
-
-.app-shell:has(> .sidebar + .main-area) .output-limit-reset-chip strong {
-  font-size: clamp(20px, 1.65vw, 27px) !important;
-  line-height: .98 !important;
-}
-
-.app-shell:has(> .sidebar + .main-area) .output-limit-chip-timer strong {
-  font-size: clamp(22px, 1.9vw, 30px) !important;
+.app-shell:has(> .sidebar + .main-area) .dashboard-command-card .output-limit-reset-chip {
+  min-height: 112px !important;
+  max-width: 360px !important;
+  justify-self: end !important;
+  align-self: start !important;
 }
 
 .app-shell:has(> .sidebar + .main-area) .dashboard-operational-metrics {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   gap: var(--client-workspace-gap) !important;
+  margin-top: 0 !important;
 }
 
 .app-shell:has(> .sidebar + .main-area) .dashboard-operational-metrics article {
   min-height: 108px !important;
   padding: 18px 22px !important;
   border-radius: 20px !important;
+}
+
+.app-shell:has(> .sidebar + .main-area) .dashboard-operational-metrics article,
+.app-shell:has(> .sidebar + .main-area) .dashboard-case-portfolio,
+.app-shell:has(> .sidebar + .main-area) .panel {
+  border: 1px solid rgba(148, 163, 184, .24) !important;
+  background: rgba(255, 255, 255, .94) !important;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, .055) !important;
 }
 
 .app-shell:has(> .sidebar + .main-area) .dashboard-case-portfolio {
@@ -171,18 +237,28 @@ body:has(.app-shell > .sidebar + .main-area) {
 }
 
 .app-shell:has(> .sidebar + .main-area) .compact-case-row {
-  min-height: 72px !important;
+  min-height: 68px !important;
   padding: 12px 14px !important;
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(130px, auto) minmax(130px, 180px) !important;
+  grid-template-columns: minmax(0, 1fr) auto minmax(128px, 176px) !important;
   align-items: center !important;
   gap: 12px !important;
   border-radius: 16px !important;
+  background: rgba(255, 255, 255, .92) !important;
 }
 
 .app-shell:has(> .sidebar + .main-area) .compact-case-row .secondary-button {
   width: 100% !important;
   min-height: 42px !important;
+}
+
+@media (min-width: 1100px) {
+  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card {
+    top: clamp(116px, 8vw, 142px) !important;
+    right: clamp(36px, 3vw, 60px) !important;
+    width: clamp(270px, 22vw, 350px) !important;
+    z-index: 90 !important;
+  }
 }
 
 @media (max-width: 1280px) {
@@ -196,6 +272,17 @@ body:has(.app-shell > .sidebar + .main-area) {
 
   .app-shell:has(> .sidebar + .main-area) .output-limit-reset-chip {
     max-width: 720px !important;
+  }
+}
+
+@media (max-width: 1099px) {
+  body[data-theme-contract="xdisputer-unified"] .app-shell:has(> .sidebar + .main-area) .header {
+    padding: 18px !important;
+    min-height: auto !important;
+  }
+
+  body[data-theme-contract="xdisputer-unified"] .app-shell:has(> .sidebar + .main-area) .workspace-header-actions {
+    padding-top: 0 !important;
   }
 }
 
