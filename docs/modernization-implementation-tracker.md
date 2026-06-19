@@ -30,6 +30,7 @@ Modernize boundaries first. Do not rewrite the domain workflow first. Keep curre
 | Admin server-state loader | coded | `src/features/admin/modernization-status-client.ts` |
 | Generation workflow rail | coded | `src/features/generation/components/WorkflowRail.tsx` |
 | Source-data/generation UI wire-up | coded | `components/GuidedSourceDataFlow.tsx`, `app/source-progressive-studio.css` |
+| Lazy debug performance mount | coded | `components/console/RenderDebuggerMount.tsx`, `app/layout.tsx`, `scripts/console-shell-contract-guard.mjs`, `scripts/ui-shell-registry-guard.mjs` |
 
 ## Not coded yet
 
@@ -43,13 +44,22 @@ Modernize boundaries first. Do not rewrite the domain workflow first. Keep curre
 | API route service refactor | partially coded | Modernization endpoint converted to service-layer pattern; production routes still need route-by-route migration. |
 | Zod dependency install | prepared | `scripts/modernization-dependency-sync.mjs` adds it after local lock sync. |
 | TanStack Query dependency install | prepared | `scripts/modernization-dependency-sync.mjs` adds it after local lock sync; first server-state loader is ready. |
+| Debug panel route-level extraction | partially coded | RenderDebugger is now lazy/client-only; future work should move debug UI behind a dedicated diagnostics route or authenticated debug panel. |
+
+## 10x smooth UI and performance strategy
+
+1. Keep Server Components as the default and mount Client Components only for real interaction.
+2. Lazy-load diagnostics, editors, DOCX/PDF preview tools, modal workflows, and heavy browser APIs.
+3. Split source-data, generation, template, evidence, and output flows into feature-owned components.
+4. Move API routes to validation -> policy -> service -> repository -> response.
+5. Reduce global CSS only after each UI surface has a feature owner and guard coverage.
 
 ## Next safe coding order
 
-1. Run `node scripts/modernization-dependency-sync.mjs` locally to sync `package.json` and `package-lock.json`.
-2. Run `npm install`, then `npm run typecheck` and `npm run build`.
-3. Convert one production API route to the service-result + validation adapter pattern.
-4. Wrap the admin modernization status loader with TanStack Query after dependency install succeeds.
+1. Pull the lazy debug mount patch and run `npm run ui-source:guard`, `npm run typecheck`, and `npm run build`.
+2. Run `node scripts/modernization-dependency-sync.mjs` locally to sync `package.json` and `package-lock.json`.
+3. Run `npm install`, then `npm run typecheck` and `npm run build`.
+4. Convert one production API route to the service-result + validation adapter pattern.
 5. Continue splitting `GuidedSourceDataFlow` into feature-owned source-data and generation components.
 
 ## Current verification commands
