@@ -1,154 +1,70 @@
-/* Client workspace 70/30 account popover contract.
-   The client shell keeps existing markup but promotes the existing workspace account card
-   into the same right-side account popover pattern used by manager/master consoles. */
+/* Client workspace account ratio contract.
+   The client shell now uses the same canonical AccountMenu dock used by manager/master.
+   This file only adds client-specific cleanup around that shared dock. */
 
 :root {
-  --client-account-popover-contract: 70-30-header-popover;
-  --client-account-popover-width: clamp(280px, 24vw, 380px);
-  --client-account-popover-top: clamp(104px, 7.2vw, 128px);
-  --client-account-popover-right: clamp(28px, 3vw, 58px);
+  --client-account-popover-contract: canonical-console-account-dock;
 }
 
-@media (min-width: 1100px) {
-  body[data-theme-contract="xdisputer-unified"] .app-shell .main-area {
-    --client-header-left-ratio: 7fr;
-    --client-header-right-ratio: minmax(280px, 3fr);
+@media (min-width: 761px) {
+  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"][data-console-header-grid="true"] {
+    --account-dock-width: minmax(280px, 1fr) !important;
+    --account-dock-height: clamp(140px, 10vw, 156px) !important;
+    --account-popover-width: min(420px, calc(100vw - 32px)) !important;
+    grid-template-columns: minmax(0, 3fr) var(--account-dock-width) !important;
+    grid-template-rows: var(--account-dock-height) auto !important;
   }
 
-  body[data-theme-contract="xdisputer-unified"] .app-shell .header {
-    display: grid !important;
-    grid-template-columns: minmax(0, var(--client-header-left-ratio)) var(--client-header-right-ratio) !important;
-    gap: clamp(18px, 2vw, 30px) !important;
-    align-items: start !important;
-    padding-right: calc(var(--client-account-popover-width) + 24px) !important;
-    position: relative !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell .header > div:first-child {
+  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > header.header[data-console-header-primary="true"] {
     grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: auto !important;
     min-width: 0 !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell .workspace-header-actions {
-    grid-column: 2 !important;
-    min-width: 0 !important;
-    align-self: end !important;
-    justify-self: stretch !important;
-    padding-top: 84px !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card {
-    position: fixed !important;
-    top: var(--client-account-popover-top) !important;
-    right: var(--client-account-popover-right) !important;
-    width: var(--client-account-popover-width) !important;
-    z-index: 70 !important;
+    min-height: var(--account-dock-height) !important;
+    height: var(--account-dock-height) !important;
+    max-height: var(--account-dock-height) !important;
     margin: 0 !important;
-    padding: 10px !important;
-    border: 1px solid rgba(37, 99, 235, .22) !important;
-    border-radius: 22px !important;
-    background: rgba(255, 255, 255, .94) !important;
-    box-shadow: 0 22px 58px rgba(15, 23, 42, .14), 0 0 0 1px rgba(255, 255, 255, .72) inset !important;
-    backdrop-filter: blur(14px) !important;
+    padding: clamp(22px, 2vw, 30px) !important;
     display: grid !important;
-    gap: 8px !important;
-    transform: translate3d(0, 0, 0) !important;
-    contain: layout paint !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card::before {
-    content: 'Account' !important;
-    padding: 0 4px !important;
-    color: #1d4ed8 !important;
-    text-transform: uppercase !important;
-    letter-spacing: .16em !important;
-    font-size: 10px !important;
-    font-weight: 950 !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card > div {
-    display: grid !important;
-    grid-template-columns: 44px minmax(0, 1fr) !important;
-    gap: 10px !important;
+    grid-template-columns: minmax(0, 1fr) !important;
     align-items: center !important;
-    min-width: 0 !important;
-    border: 1px solid rgba(191, 219, 254, .88) !important;
-    border-radius: 17px !important;
-    background: linear-gradient(135deg, rgba(239, 246, 255, .98), rgba(255, 255, 255, .98)) !important;
-    padding: 10px !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card > div > span {
-    width: 44px !important;
-    height: 44px !important;
-    border-radius: 15px !important;
-    background: #172554 !important;
-    color: #dbeafe !important;
-    box-shadow: 0 10px 26px rgba(30, 64, 175, .22) !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card strong,
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card small {
-    max-width: 100% !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card small {
-    max-width: 230px !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card > button,
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card > form {
-    opacity: 0 !important;
-    max-height: 0 !important;
     overflow: hidden !important;
-    pointer-events: none !important;
-    transform: translate3d(0, -4px, 0) !important;
-    transition-property: opacity, max-height, transform !important;
-    transition-duration: 140ms !important;
-    transition-timing-function: cubic-bezier(.2, .8, .2, 1) !important;
   }
 
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card:hover > button,
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card:focus-within > button,
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card:hover > form,
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card:focus-within > form {
-    opacity: 1 !important;
-    max-height: 48px !important;
-    pointer-events: auto !important;
-    transform: translate3d(0, 0, 0) !important;
+  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > .manager-header-account-dock[data-console-account-role="client"] {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    min-width: 280px !important;
+    min-height: var(--account-dock-height) !important;
+    height: var(--account-dock-height) !important;
+    max-height: var(--account-dock-height) !important;
+    margin: 0 !important;
+    z-index: 10 !important;
   }
 
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card:hover,
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card:focus-within {
-    border-color: rgba(37, 99, 235, .42) !important;
-    box-shadow: 0 26px 68px rgba(15, 23, 42, .18), 0 0 0 1px rgba(219, 234, 254, .8) inset !important;
+  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > .manager-header-account-dock[data-console-account-role="client"] .manager-account-popover {
+    top: 0 !important;
+    right: 0 !important;
+    width: var(--account-popover-width) !important;
   }
 
-  /* Client right-rail merge fix.
-     Keep output entitlement in the dashboard command card only.
-     Reserve the 30% header rail for the account popover and compact next action. */
-  body[data-theme-contract="xdisputer-unified"] main.app-shell:has(> aside.sidebar + section.main-area) section.main-area > header.header div.workspace-header-actions .output-limit-reset-chip {
+  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > header.header .workspace-header-actions .output-limit-reset-chip {
     display: none !important;
   }
 
-  body[data-theme-contract="xdisputer-unified"] main.app-shell:has(> aside.sidebar + section.main-area) section.main-area > header.header {
-    padding-right: clamp(390px, 32vw, 500px) !important;
-    grid-template-columns: minmax(0, 7fr) minmax(240px, 3fr) !important;
-    align-items: center !important;
-    min-height: 132px !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] main.app-shell:has(> aside.sidebar + section.main-area) section.main-area > header.header .workspace-header-actions {
-    grid-column: 2 !important;
-    padding-top: 0 !important;
-    justify-self: end !important;
-    align-self: center !important;
+  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > header.header .workspace-header-actions {
     width: min(100%, 320px) !important;
+    padding-top: 0 !important;
+    justify-self: start !important;
     display: flex !important;
-    justify-content: flex-end !important;
   }
 
-  body[data-theme-contract="xdisputer-unified"] main.app-shell:has(> aside.sidebar + section.main-area) section.main-area > header.header .header-next-action {
+  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > header.header .header-next-action {
     width: min(100%, 320px) !important;
     min-height: 46px !important;
     padding: 10px 14px !important;
@@ -160,31 +76,22 @@
     overflow: hidden !important;
   }
 
-  body[data-theme-contract="xdisputer-unified"] main.app-shell:has(> aside.sidebar + section.main-area) section.main-area > header.header .header-next-action .runtime-chip-detail {
+  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > header.header .header-next-action .runtime-chip-detail {
     min-width: 0 !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
   }
 
-  body[data-theme-contract="xdisputer-unified"] main.app-shell:has(> aside.sidebar + section.main-area) aside.sidebar .workspace-account-card {
-    top: clamp(132px, 9vw, 164px) !important;
-    right: clamp(52px, 4vw, 76px) !important;
-    width: clamp(290px, 24vw, 390px) !important;
-    z-index: 120 !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] main.app-shell:has(> aside.sidebar + section.main-area) .dashboard-command-card .output-limit-reset-chip {
+  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] .dashboard-command-card .output-limit-reset-chip {
     display: grid !important;
     width: min(100%, 360px) !important;
     justify-self: end !important;
   }
 }
 
-@media (max-width: 1099px) {
-  body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card {
-    position: static !important;
-    width: auto !important;
-    transform: none !important;
+@media (max-width: 760px) {
+  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > .manager-header-account-dock[data-console-account-role="client"] {
+    position: relative !important;
   }
 }
