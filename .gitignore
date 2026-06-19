@@ -23,6 +23,7 @@ pnpm-debug.log*
 .idea/
 tsconfig.tsbuildinfo
 .local-backups/
+.codespace-sync/
 
 # Accidental root artifacts from malformed terminal commands
 /FETCH_HEAD
