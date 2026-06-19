@@ -12,26 +12,32 @@ function read(path) {
 function must(source, text, label) {
   if (!source.includes(text)) failures.push(label);
 }
+function mustNot(source, text, label) {
+  if (source.includes(text)) failures.push(label);
+}
 
 const layout = read('app/layout.tsx');
 const css = read('app/client-account-popover-ratio.css');
-const layoutLock = read('app/client-workspace-layout-lock.css');
+const accountMenu = read('components/console/AccountMenu.tsx');
 const workspace = read('components/LetterGeneratorWorkspaceV2.tsx');
 
 must(layout, "import './client-account-popover-ratio.css';", 'root layout must load client account popover CSS');
-must(css, '--client-account-popover-contract: 70-30-header-popover', 'client account ratio contract marker missing');
-must(css, 'grid-template-columns: minmax(0, var(--client-header-left-ratio)) var(--client-header-right-ratio)', 'client header must use 70/30 grid ratio');
-must(css, '.app-shell .sidebar .workspace-account-card', 'client account card selector missing');
-must(css, 'position: fixed !important', 'client account card must become header popover on desktop');
-must(css, 'max-height: 0 !important', 'client account popover actions must collapse by default');
-must(css, ':focus-within > button', 'client account popover must open on focus');
-must(layoutLock, 'background:', 'client workspace must own professional background cleanup');
-must(layoutLock, '.header .output-limit-reset-chip', 'client header output chip cleanup missing');
-must(layoutLock, '.dashboard-command-card .output-limit-reset-chip', 'dashboard output chip cleanup missing');
-must(layoutLock, 'grid-template-columns: minmax(0, 1fr) minmax(220px, 300px)', 'client header compact grid missing');
-must(workspace, 'workspace-account-card', 'client workspace account card markup missing');
-must(workspace, 'Account settings', 'client account settings action missing');
-must(workspace, 'Sign out', 'client sign out action missing');
+must(css, '--client-account-popover-contract: canonical-console-account-dock', 'client must use canonical console account dock contract');
+must(css, 'main.app-shell[data-client-console-shell="true"]', 'client shell scoped selector missing');
+must(css, 'data-console-role="client"', 'client role selector missing');
+must(css, 'grid-template-columns: minmax(0, 3fr) var(--account-dock-width)', 'client account dock must use shared 75/25-style grid');
+must(css, '.workspace-header-actions .output-limit-reset-chip', 'duplicate header output-limit chip must be handled');
+must(css, 'display: none !important', 'duplicate header output-limit chip must be hidden');
+must(css, '.dashboard-command-card .output-limit-reset-chip', 'dashboard output-limit chip must remain active');
+must(accountMenu, "type ConsoleRole = 'manager' | 'master' | 'client'", 'canonical account menu must support client role');
+must(accountMenu, "if (role === 'client') return 'Client workspace account'", 'client account role label missing');
+must(workspace, "import AccountMenu from './console/AccountMenu';", 'client workspace must import canonical AccountMenu');
+must(workspace, 'data-client-console-shell="true"', 'client workspace shell marker missing');
+must(workspace, 'className="main-area admin-monitor-main client-console-main"', 'client main must use canonical console main class');
+must(workspace, 'data-console-header-grid="true"', 'client main must use account ratio grid');
+must(workspace, '<AccountMenu role="client" mode="workspace"', 'client workspace must mount canonical AccountMenu');
+must(workspace, 'data-console-header-primary="true"', 'client header must be primary console header');
+mustNot(workspace, 'workspace-account-card"><div>', 'legacy sidebar account card must not render in client workspace');
 
 if (failures.length) {
   console.error(`client-account-popover-guard failed: ${failures.length} check(s).`);
