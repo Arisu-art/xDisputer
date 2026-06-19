@@ -4,6 +4,7 @@ import { workspaceAccessErrorResponse } from '../../../lib/saas/access-entitleme
 import { recordGenerationIntegrity } from '../../../lib/saas/integrity-ledger';
 import { logSystemEvent, requestIdFrom, safeErrorMessage } from '../../../lib/saas/system-observability';
 import { createNotification } from '../../../lib/notifications/notification-write-service';
+import { outputActivityContract } from '../../../src/features/manager-output-activity/output-activity-contract';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -80,9 +81,9 @@ async function notifyManagerForGeneratedOutput(input: {
       disputer_id: input.disputerId,
       output_label: label,
       output_count: outputCount,
-      rate_amount: 0,
-      status: 'pending',
-      source: 'generation_success',
+      rate_amount: outputActivityContract.defaultRateAmount,
+      status: outputActivityContract.status.pending,
+      source: outputActivityContract.sourceGenerated,
       notes: 'Generated successfully. Manager must confirm before this affects payday.',
       updated_at: new Date().toISOString()
     })
@@ -95,7 +96,7 @@ async function notifyManagerForGeneratedOutput(input: {
     recipientUserId: managerId,
     title: 'Output ready for confirmation',
     body: `${profile.data?.full_name || profile.data?.email || 'A disputer'} generated ${outputCount} output item(s) for ${input.clientName}. Confirm or reject before payday.`,
-    href: '/admin/output-activity',
+    href: '/admin/output-activity-v2',
     severity: 'warning'
   });
 
