@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
-type ConsoleRole = 'manager' | 'master';
+type ConsoleRole = 'manager' | 'master' | 'client';
 type ConsoleMode = 'operations' | 'workspace';
 
 type Props = {
@@ -75,11 +75,13 @@ function displayNameFromIdentity(displayName?: string | null, email?: string | n
 }
 
 function roleLabel(role: ConsoleRole, mode: ConsoleMode) {
+  if (role === 'client') return 'Client workspace account';
   if (role === 'master') return mode === 'workspace' ? 'Master UI workspace account' : 'Master governance account';
   return mode === 'workspace' ? 'Manager workspace account' : 'Manager operations account';
 }
 
 function surfaceLabel(role: ConsoleRole, mode: ConsoleMode) {
+  if (role === 'client') return 'Client packet workspace';
   if (role === 'master') return mode === 'workspace' ? 'UI workspace control' : 'Governance monitoring';
   return mode === 'workspace' ? 'Workspace authoring' : 'Operations monitoring';
 }
