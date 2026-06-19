@@ -1,16 +1,19 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import SupportingDocumentsSetup from './SupportingDocumentsSetup';
-import SourceReviewAiPanel from './SourceReviewAiPanel';
+import LazyEvidenceStage from '../src/features/evidence/components/LazyEvidenceStage';
 import WorkflowRail from '../src/features/generation/components/WorkflowRail';
+import { packetIsReady, uniqueBlockers } from '../src/features/generation/readiness';
+import { activeWorkflowStepForStage, inputMethodForSource, type SourceInputMethod, type SourceWorkflowStage } from '../src/features/source-data/source-stage-model';
+import { firstSourceDataReadinessBlocker } from '../src/features/source-data/source-readiness';
+import SourceReviewAiPanel from './SourceReviewAiPanel';
 import { bureaus, type LetterRoute, type ParsedSource, type SourceItem } from '../lib/letter-engine';
 import type { PacketAssets } from '../lib/packet-assets';
 import type { TemplateFieldContract } from '../lib/template-contracts';
 import { runSharedTransition } from '../lib/shared-transition';
 
-type Stage = 'SOURCE' | 'REVIEW' | 'EVIDENCE';
-type SourceMethod = 'CHOOSE' | 'UPLOAD' | 'PASTE';
+type Stage = SourceWorkflowStage;
+type SourceMethod = SourceInputMethod;
 type SourceDraftSnapshot = { text: string; normalized: boolean; label: string; capturedAt: string };
 type PendingImport = { text: string; action: string } | null;
 
@@ -137,7 +140,6 @@ export default function GuidedSourceDataFlow({
   canGenerate,
   generationBlockers = [],
   missingLetters,
-  missingInsertCount,
   affidavitRequired,
   customFields,
   strict,
@@ -154,7 +156,7 @@ export default function GuidedSourceDataFlow({
   onGenerate
 }: Props) {
   const [stage, setStage] = useState<Stage>('SOURCE');
-  const [method, setMethod] = useState<SourceMethod>(source ? 'PASTE' : 'CHOOSE');
+  const [method, setMethod] = useState<SourceMethod>(inputMethodForSource(source));
   const [pendingImport, setPendingImport] = useState<PendingImport>(null);
   const [confirmRestore, setConfirmRestore] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
@@ -165,8 +167,8 @@ export default function GuidedSourceDataFlow({
   const affidavitReady = !affidavitRequired || Boolean(parsed.affidavitState.trim() && parsed.affidavitCounty.trim());
   const customReady = customFields.every((field) => !field.required || Boolean(parsed.templateFields[field.key]?.trim()));
   const strictTemplateReady = !strict || missingLetters.length === 0;
-  const packetReady = canGenerate && evidenceReady && affidavitReady && customReady && strictTemplateReady && scopeConfirmed;
-  const generationBlockReasons = Array.from(new Set([
+  const packetReady = packetIsReady({ canGenerate, evidenceReady, affidavitReady, customReady, strictTemplateReady, scopeConfirmed });
+  const generationBlockReasons = uniqueBlockers([
     ...generationBlockers,
     ...(!scopeConfirmed ? ['Confirm packet scope before generation.'] : []),
     ...(!evidenceReady ? ['Upload at least one supporting document image.'] : []),
@@ -174,10 +176,10 @@ export default function GuidedSourceDataFlow({
     ...(!customReady ? ['Complete required template fields before generating.'] : []),
     ...(!strictTemplateReady ? [`Required letter template missing: ${missingLetters.join(', ')}.`] : []),
     ...sourceWarnings.slice(0, 3).map((warning) => warning.message)
-  ].map((reason) => reason.trim()).filter(Boolean))).slice(0, 8);
+  ]);
   const generateDescribedBy = !packetReady && generationBlockReasons.length ? 'generation-blocked-reasons' : undefined;
   const showStage = (next: Stage) => runSharedTransition(() => setStage(next), 'stage');
-  const workflowActiveStep = stage === 'SOURCE' ? 'source-data' : stage === 'REVIEW' ? 'validation' : 'generate';
+  const workflowActiveStep = activeWorkflowStepForStage(stage);
 
   const visibleBureaus = useMemo(() => {
     return bureaus.filter((bureau) => parsed.dispute[bureau].length || parsed.inquiry[bureau].length || parsed.late[bureau].length);
@@ -213,7 +215,7 @@ export default function GuidedSourceDataFlow({
 
   useEffect(() => {
     setStage('SOURCE');
-    setMethod(source ? 'PASTE' : 'CHOOSE');
+    setMethod(inputMethodForSource(source));
     setPendingImport(null);
     setConfirmRestore(false);
     setValidationMessage('');
@@ -257,31 +259,21 @@ export default function GuidedSourceDataFlow({
   }
 
   function lockSource() {
-    if (!verified) {
-      const message = 'Standardize the working Notepad draft before reviewing packet scope.';
-      setValidationMessage(message);
-      onMessage(message);
+    const blocker = firstSourceDataReadinessBlocker({
+      verified,
+      hasRoutes: routes.length > 0,
+      hasVisibleBureaus: visibleBureaus.length > 0,
+      affidavitReady,
+      customReady
+    });
+
+    if (blocker) {
+      setValidationMessage(blocker);
+      if (blocker.startsWith('Affidavit')) affidavitPanel.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      onMessage(blocker);
       return;
     }
-    if (!affidavitReady) {
-      const message = 'Affidavit execution jurisdiction could not be mapped from the current address.';
-      setValidationMessage(message);
-      affidavitPanel.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      onMessage(message);
-      return;
-    }
-    if (!customReady) {
-      const message = 'Complete the additional template fields required by the configured DOCX template.';
-      setValidationMessage(message);
-      onMessage(message);
-      return;
-    }
-    if (!routes.length || !visibleBureaus.length) {
-      const message = 'No dispute, inquiry, or late-payment routes were detected. Review the Notepad headings before continuing.';
-      setValidationMessage(message);
-      onMessage(message);
-      return;
-    }
+
     setValidationMessage('');
     setScopeConfirmed(false);
     showStage('REVIEW');
@@ -307,7 +299,7 @@ export default function GuidedSourceDataFlow({
   }
 
   return (
-    <div className="guided-source-workspace progressive-source-workspace">
+    <div className="guided-source-workspace progressive-source-workspace" data-performance-slice="lazy-evidence-stage">
       <WorkflowRail activeStep={workflowActiveStep} blockers={generationBlockReasons} />
       {stage === 'SOURCE' && method === 'CHOOSE' && !source && (
         <section className="panel source-progressive-stage source-intake-stage shared-stage-surface" style={{ viewTransitionName: 'source-work-stage' }}>
@@ -390,7 +382,7 @@ export default function GuidedSourceDataFlow({
           </SourceStageHeader>
           {!packetReady && generationBlockReasons.length > 0 && <section id="generation-blocked-reasons" className="source-review generation-blocked-reasons" role="alert" aria-live="polite"><strong>Generation blocked</strong>{generationBlockReasons.map((reason, index) => <p key={`generation-blocker-${index}`}>{reason}</p>)}</section>}
           <SourceReviewAiPanel {...sourceReviewProps} />
-          {evidenceKey && <SupportingDocumentsSetup embedded storageKey={evidenceKey} clientName={parsed.name} onChanged={onEvidenceChanged} onMessage={onMessage} />}
+          {evidenceKey && <LazyEvidenceStage storageKey={evidenceKey} clientName={parsed.name} onChanged={onEvidenceChanged} onMessage={onMessage} />}
         </section>
       )}
     </div>
