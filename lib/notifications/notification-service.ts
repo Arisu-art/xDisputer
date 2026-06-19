@@ -9,7 +9,7 @@ type RawNotificationRow = {
   title: string;
   body: string | null;
   href?: string | null;
-  severity: string | null;
+  severity?: string | null;
   read_at: string | null;
   created_at: string;
 };
@@ -30,26 +30,16 @@ function safeLimit(value: number | undefined) {
   return Math.max(1, Math.min(40, Math.floor(value || 12)));
 }
 
-function isMissingHrefColumn(message: string | undefined) {
-  return Boolean(message && message.includes('notifications.href'));
+function missingOptionalColumn(message: string | undefined) {
+  return Boolean(message && (message.includes('notifications.href') || message.includes('notifications.severity')));
 }
 
 async function queryNotifications(input: { supabase: SupabaseServerClient; column: 'recipient_user_id' | 'recipient_role'; value: string; limit: number }) {
-  const withHref = await input.supabase
-    .from('notifications')
-    .select('id,title,body,href,severity,read_at,created_at')
-    .eq(input.column, input.value)
-    .order('created_at', { ascending: false })
-    .limit(input.limit);
-
-  if (!withHref.error || !isMissingHrefColumn(withHref.error.message)) return withHref;
-
-  return input.supabase
-    .from('notifications')
-    .select('id,title,body,severity,read_at,created_at')
-    .eq(input.column, input.value)
-    .order('created_at', { ascending: false })
-    .limit(input.limit);
+  const full = await input.supabase.from('notifications').select('id,title,body,href,severity,read_at,created_at').eq(input.column, input.value).order('created_at', { ascending: false }).limit(input.limit);
+  if (!full.error || !missingOptionalColumn(full.error.message)) return full;
+  const withoutHref = await input.supabase.from('notifications').select('id,title,body,severity,read_at,created_at').eq(input.column, input.value).order('created_at', { ascending: false }).limit(input.limit);
+  if (!withoutHref.error || !missingOptionalColumn(withoutHref.error.message)) return withoutHref;
+  return input.supabase.from('notifications').select('id,title,body,read_at,created_at').eq(input.column, input.value).order('created_at', { ascending: false }).limit(input.limit);
 }
 
 export async function listNotifications({ supabase, userId, role, limit }: ListNotificationsInput) {
