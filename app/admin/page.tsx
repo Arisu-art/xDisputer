@@ -29,7 +29,6 @@ function money(value: number) { return new Intl.NumberFormat('en-US', { style: '
 function statusText(value: string | null | undefined) { if (value === 'pending_manager_assignment') return 'Waiting for invite'; if (value === 'pending_manager_approval') return 'Pending approval'; if (value === 'active') return 'Active'; if (value === 'suspended') return 'Paused'; if (value === 'disabled') return 'Disabled'; return value || 'Pending'; }
 function outputUsage(entitlements: EntitlementLimitMap, accountId: string) { const row = entitlements[accountId]; return `${row?.output_used_today || 0}/${typeof row?.effective_output_limit === 'number' ? row.effective_output_limit : 'Default'} outputs today`; }
 function uniqueAccounts(...groups: AccountDirectoryRow[][]) { const map = new Map<string, AccountDirectoryRow>(); groups.flat().forEach((account) => map.set(account.id, account)); return Array.from(map.values()); }
-function hasActiveState(item: { active?: boolean }) { return item.active === true; }
 
 function ControlForm({ profileId, intent, label, primary = false }: { profileId: string; intent: string; label: string; primary?: boolean }) { return <form action="/api/control/profile" method="post"><input type="hidden" name="profileId" value={profileId} /><input type="hidden" name="intent" value={intent} /><button type="submit" className={`admin-action-button ${primary ? 'primary' : ''}`}>{label}</button></form>; }
 function PayrollSettingsForm({ managerId, accountId, settings }: { managerId: string; accountId: string; settings: ManagerUserSettingMap[string] | undefined }) { const current = settings || defaultManagerUserSetting(managerId, accountId); return <form action="/api/manager-console/payroll" method="post" className="manager-user-settings-form"><input type="hidden" name="profileId" value={accountId} /><label><span>Regular</span><select name="isRegular" defaultValue={current.is_regular ? 'true' : 'false'}><option value="true">Regular</option><option value="false">Non-regular</option></select></label><label><span>Rate/output</span><input name="rate" inputMode="decimal" defaultValue={String(current.rate || 0)} /></label><label><span>Salary</span><input name="salary" inputMode="decimal" defaultValue={String(current.salary || 0)} /></label><label className="manager-user-settings-notes"><span>Note</span><input name="notes" defaultValue={current.notes || ''} placeholder="Optional payroll or access note" /></label><button type="submit" className="admin-action-button primary">Save metadata</button></form>; }
@@ -62,7 +61,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   const settingsResult = await listManagerUserSettings(supabase, user.id, allAccounts.map((account) => account.id));
   const summary = summaryResult.summary;
   const queryError = summaryResult.errorMessage || pendingResult.errorMessage || activeResult.errorMessage || blockedResult.errorMessage || entitlementResult.errorMessage || settingsResult.errorMessage;
-  const activeDefinition = managerOperationsNavItems(activePanel).find(hasActiveState);
+  const activeDefinition = managerOperationsNavItems(activePanel).find((item) => 'active' in item && item.active === true);
 
   let inviteLink = '';
   if (activePanel === 'requests') {
