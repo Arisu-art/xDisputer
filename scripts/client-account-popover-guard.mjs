@@ -15,6 +15,7 @@ function must(source, text, label) {
 
 const layout = read('app/layout.tsx');
 const css = read('app/client-account-popover-ratio.css');
+const layoutLock = read('app/client-workspace-layout-lock.css');
 const workspace = read('components/LetterGeneratorWorkspaceV2.tsx');
 
 must(layout, "import './client-account-popover-ratio.css';", 'root layout must load client account popover CSS');
@@ -24,6 +25,10 @@ must(css, '.app-shell .sidebar .workspace-account-card', 'client account card se
 must(css, 'position: fixed !important', 'client account card must become header popover on desktop');
 must(css, 'max-height: 0 !important', 'client account popover actions must collapse by default');
 must(css, ':focus-within > button', 'client account popover must open on focus');
+must(layoutLock, 'background:', 'client workspace must own professional background cleanup');
+must(layoutLock, '.header .output-limit-reset-chip', 'client header output chip cleanup missing');
+must(layoutLock, '.dashboard-command-card .output-limit-reset-chip', 'dashboard output chip cleanup missing');
+must(layoutLock, 'grid-template-columns: minmax(0, 1fr) minmax(220px, 300px)', 'client header compact grid missing');
 must(workspace, 'workspace-account-card', 'client workspace account card markup missing');
 must(workspace, 'Account settings', 'client account settings action missing');
 must(workspace, 'Sign out', 'client sign out action missing');
