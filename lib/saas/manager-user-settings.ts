@@ -163,8 +163,12 @@ export function employmentTypeLabel(value: ManagerEmploymentType) {
   return value === 'full_time' ? 'Full-time' : 'Output-based';
 }
 
-export function payrollAmount(setting: ManagerUserSetting | undefined, outputSummary?: ManagerOutputSummary) {
+export function payrollAmount(setting: ManagerUserSetting | undefined, outputSummary?: ManagerOutputSummary | number) {
   const baseSalary = Math.max(0, Number(setting?.base_salary ?? setting?.salary ?? 0));
+  if (typeof outputSummary === 'number') {
+    const legacyExtra = Math.max(0, Number(setting?.per_output_rate ?? setting?.rate ?? 0)) * Math.max(0, outputSummary);
+    return baseSalary + legacyExtra;
+  }
   const approvedExtra = Math.max(0, Number(outputSummary?.approvedExtraPay || 0));
   return baseSalary + approvedExtra;
 }
