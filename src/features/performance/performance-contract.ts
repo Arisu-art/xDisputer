@@ -4,9 +4,12 @@ export const performanceContract = {
   guard: 'scripts/performance-boost-guard.mjs',
   debugMount: 'components/console/RenderDebuggerMount.tsx',
   notificationOwner: 'components/console/AccountMenu.tsx',
+  dashboardOwner: 'components/DashboardOperationsWorkspace.tsx',
   rules: {
     debugPanelDefault: 'off',
     notificationOwner: 'account-rail-only',
+    notificationPollingMs: 120000,
+    dashboardEntitlementSurface: 'static-no-polling-chip',
     supabaseQueryOrder: 'from-select-filter-order-limit',
     heavyClientLibraries: 'lazy-or-server-only',
     cssOwnership: 'feature-owned-or-contract-marked'
