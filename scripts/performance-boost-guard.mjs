@@ -10,6 +10,8 @@ const debuggerMount = read('components/console/RenderDebuggerMount.tsx');
 const accountMenu = read('components/console/AccountMenu.tsx');
 const shell = read('components/console/ConsoleShell.tsx');
 const notifications = read('lib/notifications/notification-service.ts');
+const notificationDock = read('components/notifications/NotificationDock.tsx');
+const dashboard = read('components/DashboardOperationsWorkspace.tsx');
 const outputRoute = read('app/api/generation-runs/route.ts');
 const perfContract = read('src/features/performance/performance-contract.ts');
 const canvas = read('docs/performance-boost-canvas.md');
@@ -22,6 +24,9 @@ must(accountMenu, '<NotificationDock />', 'account rail must own notification do
 mustNot(shell, '<NotificationDock', 'console shell must not mount notification dock directly');
 must(notifications, ".select('id,title,body", 'notification queries must select explicit columns');
 must(notifications, '.limit(', 'notification queries must limit rows');
+must(notificationDock, '120_000', 'notification polling should be throttled');
+must(dashboard, 'StaticEntitlementChip', 'dashboard entitlement surface should be static');
+mustNot(dashboard, "import OutputLimitResetChip", 'dashboard must not import polling entitlement chip');
 must(outputRoute, 'outputActivityContract.defaultRateAmount', 'generation route must use output activity contract');
 must(perfContract, 'heavy-client-bundle-risk', 'performance contract must track heavy client bundle risk');
 must(canvas, 'Performance Boost Canvas', 'performance canvas missing');
