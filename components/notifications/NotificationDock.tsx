@@ -91,7 +91,7 @@ export default function NotificationDock() {
       }
     }
     void load();
-    const timer = window.setInterval(() => { void load(); }, 45000);
+    const timer = window.setInterval(() => { void load(); }, 120_000);
     return () => { cancelled = true; window.clearInterval(timer); };
   }, []);
 
