@@ -1,10 +1,9 @@
 import type { SystemEventName, SystemEventPayload, SystemEventPayloadMap } from './types';
 
 type SystemEventHandler<TName extends SystemEventName> = (payload: SystemEventPayload<TName>) => void;
+type AnySystemEventHandler = (payload: SystemEventPayload<SystemEventName>) => void;
 
-type HandlerRegistry = {
-  [TName in SystemEventName]?: Set<SystemEventHandler<TName>>;
-};
+type HandlerRegistry = Partial<Record<SystemEventName, Set<AnySystemEventHandler>>>;
 
 export type EventUnsubscribe = () => void;
 
@@ -15,12 +14,14 @@ export class SystemEventBus {
     eventName: TName,
     handler: SystemEventHandler<TName>
   ): EventUnsubscribe {
-    const currentHandlers = this.handlers[eventName] ?? new Set<SystemEventHandler<TName>>();
-    currentHandlers.add(handler);
+    const currentHandlers = this.handlers[eventName] ?? new Set<AnySystemEventHandler>();
+    const storedHandler = handler as AnySystemEventHandler;
+
+    currentHandlers.add(storedHandler);
     this.handlers[eventName] = currentHandlers;
 
     return () => {
-      currentHandlers.delete(handler);
+      currentHandlers.delete(storedHandler);
       if (currentHandlers.size === 0) {
         delete this.handlers[eventName];
       }
@@ -28,15 +29,15 @@ export class SystemEventBus {
   }
 
   publish<TName extends SystemEventName>(eventName: TName, payload: SystemEventPayloadMap[TName]): void {
-    const currentHandlers = this.handlers[eventName] as Set<SystemEventHandler<TName>> | undefined;
+    const currentHandlers = this.handlers[eventName];
 
     if (!currentHandlers) {
       return;
     }
 
-    for (const handler of currentHandlers) {
-      handler(payload);
-    }
+    Array.from(currentHandlers).forEach((handler) => {
+      (handler as SystemEventHandler<TName>)(payload);
+    });
   }
 
   clear(): void {
