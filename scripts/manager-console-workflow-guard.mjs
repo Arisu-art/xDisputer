@@ -14,7 +14,7 @@ const settings = read('lib/saas/manager-user-settings.ts');
 const accountRoute = read('app/api/account/profile/route.ts');
 const accountMenu = read('components/console/AccountMenu.tsx');
 
-for (const label of ['Monitoring', 'Access control of user', 'Report', 'Payroll', 'Request']) {
+for (const label of ['Monitoring', 'Access control of user', 'Report', 'Output Activity', 'Request']) {
   must(panels, label, `manager panel missing: ${label}`);
 }
 
