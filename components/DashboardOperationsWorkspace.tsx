@@ -1,6 +1,5 @@
 'use client';
 
-import OutputLimitResetChip from './OutputLimitResetChip';
 import type { ClientCaseRecord, ClientCaseStatus, FilingRecord } from '../lib/client-operations-store';
 
 type Props = {
@@ -37,6 +36,16 @@ function actionFor(record: ClientCaseRecord | undefined) {
   return { title: 'Continue active packet', copy: `${record.clientName} is in ${record.round}.`, button: 'Continue Case', target: 'case' as const };
 }
 
+function StaticEntitlementChip() {
+  return <aside className="output-limit-reset-chip performance-static-entitlement-chip" aria-label="Daily output limit status">
+    <div className="output-limit-chip-main">
+      <span>Daily Output Limit</span>
+      <strong>Checked during generation</strong>
+      <small>Limit status updates after output actions.</small>
+    </div>
+  </aside>;
+}
+
 export default function DashboardOperationsWorkspace({ cases, filings, activeCaseId, onNewCase, onOpenTemplates, onOpenOutputs, onOpenTracker, onContinueCase }: Props) {
   const activeCase = cases.find((record) => record.id === activeCaseId) || cases[0];
   const primary = actionFor(activeCase);
@@ -60,7 +69,7 @@ export default function DashboardOperationsWorkspace({ cases, filings, activeCas
             <h2>{primary.title}</h2>
             <p>{primary.copy}</p>
           </div>
-          <OutputLimitResetChip />
+          <StaticEntitlementChip />
         </div>
         <div className="dashboard-command-actions">
           <button type="button" className="action-button" onClick={executePrimary}>{primary.button}</button>
