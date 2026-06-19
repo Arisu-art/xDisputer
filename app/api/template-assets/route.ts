@@ -11,6 +11,8 @@ import type { ExhibitKind } from '../../../lib/template-exhibits';
 import type { LetterType } from '../../../lib/letter-engine';
 import type { Round } from '../../../lib/reference-store';
 import { templateStoragePath, type TemplateKind } from '../../../lib/supabase/template-registry';
+import { jsonFromServiceResult } from '../../../src/server/http/api-response';
+import { readTemplateAssetsForRequest } from '../../../src/server/services/template-assets-service';
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedLetterTypes = ['DISPUTE', 'LATE_PAYMENT'];
@@ -31,10 +33,6 @@ function respond(request: NextRequest, status: 'ok' | 'error', message: string, 
   return NextResponse.redirect(target, 303);
 }
 function managerScopeFailure(request: NextRequest, error: ManagerTemplateScopeError) { return respond(request, 'error', error.message, error.code === 'NO_AUTH' ? 401 : 403, { code: error.code, category: 'MANAGER_TEMPLATE' }); }
-function managerScopeJsonError(error: unknown) {
-  if (error instanceof ManagerTemplateScopeError) return NextResponse.json({ error: error.message, code: error.code, category: 'MANAGER_TEMPLATE' }, { status: error.code === 'NO_AUTH' ? 401 : 403 });
-  return NextResponse.json({ error: 'Could not resolve manager template scope.', category: 'MANAGER_TEMPLATE' }, { status: 500 });
-}
 function mutationClient(session: SessionContext): MutationClient {
   try { return { supabase: createSupabaseAdminClient() as SessionContext['supabase'], mode: 'service-role', warning: null }; }
   catch (error) { return { supabase: session.supabase, mode: 'session-rls', warning: error instanceof Error ? error.message : 'Service role client unavailable; using session RLS fallback.' }; }
@@ -56,7 +54,6 @@ function validateSlot(input: { round: string; templateKind: string; letterType: 
 }
 function sha256FromArrayBuffer(buffer: ArrayBuffer) { return createHash('sha256').update(Buffer.from(buffer)).digest('hex'); }
 function buildValidationJson(contract: TemplateContract, input: { round: Round; templateKind: TemplateKind; letterType: LetterType | null; exhibitKind: ExhibitKind | null; contentHash: string; managerUserId: string; uploadedByUserId: string }) { return { status: contract.validation.status, confidence: contract.validation.confidence, renderMode: contract.validation.renderMode, requiredFields: contract.validation.requiredFields, fulfilledFields: contract.validation.fulfilledFields, missingFields: contract.validation.missingFields, unknownRequiredFields: contract.validation.unknownRequiredFields, warnings: contract.validation.warnings, errors: contract.validation.errors, whatIfs: contract.validation.whatIfs, aliasesUsed: contract.validation.aliasesUsed, contentHash: input.contentHash, templateScope: 'MANAGER_TEMPLATE_ASSET', managerUserId: input.managerUserId, uploadedByUserId: input.uploadedByUserId, slot: { round: input.round, templateKind: input.templateKind, letterType: input.letterType, exhibitKind: input.exhibitKind }, evaluatedAt: new Date().toISOString() }; }
-async function autoBackfillDynamicTemplateV2() { return { assets: [], backfilledCount: 0, warnings: [] as string[] }; }
 async function findExistingAssets(supabase: SessionContext['supabase'], managerUserId: string, input: { round: string; templateKind: string; letterType: string | null; exhibitKind: string | null }) { let query = supabase.from('template_assets').select('id, storage_bucket, storage_path, version_number, is_active, content_hash').eq('manager_user_id', managerUserId).eq('round_label', input.round).eq('template_kind', input.templateKind).order('version_number', { ascending: false }); if (input.letterType) query = query.eq('letter_type', input.letterType); if (input.exhibitKind) query = query.eq('exhibit_kind', input.exhibitKind); return query; }
 async function archiveAssetRecords(supabase: SessionContext['supabase'], managerUserId: string, assets: Array<{ id: string }>) { if (!assets.length) return { archived: 0, warning: null as string | null }; const ids = assets.map((asset) => asset.id); const update = await supabase.from('template_assets').update({ is_active: false, archived_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('manager_user_id', managerUserId).in('id', ids); if (update.error) return { archived: 0, warning: update.error.message }; return { archived: assets.length, warning: null }; }
 async function activateInsertedTemplateAsset(client: MutationClient, managerUserId: string, input: { assetId: string; existingAssets: ExistingTemplateAsset[] }) {
@@ -83,19 +80,9 @@ async function deleteAssetRecordsAndFiles(session: SessionContext, client: Mutat
 }
 
 export async function GET(request: NextRequest) {
-  const accessError = await workspaceAccessErrorResponse(); if (accessError) return accessError;
-  const session = await getSessionContext();
-  if (!session.user) return NextResponse.json({ error: 'No authenticated user.' }, { status: 401 });
-  let scope;
-  try { scope = await resolveManagerTemplateScope(session); } catch (error) { return managerScopeJsonError(error); }
-  const client = mutationClient(session);
-  const round = request.nextUrl.searchParams.get('round');
-  let query = client.supabase.from('template_assets').select('*').eq('manager_user_id', scope.managerUserId).eq('is_active', true).order('created_at', { ascending: false });
-  if (round && allowedRounds.includes(round)) query = query.eq('round_label', round);
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  await autoBackfillDynamicTemplateV2();
-  return NextResponse.json({ assets: data || [], managerTemplateScope: managerTemplateScopePayload(scope), templateStorage: { mode: managerTemplateStorageMode(), mutationMode: client.mode, warning: client.warning } });
+  const accessError = await workspaceAccessErrorResponse();
+  if (accessError) return accessError;
+  return jsonFromServiceResult(await readTemplateAssetsForRequest({ round: request.nextUrl.searchParams.get('round') }));
 }
 
 export async function POST(request: NextRequest) {
