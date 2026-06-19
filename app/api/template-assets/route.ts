@@ -82,7 +82,9 @@ async function deleteAssetRecordsAndFiles(session: SessionContext, client: Mutat
 export async function GET(request: NextRequest) {
   const accessError = await workspaceAccessErrorResponse();
   if (accessError) return accessError;
-  return jsonFromServiceResult(await readTemplateAssetsForRequest({ round: request.nextUrl.searchParams.get('round') }));
+  const result = await readTemplateAssetsForRequest({ round: request.nextUrl.searchParams.get('round') });
+  if (!result.ok) return jsonFromServiceResult(result);
+  return NextResponse.json(result.data, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
 }
 
 export async function POST(request: NextRequest) {
