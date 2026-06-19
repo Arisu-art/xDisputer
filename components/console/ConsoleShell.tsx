@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import ConsoleNavLink from '../ConsoleNavLink';
 import AccountMenu from './AccountMenu';
 import ConsoleHeader, { type ConsoleHeaderProps } from './ConsoleHeader';
-import NotificationDock from '../notifications/NotificationDock';
 
 type ConsoleNavItem = {
   href: string;
@@ -111,7 +110,6 @@ export default function ConsoleShell({ role, mode, email, accountName, accountLa
       </section>
     </aside>
     <section className="admin-monitor-main native-console-main" data-console-main="true" data-console-component="ConsoleMain" data-console-header-grid="true" data-console-has-header={header ? 'true' : 'false'}>
-      <div className="console-notification-dock"><NotificationDock /></div>
       <AccountMenu role={role} mode={mode} email={email} displayName={accountName} accountLabel={accountLabel} switchTarget={finalSwitchTarget} switchTargetLabel={finalSwitchLabel} />
       {header ? <ConsoleHeader {...header} /> : null}
       {children}
