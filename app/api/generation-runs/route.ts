@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '../../../lib/supabase/server';
 import { workspaceAccessErrorResponse } from '../../../lib/saas/access-entitlement';
 import { recordGenerationIntegrity } from '../../../lib/saas/integrity-ledger';
 import { logSystemEvent, requestIdFrom, safeErrorMessage } from '../../../lib/saas/system-observability';
+import { createNotification } from '../../../lib/notifications/notification-write-service';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -47,6 +48,58 @@ async function readDailyEntitlement(supabase: Awaited<ReturnType<typeof createSu
   if (!daily.error || !isMissingRpcError(daily.error.message)) return daily;
 
   return supabase.rpc('access_check_generation_output_limit_v1', { owner_id_input: ownerId });
+}
+
+function outputCountFromManifest(manifest: any) {
+  const outputs = Array.isArray(manifest?.outputs) ? manifest.outputs : [];
+  return Math.max(1, outputs.length || Number(manifest?.outputCount || 1));
+}
+
+async function notifyManagerForGeneratedOutput(input: {
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  disputerId: string;
+  clientName: string;
+  round: string;
+  manifest: unknown;
+}) {
+  const profile = await input.supabase
+    .from('profiles')
+    .select('manager_id, full_name, email')
+    .eq('id', input.disputerId)
+    .maybeSingle();
+
+  const managerId = profile.data?.manager_id;
+  if (!managerId) return { activityId: null as string | null, notification: 'no-manager' as const };
+
+  const outputCount = outputCountFromManifest(input.manifest);
+  const label = `${input.clientName} · ${input.round} generated output`;
+  const activity = await input.supabase
+    .from('manager_disputer_output_approvals')
+    .insert({
+      manager_id: managerId,
+      disputer_id: input.disputerId,
+      output_label: label,
+      output_count: outputCount,
+      rate_amount: 0,
+      status: 'pending',
+      source: 'generation_success',
+      notes: 'Generated successfully. Manager must confirm before this affects payday.',
+      updated_at: new Date().toISOString()
+    })
+    .select('id')
+    .single();
+
+  await createNotification({
+    supabase: input.supabase,
+    createdBy: input.disputerId,
+    recipientUserId: managerId,
+    title: 'Output ready for confirmation',
+    body: `${profile.data?.full_name || profile.data?.email || 'A disputer'} generated ${outputCount} output item(s) for ${input.clientName}. Confirm or reject before payday.`,
+    href: '/admin/output-activity',
+    severity: 'warning'
+  });
+
+  return { activityId: activity.data?.id || null, notification: activity.error ? 'activity-warning' as const : 'created' as const };
 }
 
 export async function GET(request: NextRequest) {
@@ -172,6 +225,10 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    const outputActivity = status === 'generated'
+      ? await notifyManagerForGeneratedOutput({ supabase, disputerId: userResult.user.id, clientName, round, manifest }).catch((error) => ({ activityId: null, notification: safeErrorMessage(error) }))
+      : null;
+
     const integrityError = await recordGenerationIntegrity(supabase, {
       generationRunId: data.id,
       eventType: 'generation_run_recorded',
@@ -183,7 +240,7 @@ export async function POST(request: NextRequest) {
         selectedStatus: status
       },
       status: status === 'failed' ? 'failed' : 'recorded',
-      metadata: { clientName, round, status }
+      metadata: { clientName, round, status, outputActivity }
     });
 
     await logSystemEvent(supabase, {
@@ -193,7 +250,7 @@ export async function POST(request: NextRequest) {
       eventStatus: integrityError ? 'warning' : 'success',
       durationMs: Date.now() - startedAt,
       safeMessage: integrityError,
-      metadata: { generationRunId: data.id, round, status }
+      metadata: { generationRunId: data.id, round, status, outputActivity }
     });
 
     const afterLimit = status === 'failed' ? null : await readDailyEntitlement(supabase, userResult.user.id);
@@ -201,7 +258,7 @@ export async function POST(request: NextRequest) {
       ? normalizeDailyEntitlement(afterLimit.data[0])
       : null;
 
-    return noStoreJson({ run: data, entitlement });
+    return noStoreJson({ run: data, entitlement, outputActivity });
   } catch (error) {
     await logSystemEvent(supabase, {
       requestId,
