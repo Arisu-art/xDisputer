@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 const failures = [];
 const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : (failures.push(`missing ${path}`), '');
 const must = (source, text, label) => { if (!source.includes(text)) failures.push(label); };
+const mustNot = (source, text, label) => { if (source.includes(text)) failures.push(label); };
 
 const admin = read('app/admin/page.tsx');
 const panels = read('lib/manager-console/manager-operations-panels.ts');
@@ -18,14 +19,19 @@ for (const label of ['Monitoring', 'Access control of user', 'Report', 'Output A
   must(panels, label, `manager panel missing: ${label}`);
 }
 
-for (const marker of ['MonitoringPanel', 'AccessPanel', 'ReportPanel', 'PayrollPanel', 'RequestsPanel']) {
+for (const marker of ['MonitoringPanel', 'AccessPanel', 'ReportPanel', 'OutputActivityPanel', 'RequestsPanel']) {
   must(admin, marker, `manager console section missing: ${marker}`);
 }
 
+must(panels, "'output_activity'", 'manager panel id must use output_activity');
+must(panels, "panel === 'payroll'", 'legacy payroll query alias must stay backward compatible');
+must(admin, "activePanel === 'output_activity'", 'manager page must render Output Activity by output_activity id');
+mustNot(admin, 'function PayrollPanel', 'manager page must not expose PayrollPanel UI owner');
+mustNot(admin, "activePanel === 'payroll'", 'manager page must not render payroll panel id directly');
 must(admin, 'intent="clear_manager"', 'manager access must expose unlink action');
 must(admin, 'intent="suspend"', 'manager access must expose pause action');
 must(admin, 'manager-user-settings-form', 'manager access must expose user metadata form');
-must(admin, 'payrollAmount', 'manager payroll must compute from settings and output count');
+must(admin, 'payrollAmount', 'manager output activity must compute from settings and output count');
 must(settings, 'manager_user_settings', 'manager user settings helper missing table contract');
 must(payrollRoute, 'manager_user_settings', 'payroll route must save manager metadata');
 must(css, 'manager-console-kpi-grid', 'manager console CSS missing KPI layout');
