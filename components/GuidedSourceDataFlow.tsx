@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import SupportingDocumentsSetup from './SupportingDocumentsSetup';
 import SourceReviewAiPanel from './SourceReviewAiPanel';
+import WorkflowRail from '../src/features/generation/components/WorkflowRail';
 import { bureaus, type LetterRoute, type ParsedSource, type SourceItem } from '../lib/letter-engine';
 import type { PacketAssets } from '../lib/packet-assets';
 import type { TemplateFieldContract } from '../lib/template-contracts';
@@ -176,6 +177,7 @@ export default function GuidedSourceDataFlow({
   ].map((reason) => reason.trim()).filter(Boolean))).slice(0, 8);
   const generateDescribedBy = !packetReady && generationBlockReasons.length ? 'generation-blocked-reasons' : undefined;
   const showStage = (next: Stage) => runSharedTransition(() => setStage(next), 'stage');
+  const workflowActiveStep = stage === 'SOURCE' ? 'source-data' : stage === 'REVIEW' ? 'validation' : 'generate';
 
   const visibleBureaus = useMemo(() => {
     return bureaus.filter((bureau) => parsed.dispute[bureau].length || parsed.inquiry[bureau].length || parsed.late[bureau].length);
@@ -306,6 +308,7 @@ export default function GuidedSourceDataFlow({
 
   return (
     <div className="guided-source-workspace progressive-source-workspace">
+      <WorkflowRail activeStep={workflowActiveStep} blockers={generationBlockReasons} />
       {stage === 'SOURCE' && method === 'CHOOSE' && !source && (
         <section className="panel source-progressive-stage source-intake-stage shared-stage-surface" style={{ viewTransitionName: 'source-work-stage' }}>
           <SourceStageHeader eyebrow="Step 01 · Source Notepad" title="Upload or review client Notepad data" description="Upload a Notepad/TXT source file into a clean canvas. The original is protected, the working draft stays editable, and FTC fields are not added during normalization." />
