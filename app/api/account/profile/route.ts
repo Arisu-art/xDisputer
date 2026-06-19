@@ -20,13 +20,9 @@ function appendAccountSettingsState(next: string, state: 'saved' | 'error', reas
 }
 
 function relativeRedirect(location: string) {
-  return new NextResponse(null, {
-    status: 303,
-    headers: {
-      Location: location,
-      'Cache-Control': 'no-store, max-age=0'
-    }
-  });
+  const response = new NextResponse(null, { status: 303, headers: { Location: location } });
+  response.headers.set('Cache-Control', 'no-store, max-age=0');
+  return response;
 }
 
 function redirectBack(next: string, state: 'saved' | 'error', reason?: string | null, displayName?: string | null) {
