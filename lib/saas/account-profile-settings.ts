@@ -55,7 +55,7 @@ async function saveWithSessionRpc(supabase: SupabaseServerClient & { rpc?: Funct
 
 async function saveWithSessionAuth(supabase: SupabaseServerClient, displayName: string | null): Promise<AccountProfileSaveResult> {
   const { error } = await supabase.auth.updateUser({ data: { full_name: displayName || '' } });
-  if (error) return { ok: false, displayName, errorMessage: error.message, strategy: 'session-auth' };
+  if (error) return { ok: false, displayName, errorMessage: error.message ?? 'Session profile update failed.', strategy: 'session-auth' };
   return { ok: true, displayName, errorMessage: null, strategy: 'session-auth' };
 }
 
