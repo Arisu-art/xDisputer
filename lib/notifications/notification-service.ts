@@ -8,7 +8,7 @@ type RawNotificationRow = {
   id: string;
   title: string;
   body: string | null;
-  href: string | null;
+  href?: string | null;
   severity: string | null;
   read_at: string | null;
   created_at: string;
@@ -26,7 +26,7 @@ function toNotificationRecord(row: RawNotificationRow): NotificationRecord {
     id: row.id,
     title: row.title,
     body: row.body,
-    href: row.href,
+    href: row.href || null,
     severity: normalizeNotificationSeverity(row.severity),
     read_at: row.read_at,
     created_at: row.created_at
@@ -38,21 +38,33 @@ function safeLimit(value: number | undefined) {
   return Math.max(1, Math.min(40, Math.floor(value || 12)));
 }
 
+function isMissingHrefColumn(message: string | undefined) {
+  return Boolean(message && message.includes('notifications.href'));
+}
+
+async function selectNotifications(baseQuery: any) {
+  const full = await baseQuery.select('id,title,body,href,severity,read_at,created_at');
+  if (!full.error || !isMissingHrefColumn(full.error.message)) return full;
+  return baseQuery.select('id,title,body,severity,read_at,created_at');
+}
+
 export async function listNotifications({ supabase, userId, role, limit }: ListNotificationsInput) {
   const cappedLimit = safeLimit(limit);
-  const direct = await supabase
-    .from('notifications')
-    .select('id,title,body,href,severity,read_at,created_at')
-    .eq('recipient_user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(cappedLimit);
+  const direct = await selectNotifications(
+    supabase
+      .from('notifications')
+      .eq('recipient_user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(cappedLimit)
+  );
 
-  const roleWide = await supabase
-    .from('notifications')
-    .select('id,title,body,href,severity,read_at,created_at')
-    .eq('recipient_role', role)
-    .order('created_at', { ascending: false })
-    .limit(cappedLimit);
+  const roleWide = await selectNotifications(
+    supabase
+      .from('notifications')
+      .eq('recipient_role', role)
+      .order('created_at', { ascending: false })
+      .limit(cappedLimit)
+  );
 
   if (direct.error || roleWide.error) {
     return {
