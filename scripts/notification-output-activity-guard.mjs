@@ -12,11 +12,12 @@ const dock = read('components/notifications/NotificationDock.tsx');
 const accountMenu = read('components/console/AccountMenu.tsx');
 const shell = read('components/console/ConsoleShell.tsx');
 const decision = read('app/api/manager-output-decision/route.ts');
+const outputContract = read('src/features/manager-output-activity/output-activity-contract.ts');
 const canvas = read('docs/precision-change-control-canvas.md');
 
 must(generation, 'notifyManagerForGeneratedOutput', 'generation route must create output activity notification');
 must(generation, 'manager_disputer_output_approvals', 'generation route must create pending output activity');
-must(generation, 'rate_amount: 0', 'generated output activity must default rate to zero');
+must(generation, 'outputActivityContract.defaultRateAmount', 'generation route must use default output activity rate contract');
 must(readService, 'missingOptionalColumn', 'notification reads must tolerate optional column drift');
 must(writeService, 'isMissingOptionalColumn', 'notification writes must tolerate optional column drift');
 must(dock, "position: 'absolute'", 'notification dock must be out of normal page flow');
@@ -24,6 +25,8 @@ must(accountMenu, '<NotificationDock />', 'account menu rail must own notificati
 must(shell, '<AccountMenu', 'console shell must delegate account rail to AccountMenu');
 must(decision, 'manager_disputer_output_approvals', 'manager decision route must update output activity');
 must(decision, 'createNotification', 'manager decision route must notify disputer');
+must(decision, 'decisionStatus', 'manager decision route must use centralized decision status mapping');
+must(outputContract, 'defaultRateAmount: 0', 'output activity contract must default extra rate to zero');
 must(canvas, 'Precision Change Control Canvas', 'precision change canvas missing');
 
 if (failures.length) {
