@@ -87,7 +87,7 @@ import './topbar-action-cluster.css';
 import './instant-interaction-performance.css';
 import './ui-layout-contracts.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
-import RenderDebugger from '../components/console/RenderDebugger';
+import RenderDebuggerMount from '../components/console/RenderDebuggerMount';
 import GlobalTopbarActionsMount from '../components/shell/GlobalTopbarActionsMount';
 
 export const metadata = {
@@ -96,5 +96,5 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body data-theme-contract="xdisputer-unified" data-ui-scope="global" data-ui-quality="production" data-motion-contract="safe"><ControlNavGlobalTelemetry /><GlobalTopbarActionsMount />{children}<Suspense fallback={null}><RenderDebugger /></Suspense></body></html>;
+  return <html lang="en"><body data-theme-contract="xdisputer-unified" data-ui-scope="global" data-ui-quality="production" data-motion-contract="safe"><ControlNavGlobalTelemetry /><GlobalTopbarActionsMount />{children}<Suspense fallback={null}><RenderDebuggerMount /></Suspense></body></html>;
 }
