@@ -1,13 +1,19 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useMemo, useState } from 'react';
-import AiInsightPanel from './AiInsightPanel';
-import { runAiUiReview, type AiUiClientState } from '../lib/ai/ai-ui-client';
 import type { AiUiFinding, AiUiResult, AiUiSuggestedAction } from '../lib/ai/ai-ui-result';
 import type { LetterRoute, ParsedSource } from '../lib/letter-engine';
 import type { PacketAssets } from '../lib/packet-assets';
 import type { TemplateFieldContract } from '../lib/template-contracts';
 import type { JsonObject } from '../lib/ai/ai-types';
+
+const AiInsightPanel = dynamic(() => import('./AiInsightPanel'), {
+  ssr: false,
+  loading: () => <section className="ai-insight-panel loading" aria-live="polite">Preparing AI review controls…</section>
+});
+
+type AiUiClientState = 'idle' | 'loading' | 'ready' | 'error';
 
 type Props = {
   parsed: ParsedSource;
@@ -101,6 +107,7 @@ export default function SourceReviewAiPanel(props: Props) {
 
   async function runReview() {
     setStatus('loading');
+    const { runAiUiReview } = await import('../lib/ai/ai-ui-client');
     const next = await runAiUiReview({
       mode: 'source_review',
       message: 'Review source data completeness and explain generation readiness. Do not enable generation or change source data.',
