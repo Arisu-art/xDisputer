@@ -10,6 +10,12 @@ export type ClientWorkspaceCriticalGap = {
   verification: string;
 };
 
+export const clientWorkspaceOwnershipContract = {
+  owner: 'src/features/client-workspace',
+  activeShell: 'components/LetterGeneratorWorkspaceV2.tsx',
+  rule: 'Client workspace should compose feature-owned pieces and avoid duplicated shell, account rail, and entitlement surfaces.'
+} as const;
+
 export const clientWorkspacePanels: ClientWorkspacePanel[] = ['Dashboard', 'Templates', 'Source Data', 'Outputs', 'Client Center', 'Settings'];
 
 export const clientWorkspaceCriticalGaps: ClientWorkspaceCriticalGap[] = [
