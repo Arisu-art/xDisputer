@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 
 const requiredFiles = [
   'docs/modernization-implementation-tracker.md',
@@ -9,7 +10,9 @@ const requiredFiles = [
   'src/features/accounts/README.md',
   'src/features/templates/README.md',
   'src/features/source-data/README.md',
+  'src/features/source-data/source-readiness.ts',
   'src/features/generation/README.md',
+  'src/features/generation/readiness.ts',
   'src/features/generation/components/WorkflowRail.tsx',
   'src/features/outputs/README.md',
   'src/features/evidence/README.md',
@@ -27,6 +30,7 @@ const requiredFiles = [
   'src/server/services/README.md',
   'src/server/services/modernization-status.ts',
   'scripts/modernization-dependency-sync.mjs',
+  'scripts/performance-modernization-guard.mjs',
   'app/api/system/modernization/route.ts'
 ];
 
@@ -46,7 +50,7 @@ for (const file of requiredFiles) {
 }
 
 const tracker = read('docs/modernization-implementation-tracker.md');
-for (const marker of ['Coded in this pass', 'Not coded yet', 'Next safe coding order', 'Tracking rule']) {
+for (const marker of ['Coded in this pass', 'Not coded yet', 'Next safe coding order', 'Tracking rule', '10x smooth UI and performance strategy']) {
   if (!tracker.includes(marker)) report(`tracker marker missing: ${marker}`);
 }
 
@@ -77,6 +81,12 @@ for (const marker of ['WorkflowRail', 'workflowActiveStep']) {
 
 if (!read('src/features/generation/components/WorkflowRail.tsx').includes('data-modernization-feature="generation"')) {
   report('workflow rail feature marker missing');
+}
+
+try {
+  execSync('node scripts/performance-modernization-guard.mjs', { stdio: 'inherit' });
+} catch {
+  report('performance modernization guard failed');
 }
 
 if (failed) process.exit(1);
