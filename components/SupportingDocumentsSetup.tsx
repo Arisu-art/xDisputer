@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import ProgressiveDisclosure from './ProgressiveDisclosure';
 import SupportingDocumentsLayoutEditor from './SupportingDocumentsLayoutEditor';
 import { setActivePacketEvidence } from '../lib/active-packet-evidence';
+import { readEvidenceReadiness } from '../src/features/evidence/evidence-readiness';
 import {
   addSupportingAssets,
   loadPacketAssets,
@@ -69,10 +70,11 @@ export default function SupportingDocumentsSetup({ storageKey, clientName, embed
     savePacketAssets(storageKey, next);
     changed(next);
   }
-  const ready = assets.supporting.length > 0;
+  const evidenceReadiness = readEvidenceReadiness({ supportingCount: assets.supporting.length });
+  const ready = evidenceReadiness.ready;
   const fileLabel = `${assets.supporting.length} file${assets.supporting.length === 1 ? '' : 's'}`;
   const layoutTitle = ready ? 'Evidence page ready for layout' : 'Evidence image required';
-  const layoutSummary = ready ? `Client: ${clientName} · Position 02 supporting documents` : 'Upload at least one image for packet position 02.';
+  const layoutSummary = ready ? `Client: ${clientName} · Position 02 supporting documents` : evidenceReadiness.blocker || 'Upload at least one image for packet position 02.';
   const uploadInputId = `${storageKey}-evidence-upload`;
 
   const managerPanel = (selectedEvidenceId: string | null, selectEvidence: (id: string) => void) => <div className="evidence-panel-v2">
@@ -101,7 +103,7 @@ export default function SupportingDocumentsSetup({ storageKey, clientName, embed
 
   const managerPanelNode = managerPanel(null, () => undefined);
 
-  return <section className={`${embedded ? 'source-supporting-embedded required-supporting-embedded' : 'panel source-supporting-panel'} progressive-supporting merged-evidence-header`}>
+  return <section className={`${embedded ? 'source-supporting-embedded required-supporting-embedded' : 'panel source-supporting-panel'} progressive-supporting merged-evidence-header`} data-feature-owner="evidence">
     {!embedded && <header className="supporting-header">
       <div><p className="eyebrow">Required evidence</p><h2>Supporting Documents</h2><p>Upload and arrange evidence for <strong>{clientName}</strong>.</p></div>
       <span className={`supporting-count ${ready ? 'has-files' : ''}`}>{fileLabel}</span>
