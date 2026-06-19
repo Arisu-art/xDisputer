@@ -78,8 +78,8 @@ export async function markDirectNotificationsRead({ supabase, userId }: { supaba
     .update({ read_at: new Date().toISOString() })
     .eq('recipient_user_id', userId)
     .is('read_at', null)
-    .select('id', { count: 'exact', head: true });
+    .select('id');
 
   if (result.error) return { updatedCount: 0, errorMessage: result.error.message };
-  return { updatedCount: result.count || 0, errorMessage: null };
+  return { updatedCount: result.data ? result.data.length : 0, errorMessage: null };
 }
