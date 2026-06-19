@@ -9,8 +9,8 @@ const RenderDebugger = dynamic(() => import('./RenderDebugger'), {
 });
 
 function debugRequested() {
-  if (process.env.NODE_ENV !== 'production') return true;
   if (typeof window === 'undefined') return false;
+  if (process.env.NEXT_PUBLIC_XDISPUTER_DEBUG_PANEL === '1') return true;
 
   const params = new URLSearchParams(window.location.search);
   return params.get('debugPanel') === '1'
