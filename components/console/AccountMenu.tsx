@@ -86,16 +86,34 @@ function surfaceLabel(role: ConsoleRole, mode: ConsoleMode) {
   return mode === 'workspace' ? 'Workspace authoring' : 'Operations monitoring';
 }
 
+function displayNameFromUrl() {
+  if (typeof window === 'undefined') return '';
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('account_settings') !== 'saved') return '';
+  return cleanDisplayName(params.get('account_settings_name'));
+}
+
 export default function AccountMenu({ role, mode, email, displayName, accountLabel }: Props) {
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [localDisplayName, setLocalDisplayName] = useState(() => displayNameFromIdentity(displayName, email));
   const popoverId = useMemo(() => `xdisputer-account-popover-${role}-${mode}`, [role, mode]);
-  const resolvedDisplayName = useMemo(() => displayNameFromIdentity(displayName, email), [displayName, email]);
+  const resolvedDisplayName = useMemo(() => displayNameFromIdentity(localDisplayName || displayName, email), [localDisplayName, displayName, email]);
   const initial = useMemo(() => initialFromDisplayName(resolvedDisplayName), [resolvedDisplayName]);
   const safeNext = pathname || '/';
 
   useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    const nextName = displayNameFromIdentity(displayName, email);
+    setLocalDisplayName((current) => cleanDisplayName(current) || nextName);
+  }, [displayName, email]);
+
+  useEffect(() => {
+    const savedName = displayNameFromUrl();
+    if (savedName) setLocalDisplayName(savedName);
+  }, [pathname]);
 
   useEffect(() => {
     if (!open) return;
