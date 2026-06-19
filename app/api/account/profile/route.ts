@@ -8,11 +8,13 @@ function safeRedirectTarget(value: FormDataEntryValue | null) {
   return raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 }
 
-function appendAccountSettingsState(next: string, state: 'saved' | 'error', reason?: string | null) {
+function appendAccountSettingsState(next: string, state: 'saved' | 'error', reason?: string | null, displayName?: string | null) {
   const [path = '/', query = ''] = next.split('?');
   const params = new URLSearchParams(query);
   params.set('account_settings', state);
   if (reason) params.set('account_settings_reason', reason.slice(0, 80));
+  if (displayName) params.set('account_settings_name', displayName.slice(0, 120));
+  params.set('account_settings_sync', String(Date.now()));
   const suffix = params.toString();
   return suffix ? `${path}?${suffix}` : path;
 }
@@ -20,12 +22,15 @@ function appendAccountSettingsState(next: string, state: 'saved' | 'error', reas
 function relativeRedirect(location: string) {
   return new NextResponse(null, {
     status: 303,
-    headers: { Location: location }
+    headers: {
+      Location: location,
+      'Cache-Control': 'no-store, max-age=0'
+    }
   });
 }
 
-function redirectBack(next: string, state: 'saved' | 'error', reason?: string | null) {
-  return relativeRedirect(appendAccountSettingsState(next, state, reason));
+function redirectBack(next: string, state: 'saved' | 'error', reason?: string | null, displayName?: string | null) {
+  return relativeRedirect(appendAccountSettingsState(next, state, reason, displayName));
 }
 
 export async function POST(request: NextRequest) {
@@ -41,11 +46,14 @@ export async function POST(request: NextRequest) {
   const result = await saveCurrentAccountProfile({ supabase, user, displayName: fullName });
 
   revalidatePath('/', 'layout');
+  revalidatePath('/workspace');
   revalidatePath('/admin');
+  revalidatePath('/admin/access');
   revalidatePath('/manager-workspace');
   revalidatePath('/master');
+  revalidatePath('/master/ui-workspace');
   revalidatePath(next);
 
-  if (!result.ok) return redirectBack(next, 'error', result.strategy);
-  return redirectBack(next, 'saved', result.strategy);
+  if (!result.ok) return redirectBack(next, 'error', result.strategy, result.displayName);
+  return redirectBack(next, 'saved', result.strategy, result.displayName);
 }
