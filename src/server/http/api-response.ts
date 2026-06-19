@@ -13,9 +13,18 @@ const statusByCode: Record<ServiceErrorCode, number> = {
   unexpected_error: 500
 };
 
+function rawJsonPayload<TData>(data: TData): TData | null {
+  if (!data || typeof data !== 'object') return null;
+  const payload = data as Record<string, unknown>;
+  if (payload.__rawJson !== true) return null;
+  const { __rawJson, ...rest } = payload;
+  void __rawJson;
+  return rest as TData;
+}
+
 export function jsonFromServiceResult<TData>(result: ServiceResult<TData>): NextResponse {
   if (result.ok) {
-    return NextResponse.json({ ok: true, data: result.data }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
+    return NextResponse.json(rawJsonPayload(result.data) ?? { ok: true, data: result.data }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
   }
 
   return NextResponse.json(
