@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import './globals.css';
 import './workspace-light.css';
 import './workspace-dashboard.css';
@@ -95,5 +96,5 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body data-theme-contract="xdisputer-unified" data-ui-scope="global" data-ui-quality="production" data-motion-contract="safe"><ControlNavGlobalTelemetry /><GlobalTopbarActionsMount />{children}<RenderDebugger /></body></html>;
+  return <html lang="en"><body data-theme-contract="xdisputer-unified" data-ui-scope="global" data-ui-quality="production" data-motion-contract="safe"><ControlNavGlobalTelemetry /><GlobalTopbarActionsMount />{children}<Suspense fallback={null}><RenderDebugger /></Suspense></body></html>;
 }
