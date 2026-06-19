@@ -13,6 +13,7 @@ const accountMenu = read('components/console/AccountMenu.tsx');
 const generation = read('app/api/generation-runs/route.ts');
 const decision = read('app/api/manager-output-decision/route.ts');
 const repoAudit = read('scripts/repo-precision-audit.mjs');
+const managerMasterGuard = read('scripts/manager-master-lightweight-ui-guard.mjs');
 const canvas = read('docs/frontend-backend-organization-canvas.md');
 
 must(accountRail, 'Account rail owns notification dock', 'account rail contract must own notification dock');
@@ -23,6 +24,7 @@ must(accountMenu, '<NotificationDock />', 'AccountMenu must mount NotificationDo
 must(generation, 'outputActivityContract.defaultRateAmount', 'generation route must use output activity contract default rate');
 must(decision, 'decisionStatus', 'manager decision route must centralize decision status');
 must(repoAudit, 'NotificationDock should be owned by AccountMenu', 'repo precision audit must detect notification ownership drift');
+must(managerMasterGuard, 'manager-master-lightweight-ui-guard', 'manager/master lightweight UI guard missing');
 must(canvas, 'Request -> canvas -> owner file', 'organization canvas must define precision chain');
 
 if (failures.length) {
