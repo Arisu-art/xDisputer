@@ -28,6 +28,7 @@ function extractRoutes() {
   'components/console/ConsoleHeader.tsx',
   'components/console/AccountMenu.tsx',
   'components/console/RenderDebugger.tsx',
+  'components/console/RenderDebuggerMount.tsx',
   'components/console/ui-shell-registry.ts',
   'app/console-shell-system.css',
   'app/console-debug-overlay.css',
@@ -41,8 +42,10 @@ assertContains('components/console/ConsoleHeader.tsx', 'data-console-header="tru
 assertContains('components/console/AccountMenu.tsx', 'data-console-account-menu="true"');
 assertContains('components/console/RenderDebugger.tsx', 'window.__xdisputerDebug');
 assertContains('components/console/RenderDebugger.tsx', 'window.__xdisputerTemplateExecution');
+assertContains('components/console/RenderDebuggerMount.tsx', "dynamic(() => import('./RenderDebugger')");
+assertContains('components/console/RenderDebuggerMount.tsx', 'ssr: false');
 assertContains('components/console/ui-shell-registry.ts', 'templateExecutionStore');
-assertContains('app/layout.tsx', '<RenderDebugger />');
+assertContains('app/layout.tsx', '<RenderDebuggerMount />');
 
 for (const owner of extractOwners()) {
   assertFile(owner);
