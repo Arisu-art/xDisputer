@@ -11,6 +11,10 @@ function numberValue(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
+function employmentType(value: FormDataEntryValue | null) {
+  return clean(value) === 'full_time' ? 'full_time' : 'output_based';
+}
+
 function redirectToConsole(request: NextRequest, state: 'ok' | 'error', message?: string) {
   const referer = request.headers.get('referer');
   const target = referer ? new URL(referer) : new URL('/admin?panel=payroll', request.url);
@@ -26,12 +30,19 @@ export async function POST(request: NextRequest) {
     if (!profileId) return redirectToConsole(request, 'error', 'Missing account.');
 
     const { user, supabase } = await requireRole('manager');
+    const type = employmentType(formData.get('employmentType'));
+    const baseSalary = numberValue(formData.get('baseSalary'));
+    const perOutputRate = numberValue(formData.get('perOutputRate'));
     const record = {
       manager_id: user.id,
       user_id: profileId,
-      is_regular: clean(formData.get('isRegular')) === 'true',
-      rate: numberValue(formData.get('rate')),
-      salary: numberValue(formData.get('salary')),
+      employment_type: type,
+      is_regular: type === 'full_time',
+      base_salary: baseSalary,
+      per_output_rate: perOutputRate,
+      salary: baseSalary,
+      rate: perOutputRate,
+      payday_frequency: clean(formData.get('paydayFrequency')) || 'manual',
       notes: clean(formData.get('notes'), 300) || null,
       updated_at: new Date().toISOString()
     };
@@ -40,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (saved.error) return redirectToConsole(request, 'error', saved.error.message);
 
     revalidatePath('/admin');
-    return redirectToConsole(request, 'ok', 'Payroll settings saved.');
+    return redirectToConsole(request, 'ok', 'Disputer payroll settings saved.');
   } catch (error) {
     return redirectToConsole(request, 'error', error instanceof Error ? error.message : 'Payroll settings failed.');
   }
