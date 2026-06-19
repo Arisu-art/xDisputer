@@ -22,15 +22,7 @@ type ListNotificationsInput = {
 };
 
 function toNotificationRecord(row: RawNotificationRow): NotificationRecord {
-  return {
-    id: row.id,
-    title: row.title,
-    body: row.body,
-    href: row.href || null,
-    severity: normalizeNotificationSeverity(row.severity),
-    read_at: row.read_at,
-    created_at: row.created_at
-  };
+  return { id: row.id, title: row.title, body: row.body, href: row.href || null, severity: normalizeNotificationSeverity(row.severity), read_at: row.read_at, created_at: row.created_at };
 }
 
 function safeLimit(value: number | undefined) {
@@ -42,56 +34,40 @@ function isMissingHrefColumn(message: string | undefined) {
   return Boolean(message && message.includes('notifications.href'));
 }
 
-async function selectNotifications(baseQuery: any) {
-  const full = await baseQuery.select('id,title,body,href,severity,read_at,created_at');
-  if (!full.error || !isMissingHrefColumn(full.error.message)) return full;
-  return baseQuery.select('id,title,body,severity,read_at,created_at');
+async function queryNotifications(input: { supabase: SupabaseServerClient; column: 'recipient_user_id' | 'recipient_role'; value: string; limit: number }) {
+  const withHref = await input.supabase
+    .from('notifications')
+    .select('id,title,body,href,severity,read_at,created_at')
+    .eq(input.column, input.value)
+    .order('created_at', { ascending: false })
+    .limit(input.limit);
+
+  if (!withHref.error || !isMissingHrefColumn(withHref.error.message)) return withHref;
+
+  return input.supabase
+    .from('notifications')
+    .select('id,title,body,severity,read_at,created_at')
+    .eq(input.column, input.value)
+    .order('created_at', { ascending: false })
+    .limit(input.limit);
 }
 
 export async function listNotifications({ supabase, userId, role, limit }: ListNotificationsInput) {
   const cappedLimit = safeLimit(limit);
-  const direct = await selectNotifications(
-    supabase
-      .from('notifications')
-      .eq('recipient_user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(cappedLimit)
-  );
+  const direct = await queryNotifications({ supabase, column: 'recipient_user_id', value: userId, limit: cappedLimit });
+  const roleWide = await queryNotifications({ supabase, column: 'recipient_role', value: role, limit: cappedLimit });
 
-  const roleWide = await selectNotifications(
-    supabase
-      .from('notifications')
-      .eq('recipient_role', role)
-      .order('created_at', { ascending: false })
-      .limit(cappedLimit)
-  );
-
-  if (direct.error || roleWide.error) {
-    return {
-      notifications: [] as NotificationRecord[],
-      unreadCount: 0,
-      errorMessage: direct.error?.message || roleWide.error?.message || 'Notification query failed.'
-    };
-  }
+  if (direct.error || roleWide.error) return { notifications: [] as NotificationRecord[], unreadCount: 0, errorMessage: direct.error?.message || roleWide.error?.message || 'Notification query failed.' };
 
   const merged = [...((direct.data || []) as RawNotificationRow[]), ...((roleWide.data || []) as RawNotificationRow[])];
-  const unique = Array.from(new Map(merged.map((item) => [item.id, item])).values())
-    .sort((left, right) => right.created_at.localeCompare(left.created_at))
-    .slice(0, cappedLimit);
+  const unique = Array.from(new Map(merged.map((item) => [item.id, item])).values()).sort((left, right) => right.created_at.localeCompare(left.created_at)).slice(0, cappedLimit);
   const notifications = unique.map(toNotificationRecord);
   const unreadCount = notifications.filter((item) => !item.read_at).length;
-
   return { notifications, unreadCount, errorMessage: null };
 }
 
 export async function markDirectNotificationsRead({ supabase, userId }: { supabase: SupabaseServerClient; userId: string }) {
-  const result = await supabase
-    .from('notifications')
-    .update({ read_at: new Date().toISOString() })
-    .eq('recipient_user_id', userId)
-    .is('read_at', null)
-    .select('id');
-
+  const result = await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('recipient_user_id', userId).is('read_at', null).select('id');
   if (result.error) return { updatedCount: 0, errorMessage: result.error.message };
   return { updatedCount: result.data ? result.data.length : 0, errorMessage: null };
 }
