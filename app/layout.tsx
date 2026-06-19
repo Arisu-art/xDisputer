@@ -64,6 +64,7 @@ import './xdisputer-shell-compact.css';
 import './workspace-account-controls.css';
 import './client-account-popover-ratio.css';
 import './admin-monitor.css';
+import './manager-console-workflow.css';
 import './control-dashboard-lists.css';
 import './production-ui-lock.css';
 import './professional-console-layout.css';
