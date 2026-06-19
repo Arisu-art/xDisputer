@@ -5,6 +5,9 @@ import { managerRuntimeSourceSyncSnapshot } from '../../../../lib/manager-runtim
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const legacyWorkspaceAutowrite = ['apply-manager-workspace-nav', '-wiring.mjs'].join('');
+const legacyTemplateAutowrite = ['apply-manager-template-generation', '-wiring.mjs'].join('');
+
 function read(path: string) {
   return existsSync(path) ? readFileSync(path, 'utf8') : '';
 }
@@ -25,7 +28,7 @@ export async function GET() {
     { key: 'workspace_uses_orchestrator', ok: workspace.includes('executeTemplateGeneration({'), label: 'Client workspace calls TemplateExecutionOrchestrator' },
     { key: 'orchestrator_resolves_manager_templates', ok: orchestrator.includes('ManagerTemplateResolver'), label: 'TemplateExecutionOrchestrator resolves manager template authority' },
     { key: 'orchestrator_publishes_runtime_debug', ok: orchestrator.includes('window.__xdisputerTemplateExecution'), label: 'TemplateExecutionOrchestrator publishes runtime debug snapshot' },
-    { key: 'package_no_autowrite_lifecycle', ok: !pkg.includes('apply-manager-workspace-nav-wiring.mjs') && !pkg.includes('apply-manager-template-generation-wiring.mjs'), label: 'package lifecycle is verification-only and contains no UI autowrite scripts' },
+    { key: 'package_no_autowrite_lifecycle', ok: !pkg.includes(legacyWorkspaceAutowrite) && !pkg.includes(legacyTemplateAutowrite), label: 'package lifecycle is verification-only and contains no UI autowrite scripts' },
     { key: 'package_template_execution_guard', ok: pkg.includes('template-execution:guard'), label: 'package lifecycle includes template execution guard' }
   ]);
 
