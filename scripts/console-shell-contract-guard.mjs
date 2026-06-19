@@ -40,6 +40,7 @@ const access = read('app/admin/access/page.tsx');
 const clients = read('app/admin/clients/page.tsx');
 const menu = read('components/console/AccountMenu.tsx');
 const layout = read('app/layout.tsx');
+const debuggerMount = read('components/console/RenderDebuggerMount.tsx');
 const phase14 = read('scripts/phase14-local-safety-check.mjs');
 
 must(shell, 'data-console-shell="true"', 'shell marker missing');
@@ -63,7 +64,9 @@ pageUsesShell('/admin/clients', clients, wrapper);
 must(menu, 'data-console-account-menu="true"', 'account menu marker missing');
 must(menu, 'data-manager-account-anchor="header-ratio-grid"', 'account anchor marker missing');
 must(menu, 'manager-account-settings-form', 'account settings form missing');
-must(layout, '<RenderDebugger />', 'runtime debugger mount missing');
+must(layout, '<RenderDebuggerMount />', 'lazy runtime debugger mount missing');
+must(debuggerMount, "dynamic(() => import('./RenderDebugger')", 'RenderDebugger must load through dynamic import');
+must(debuggerMount, 'ssr: false', 'RenderDebugger mount must stay client-only');
 must(phase14, 'verification-only mode', 'phase14 verification marker missing');
 mustNot(phase14, 'runSelfHealingScript(', 'phase14 must not rewrite source');
 
