@@ -1,0 +1,34 @@
+#!/usr/bin/env node
+import { existsSync, readFileSync } from 'node:fs';
+
+const failures = [];
+const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : (failures.push(`missing ${path}`), '');
+const must = (source, marker, label) => { if (!source.includes(marker)) failures.push(label); };
+
+const accountRail = read('src/features/account-rail/account-rail-contract.ts');
+const consoleShell = read('src/features/console-shell/console-shell-contract.ts');
+const outputActivity = read('src/features/manager-output-activity/output-activity-contract.ts');
+const clientWorkspace = read('src/features/client-workspace/client-workspace-contract.ts');
+const accountMenu = read('components/console/AccountMenu.tsx');
+const generation = read('app/api/generation-runs/route.ts');
+const decision = read('app/api/manager-output-decision/route.ts');
+const repoAudit = read('scripts/repo-precision-audit.mjs');
+const canvas = read('docs/frontend-backend-organization-canvas.md');
+
+must(accountRail, 'Account rail owns notification dock', 'account rail contract must own notification dock');
+must(consoleShell, 'Provides sidebar, mode switch, header grid slot', 'console shell contract must be slot-only');
+must(outputActivity, 'defaultRateAmount: 0', 'output activity contract must keep default rate zero');
+must(clientWorkspace, 'clientWorkspaceOwnershipContract', 'client workspace ownership contract missing');
+must(accountMenu, '<NotificationDock />', 'AccountMenu must mount NotificationDock');
+must(generation, 'outputActivityContract.defaultRateAmount', 'generation route must use output activity contract default rate');
+must(decision, 'decisionStatus', 'manager decision route must centralize decision status');
+must(repoAudit, 'NotificationDock should be owned by AccountMenu', 'repo precision audit must detect notification ownership drift');
+must(canvas, 'Request -> canvas -> owner file', 'organization canvas must define precision chain');
+
+if (failures.length) {
+  console.error(`feature-ownership-guard failed: ${failures.length} check(s).`);
+  for (const failure of failures) console.error(`- ${failure}`);
+  process.exit(1);
+}
+
+console.log('feature-ownership-guard: ok');
