@@ -14,11 +14,11 @@ import { requireRole } from '../../../lib/saas/session';
 type PageProps = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
 function viewTitle(view: string) {
-  if (view === 'managers') return 'Workspace manager accounts';
-  if (view === 'clients') return 'Workspace client accounts';
-  if (view === 'pending') return 'Pending / unassigned workspace clients';
-  if (view === 'blocked') return 'Disabled / suspended workspace accounts';
-  return 'Workspace account directory';
+  if (view === 'managers') return 'Manager accounts';
+  if (view === 'clients') return 'Client accounts';
+  if (view === 'pending') return 'Pending / unassigned clients';
+  if (view === 'blocked') return 'Disabled / suspended accounts';
+  return 'Account directory';
 }
 
 function viewDescription(view: string) {
@@ -43,8 +43,6 @@ function Pager({ view, query, page, pageSize, total }: { view: string; query: st
 const masterAccountNavItems = [
   { href: '/master', label: 'Monitoring' },
   { href: '/master/accounts', label: 'All accounts', active: true },
-  { href: '/master/workspaces', label: 'Workspaces' },
-  { href: '/master/ui-workspace', label: 'UI workspace' },
   { href: '/master/reports', label: 'Reports' },
   { href: '/master/audit', label: 'Audit log' },
   { href: '/master/system', label: 'System health' }
@@ -62,14 +60,13 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
   ]);
 
   const entitlementResult = selectedView === 'overview' ? { entitlements: {}, errorMessage: null } : await listEntitlementLimits(supabase, directory.accounts.map((account) => account.id));
-  const coverageRate = summary.clients ? Math.round((summary.linked / summary.clients) * 100) : 0;
-  const headerTitle = selectedView === 'overview' ? 'Workspace-scoped account workflow.' : `${viewTitle(selectedView)}.`;
+  const headerTitle = selectedView === 'overview' ? 'Account workflow.' : `${viewTitle(selectedView)}.`;
   const headerDescription = viewDescription(selectedView);
   const email = profile?.email || user.email || 'Master account';
 
-  return <ConsoleShell role="master" mode="operations" email={email} accountLabel="Master account" brandSubtitle="Workspace accounts" sidebarSectionTitle="Operations" navItems={masterAccountNavItems} switchTarget="/admin" switchTargetLabel="Manager console" navAriaLabel="Master navigation" activeNavUsesConsoleLink>
+  return <ConsoleShell role="master" mode="operations" email={email} accountLabel="Master account" brandSubtitle="Accounts" sidebarSectionTitle="Operations" navItems={masterAccountNavItems} switchTarget="/admin" switchTargetLabel="Manager console" navAriaLabel="Master navigation" activeNavUsesConsoleLink>
     <header className="admin-monitor-header native-command-hero master-compact-hero directory-hero-with-action" data-layout-contract="command-header"><div data-layout-zone="copy"><p>Master account directory</p><h1>{headerTitle}</h1><span>{headerDescription}</span></div>{selectedView !== 'overview' && <ConsoleNavLink className="directory-header-action" href="/master/accounts">Account directory</ConsoleNavLink>}</header>
     {(summaryError || directory.errorMessage || entitlementResult.errorMessage) && <section className="admin-monitor-card"><div className="admin-monitor-empty">{summaryError || directory.errorMessage || entitlementResult.errorMessage}</div></section>}
-    {selectedView === 'overview' ? <section className="progressive-dataset-grid access-workflow-grid"><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=managers"><p>Manager limits</p><h2>Workspace managers</h2><span>{summary.managers} manager(s)</span><strong>Set client-seat limits and default daily output limits.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=clients"><p>Client limits</p><h2>Workspace clients</h2><span>{summary.clients} client(s)</span><strong>Set per-client daily output caps and review usage.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=pending"><p>Pending</p><h2>Pending / unassigned</h2><span>{summary.pending} pending</span><strong>Find users who need manager assignment or approval.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=blocked"><p>Blocked</p><h2>Disabled / suspended</h2><span>{summary.blocked} blocked</span><strong>Review accounts that cannot use the platform.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/workspaces"><p>Workspace</p><h2>Tenant directory</h2><span>{coverageRate}% coverage</span><strong>Open workspace membership and assignment visibility.</strong></ConsoleNavLink></section> : <section className="master-access-stack single-header-dataset"><article className="admin-monitor-card native-operation-card" data-layout-contract="dataset-card"><DirectoryFilter view={selectedView} query={directoryParams.query} /><MasterAccountTable accounts={directory.accounts} currentUserId={user.id} emptyText="No accounts match this workspace dataset." entitlements={entitlementResult.entitlements} /><Pager view={selectedView} query={directoryParams.query} page={directory.page} pageSize={directory.pageSize} total={directory.total} /></article></section>}
+    {selectedView === 'overview' ? <section className="progressive-dataset-grid access-workflow-grid"><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=managers"><p>Manager limits</p><h2>Managers</h2><span>{summary.managers} manager(s)</span><strong>Set client-seat limits and default daily output limits.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=clients"><p>Client limits</p><h2>Clients</h2><span>{summary.clients} client(s)</span><strong>Set per-client daily output caps and review usage.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=pending"><p>Pending</p><h2>Pending / unassigned</h2><span>{summary.pending} pending</span><strong>Find users who need manager assignment or approval.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=blocked"><p>Blocked</p><h2>Disabled / suspended</h2><span>{summary.blocked} blocked</span><strong>Review accounts that cannot use the platform.</strong></ConsoleNavLink></section> : <section className="master-access-stack single-header-dataset"><article className="admin-monitor-card native-operation-card" data-layout-contract="dataset-card"><DirectoryFilter view={selectedView} query={directoryParams.query} /><MasterAccountTable accounts={directory.accounts} currentUserId={user.id} emptyText="No accounts match this account dataset." entitlements={entitlementResult.entitlements} /><Pager view={selectedView} query={directoryParams.query} page={directory.page} pageSize={directory.pageSize} total={directory.total} /></article></section>}
   </ConsoleShell>;
 }
