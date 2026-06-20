@@ -27,8 +27,16 @@ mustNot(layout, "import './client-account-popover-ratio.css';", 'layout must not
 must(foundation, "@import './globals.css';", 'foundation bundle must include globals');
 must(pipeline, "@import './template-flow.css';", 'pipeline bundle must include template flow');
 must(client, "@import './client-operations.css';", 'client bundle must include client operations');
-must(consoleShell, "@import './final-console-account-rail.css';", 'console shell bundle must include account rail');
 must(contracts, "@import './ui-layout-contracts.css';", 'contracts bundle must include layout contracts');
+
+const explicitRailOrder = layout.includes("import './account-menu-ratio-system.css';") &&
+  layout.includes("import './final-console-account-rail.css';") &&
+  layout.includes("import './console-debug-overlay.css';");
+const bundledRailOrder = consoleShell.includes("@import './final-console-account-rail.css';");
+
+if (!explicitRailOrder && !bundledRailOrder) {
+  failures.push('account rail CSS must be imported by explicit root order or console shell bundle');
+}
 
 if (failures.length) {
   console.error('root-css-import-reduction-guard failed: ' + failures.length + ' check(s).');
