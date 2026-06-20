@@ -1,97 +1,12 @@
-/* Client workspace account ratio contract.
-   The client shell now uses the same canonical AccountMenu dock used by manager/master.
-   This file only adds client-specific cleanup around that shared dock. */
+/* Client account CSS syntax repair. */
+:root { --client-account-popover-contract: canonical-console-account-dock; }
 
-:root {
-  --client-account-popover-contract: canonical-console-account-dock;
+main.app-shell[data-client-console-shell="true"] section.main-area[data-console-role="client"] {
+  --account-dock-width: minmax(280px, 1fr);
 }
 
 @media (min-width: 761px) {
-  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"][data-console-header-grid="true"] {
-    --account-dock-width: minmax(280px, 1fr) !important;
-    --account-dock-height: clamp(140px, 10vw, 156px) !important;
-    --account-popover-width: min(420px, calc(100vw - 32px)) !important;
+  main.app-shell[data-client-console-shell="true"] section.main-area.admin-monitor-main[data-console-role="client"][data-console-header-grid="true"] {
     grid-template-columns: minmax(0, 3fr) var(--account-dock-width) !important;
-    grid-template-rows: var(--account-dock-height) auto !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > header.header[data-console-header-primary="true"] {
-    grid-column: 1 !important;
-    grid-row: 1 !important;
-    width: auto !important;
-    min-width: 0 !important;
-    min-height: var(--account-dock-height) !important;
-    height: var(--account-dock-height) !important;
-    max-height: var(--account-dock-height) !important;
-    margin: 0 !important;
-    padding: clamp(22px, 2vw, 30px) !important;
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    align-items: center !important;
-    overflow: hidden !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > .manager-header-account-dock[data-console-account-role="client"] {
-    grid-column: 2 !important;
-    grid-row: 1 !important;
-    position: relative !important;
-    inset: auto !important;
-    top: auto !important;
-    right: auto !important;
-    width: 100% !important;
-    min-width: 280px !important;
-    min-height: var(--account-dock-height) !important;
-    height: var(--account-dock-height) !important;
-    max-height: var(--account-dock-height) !important;
-    margin: 0 !important;
-    z-index: 10 !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > .manager-header-account-dock[data-console-account-role="client"] .manager-account-popover {
-    top: 0 !important;
-    right: 0 !important;
-    width: var(--account-popover-width) !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > header.header .workspace-header-actions .output-limit-reset-chip {
-    display: none !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > header.header .workspace-header-actions {
-    width: min(100%, 320px) !important;
-    padding-top: 0 !important;
-    justify-self: start !important;
-    display: flex !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > header.header .header-next-action {
-    width: min(100%, 320px) !important;
-    min-height: 46px !important;
-    padding: 10px 14px !important;
-    border-radius: 999px !important;
-    display: grid !important;
-    grid-template-columns: 10px auto minmax(74px, auto) minmax(0, 1fr) !important;
-    align-items: center !important;
-    gap: 10px !important;
-    overflow: hidden !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > header.header .header-next-action .runtime-chip-detail {
-    min-width: 0 !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] .dashboard-command-card .output-limit-reset-chip {
-    display: grid !important;
-    width: min(100%, 360px) !important;
-    justify-self: end !important;
-  }
-}
-
-@media (max-width: 760px) {
-  body[data-theme-contract="xdisputer-unified"] main.app-shell[data-client-console-shell="true"] > section.main-area.admin-monitor-main[data-console-role="client"] > .manager-header-account-dock[data-console-account-role="client"] {
-    position: relative !important;
   }
 }
