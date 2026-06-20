@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient } from '../../../../lib/supabase/server';
 import { normalizeAccountDisplayName, saveCurrentAccountProfile } from '../../../../lib/saas/account-profile-settings';
+import { revalidateAccountProfileRoutes } from '../../../../src/features/account-profile/account-profile-revalidation';
 
 function safeRedirectTarget(value: FormDataEntryValue | null) {
   const raw = typeof value === 'string' ? value.trim() : '';
@@ -40,15 +40,7 @@ export async function POST(request: NextRequest) {
   if (!user) return relativeRedirect('/login');
 
   const result = await saveCurrentAccountProfile({ supabase, user, displayName: fullName });
-
-  revalidatePath('/', 'layout');
-  revalidatePath('/workspace');
-  revalidatePath('/admin');
-  revalidatePath('/admin/access');
-  revalidatePath('/manager-workspace');
-  revalidatePath('/master');
-  revalidatePath('/master/ui-workspace');
-  revalidatePath(next);
+  revalidateAccountProfileRoutes(next);
 
   if (!result.ok) return redirectBack(next, 'error', result.strategy, result.displayName);
   return redirectBack(next, 'saved', result.strategy, result.displayName);
