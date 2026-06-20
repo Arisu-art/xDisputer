@@ -27,12 +27,12 @@ mustNot(shell, '<NotificationDock', 'console shell must not mount notification d
 must(notifications, ".select('id,title,body", 'notification queries must select explicit columns');
 must(notifications, '.limit(', 'notification queries must limit rows');
 must(notificationDock, '120_000', 'notification polling should be throttled');
-must(dashboard, 'StaticEntitlementChip', 'dashboard entitlement surface should be static');
-mustNot(dashboard, "import OutputLimitResetChip", 'dashboard must not import polling entitlement chip');
+mustNot(dashboard, 'StaticEntitlementChip', 'dashboard must not keep retired static entitlement chip');
+mustNot(dashboard, 'output-limit-reset-chip', 'dashboard must not keep retired entitlement chip classes');
 mustNot(boundary, 'window.setInterval', 'output limit boundary must not run interval polling');
 must(workspace, "import('jszip')", 'workspace archive builder must lazy-load JSZip');
 mustNot(workspace, "import JSZip from 'jszip'", 'workspace must not statically import JSZip');
-mustNot(workspace, "import OutputLimitResetChip", 'workspace header must not import polling entitlement chip');
+mustNot(workspace, 'OutputLimitResetChip', 'workspace header must not import retired entitlement chip');
 must(outputRoute, 'outputActivityContract.defaultRateAmount', 'generation route must use output activity contract');
 must(perfContract, 'heavy-client-bundle-risk', 'performance contract must track heavy client bundle risk');
 must(canvas, 'Performance Boost Canvas', 'performance canvas missing');
