@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import OwnedNotificationDock from '../notifications/OwnedNotificationDock';
+import NotificationDock from '../notifications/OwnedNotificationDock';
 
 type ConsoleRole = 'manager' | 'master' | 'client';
 type ConsoleMode = 'operations' | 'workspace';
@@ -135,7 +135,7 @@ export default function AccountMenu({ role, mode, email, displayName, accountLab
 
   return <div ref={rootRef} className="manager-header-account-dock" data-console-component="AccountMenu" data-console-account-menu="true" data-console-account-role={role} data-console-mode={mode} data-manager-account-menu="true" data-manager-account-anchor="header-ratio-grid" data-manager-account-layout="header-75-25-avatar-only" data-manager-account-state={open ? 'open' : 'closed'} data-manager-account-popover-align="same-rail">
     <style data-account-rail-contract="true">{ACCOUNT_RAIL_CONTRACT_CSS}</style>
-    <OwnedNotificationDock />
+    <NotificationDock />
     <button type="button" className="manager-header-account-avatar" aria-haspopup="dialog" aria-expanded={open} aria-controls={popoverId} aria-label={`Open ${accountLabel} account settings`} onClick={() => setOpen((value) => !value)}>{initial}</button>
     {open ? <div id={popoverId} className="manager-account-popover" data-console-account-popover="true" data-manager-account-popover="true" data-manager-account-popover-align="same-rail" role="dialog" aria-label={`${accountLabel} settings`}>
       <div className="manager-account-popover-topline"><span>{email || accountLabel}</span><button type="button" className="manager-account-close" aria-label="Close account settings" onClick={() => setOpen(false)}>×</button></div>
