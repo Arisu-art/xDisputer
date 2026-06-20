@@ -22,34 +22,6 @@ function isMissingNotificationTable(message: string | undefined) {
   ));
 }
 
-function isMissingOptionalColumn(message: string | undefined) {
-  return Boolean(message && (
-    message.includes('notifications.href') ||
-    message.includes('notifications.severity') ||
-    message.includes('recipient_role')
-  ));
-}
-
-async function insertNotification(
-  input: CreateNotificationInput,
-  includeRole: boolean,
-  includeHref: boolean,
-  includeSeverity: boolean
-) {
-  const record: Record<string, unknown> = {
-    recipient_user_id: input.recipientUserId || null,
-    title: input.title.trim().slice(0, 140),
-    body: input.body ? input.body.trim().slice(0, 500) : null,
-    created_by: input.createdBy
-  };
-
-  if (includeRole) record.recipient_role = input.recipientRole || null;
-  if (includeSeverity) record.severity = input.severity || 'info';
-  if (includeHref) record.href = input.href || null;
-
-  return input.supabase.from('notifications').insert(record);
-}
-
 export async function createNotification(input: CreateNotificationInput) {
   const title = input.title.trim().slice(0, 140);
   if (!title) return { ok: false, errorMessage: 'Notification title is required.' };
@@ -57,29 +29,21 @@ export async function createNotification(input: CreateNotificationInput) {
     return { ok: false, errorMessage: 'Notification recipient is required.' };
   }
 
-  const attempts = [
-    { role: true, href: true, severity: true },
-    { role: false, href: true, severity: true },
-    { role: false, href: false, severity: true },
-    { role: false, href: false, severity: false }
-  ];
+  const record: Record<string, unknown> = {
+    recipient_user_id: input.recipientUserId || null,
+    recipient_role: input.recipientRole || null,
+    title,
+    body: input.body ? input.body.trim().slice(0, 500) : null,
+    href: input.href || null,
+    severity: input.severity || 'info',
+    created_by: input.createdBy
+  };
 
-  let lastError: string | null = null;
-
-  for (const attempt of attempts) {
-    if (!input.recipientUserId && !attempt.role) continue;
-    const result = await insertNotification(input, attempt.role, attempt.href, attempt.severity);
-    if (!result.error) return { ok: true, errorMessage: null };
-    lastError = result.error.message;
-    if (!isMissingOptionalColumn(result.error.message)) break;
-  }
-
-  if (!input.recipientUserId && input.recipientRole && lastError?.includes('recipient_role')) {
-    return { ok: true, errorMessage: null };
-  }
+  const result = await input.supabase.from('notifications').insert(record);
+  if (!result.error) return { ok: true, errorMessage: null };
 
   return {
     ok: false,
-    errorMessage: isMissingNotificationTable(lastError || undefined) ? null : lastError
+    errorMessage: isMissingNotificationTable(result.error.message) ? null : result.error.message
   };
 }
