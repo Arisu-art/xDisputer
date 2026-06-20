@@ -14,7 +14,6 @@ export const UI_SHELL_ROUTE_EXPECTATIONS: UiShellRouteExpectation[] = [
   { path: '/admin/audit', role: 'manager', mode: 'operations', owner: 'components/AccessAuditView.tsx' },
   { path: '/master', role: 'master', mode: 'operations', owner: 'app/master/MasterConsoleHome.tsx' },
   { path: '/master/accounts', role: 'master', mode: 'operations', owner: 'app/master/accounts/page.tsx' },
-  { path: '/master/workspaces', role: 'master', mode: 'operations', owner: 'app/master/workspaces/page.tsx' },
   { path: '/master/reports', role: 'master', mode: 'operations', owner: 'components/GenerationReportView.tsx' },
   { path: '/master/audit', role: 'master', mode: 'operations', owner: 'components/AccessAuditView.tsx' },
   { path: '/master/system', role: 'master', mode: 'operations', owner: 'app/master/system/page.tsx' },

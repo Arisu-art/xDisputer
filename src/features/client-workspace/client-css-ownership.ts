@@ -7,13 +7,13 @@ export type ClientCssOwner = {
 export const clientCssOwners: ClientCssOwner[] = [
   {
     file: 'app/client-account-popover-ratio.css',
-    owns: ['canonical client AccountMenu dock', 'client account 75/25 rail', 'duplicate header entitlement hiding'],
-    forbidden: ['fixed sidebar account card imitation', 'desktop workspace-account-card popover positioning']
+    owns: ['canonical client AccountMenu dock', 'client account 75/25 rail', 'compact account popover contract'],
+    forbidden: ['retired chip selectors', 'fixed sidebar account card imitation', 'desktop workspace-account-card popover positioning']
   },
   {
     file: 'app/client-workspace-layout-lock.css',
     owns: ['client shell page width', 'dashboard card geometry', 'metrics and recent work alignment'],
-    forbidden: ['account popover ownership', 'duplicated entitlement ownership']
+    forbidden: ['account popover ownership', 'retired chip ownership']
   },
   {
     file: 'app/account-menu-ratio-system.css',
@@ -23,5 +23,5 @@ export const clientCssOwners: ClientCssOwner[] = [
 ];
 
 export function clientCssOwnershipSummary() {
-  return clientCssOwners.map((owner) => `${owner.file}: ${owner.owns.join(', ')}`).join('\n');
+  return clientCssOwners.map((owner) => owner.file + ': ' + owner.owns.join(', ')).join('\n');
 }

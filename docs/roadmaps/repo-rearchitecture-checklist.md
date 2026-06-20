@@ -7,7 +7,7 @@
   - Goal: one deterministic local repair path, no giant pasted terminal code.
 
 - [x] Fix 2 — route convention normalization
-  - Files: `proxy.ts`, deprecated `middleware.ts` scheduled for local removal after sync
+  - Files: `proxy.ts`, deprecated `middleware.ts` removed by cleanup
   - Goal: align with Next.js 16 proxy convention.
 
 - [x] Fix 3 — client account CSS repair

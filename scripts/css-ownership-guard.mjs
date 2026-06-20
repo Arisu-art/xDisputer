@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const failures = [];
-const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : (failures.push(`missing ${path}`), '');
+const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : (failures.push('missing ' + path), '');
 const must = (source, text, label) => { if (!source.includes(text)) failures.push(label); };
 const mustNot = (source, text, label) => { if (source.includes(text)) failures.push(label); };
 
@@ -11,7 +11,6 @@ const clientAccount = read('app/client-account-popover-ratio.css');
 const clientLayout = read('app/client-workspace-layout-lock.css');
 const accountRatio = read('app/account-menu-ratio-system.css');
 const layout = read('app/layout.tsx');
-
 const retiredA = 'output-limit' + '-reset-chip';
 const retiredB = 'output-limit' + '-chip-main';
 const retiredC = 'performance-static' + '-entitlement-chip';
@@ -34,8 +33,8 @@ mustNot(clientLayout, retiredB, 'client layout CSS must not keep retired chip in
 mustNot(clientLayout, retiredC, 'client layout CSS must not keep retired static chip selector');
 
 if (failures.length) {
-  console.error(`css-ownership-guard failed: ${failures.length} check(s).`);
-  for (const failure of failures) console.error(`- ${failure}`);
+  console.error('css-ownership-guard failed: ' + failures.length + ' check(s).');
+  for (const failure of failures) console.error('- ' + failure);
   process.exit(1);
 }
 

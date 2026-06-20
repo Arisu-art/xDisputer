@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const failures = [];
-const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : (failures.push(`missing ${path}`), '');
+const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : (failures.push('missing ' + path), '');
 const must = (source, text, label) => { if (!source.includes(text)) failures.push(label); };
 
 const roadmap = read('docs/roadmaps/repo-rearchitecture-checklist.md');
@@ -22,8 +22,8 @@ must(proxy, 'export async function proxy', 'Next.js proxy convention must be act
 must(layout, "import './account-popover-compact-retirement.css';", 'root layout must include compact popover CSS');
 
 if (failures.length) {
-  console.error(`repo-rearchitecture-roadmap-guard failed: ${failures.length} check(s).`);
-  for (const failure of failures) console.error(`- ${failure}`);
+  console.error('repo-rearchitecture-roadmap-guard failed: ' + failures.length + ' check(s).');
+  for (const failure of failures) console.error('- ' + failure);
   process.exit(1);
 }
 

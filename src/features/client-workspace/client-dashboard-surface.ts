@@ -15,5 +15,5 @@ export const clientDashboardSurface: ClientDashboardSurface = {
 };
 
 export function explainClientDashboardSurface() {
-  return 'Account actions live in the canonical account dock.';
+  return 'Client dashboard and header limit surfaces are retired. Account actions live in the canonical account dock.';
 }
