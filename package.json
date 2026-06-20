@@ -28,7 +28,7 @@
     "theme:guard": "node scripts/theme-consistency-guard.mjs && npm run theme-governance:guard",
     "layout:guard": "node scripts/ui-layout-contract-guard.mjs && node scripts/ui-collapse-contract-guard.mjs",
     "template-workspace:guard": "node scripts/template-workspace-contract-guard.mjs && npm run dti:guard && npm run dynamic-template:anchor-guard && npm run manager-owned-docx:guard && npm run client-template:guard",
-    "ui-source:guard": "npm run no-autowrite:guard && npm run ui-shell:registry && npm run ui-intelligence:guard && npm run performance:guard && npm run manager-master-lightweight:guard && npm run modernization-next:guard && npm run manager-console:guard && npm run client-account:guard && npm run template-workspace:guard && npm run responsive:guard && npm run theme:guard && npm run master-ui-workspace:guard && npm run layout:guard && node scripts/console-shell-contract-guard.mjs && node scripts/manager-visible-switch-contract-guard.mjs",
+    "ui-source:guard": "npm run no-autowrite:guard && npm run ui-shell:registry && npm run ui-intelligence:guard && npm run performance:guard && npm run notification-ui:guard && npm run manager-master-lightweight:guard && npm run modernization-next:guard && npm run manager-console:guard && npm run client-account:guard && npm run template-workspace:guard && npm run responsive:guard && npm run theme:guard && npm run master-ui-workspace:guard && npm run layout:guard && node scripts/console-shell-contract-guard.mjs && node scripts/manager-visible-switch-contract-guard.mjs",
     "ui-shell:smoke": "npx --yes @playwright/test test tests/ui-shell-smoke.spec.ts",
     "console-roadmap:guard": "node scripts/console-roadmap-guard.mjs",
     "template-execution:guard": "node scripts/template-execution-guard.mjs",
@@ -68,7 +68,8 @@
     "connection-inheritance:guard": "node scripts/connector-inheritance-guard.mjs",
     "supabase:doctor": "npm run connections:doctor",
     "active:sync": "bash scripts/xdisputer-active-sync.sh",
-    "active:sync:db": "npm run active:sync -- --sync-db --verify"
+    "active:sync:db": "npm run active:sync -- --sync-db --verify",
+    "notification-ui:guard": "node scripts/notification-ui-frontend-guard.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

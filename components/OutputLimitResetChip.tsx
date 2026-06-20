@@ -37,6 +37,12 @@ function isEntitlementPayload(value: unknown): value is EntitlementPayload {
   return Boolean(value && typeof value === 'object' && 'outputUsedToday' in value);
 }
 
+function countdownStep(secondsLeft: number | null) {
+  if (secondsLeft === null || secondsLeft > 3600) return { delay: 60_000, decrement: 60 };
+  if (secondsLeft > 300) return { delay: 10_000, decrement: 10 };
+  return { delay: 1000, decrement: 1 };
+}
+
 export default function OutputLimitResetChip() {
   const [entitlement, setEntitlement] = useState<EntitlementPayload | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -74,23 +80,29 @@ export default function OutputLimitResetChip() {
       }
     }
 
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') void load();
+    }
+
     void load();
     window.addEventListener('xdisputer:output-entitlement-updated', handleUpdate);
     window.addEventListener('xdisputer:output-entitlement-refresh', handleUpdate);
-    const refresh = window.setInterval(load, 30_000);
+    document.addEventListener('visibilitychange', handleVisibility);
     return () => {
-      window.clearInterval(refresh);
       window.removeEventListener('xdisputer:output-entitlement-updated', handleUpdate);
       window.removeEventListener('xdisputer:output-entitlement-refresh', handleUpdate);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [load]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setSecondsLeft((value) => typeof value === 'number' ? Math.max(0, value - 1) : value);
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, []);
+    if (typeof secondsLeft !== 'number') return;
+    const step = countdownStep(secondsLeft);
+    const timer = window.setTimeout(() => {
+      setSecondsLeft((value) => typeof value === 'number' ? Math.max(0, value - step.decrement) : value);
+    }, step.delay);
+    return () => window.clearTimeout(timer);
+  }, [secondsLeft]);
 
   useEffect(() => {
     if (secondsLeft !== 0 || resetRefreshStartedRef.current) return;

@@ -27,7 +27,8 @@ const buttonStyle: CSSProperties = {
   background: 'rgba(239, 246, 255, .96)',
   color: '#1d4ed8',
   fontWeight: 950,
-  cursor: 'pointer'
+  cursor: 'pointer',
+  boxShadow: '0 10px 24px rgba(29, 78, 216, .12)'
 };
 
 const badgeStyle: CSSProperties = {
@@ -46,12 +47,12 @@ const badgeStyle: CSSProperties = {
 
 const popoverStyle: CSSProperties = {
   position: 'absolute',
-  top: 50,
+  top: 52,
   right: 0,
-  width: 'min(360px, calc(100vw - 32px))',
+  width: 'min(340px, calc(100vw - 32px))',
   display: 'grid',
-  gap: 8,
-  padding: 12,
+  gap: 10,
+  padding: 14,
   border: '1px solid rgba(203, 213, 225, .92)',
   borderRadius: 22,
   background: 'rgba(255, 255, 255, .98)',
@@ -69,12 +70,23 @@ const itemStyle: CSSProperties = {
   textDecoration: 'none'
 };
 
+const closeStyle: CSSProperties = {
+  border: '1px solid rgba(203, 213, 225, .92)',
+  borderRadius: 999,
+  background: '#fff',
+  color: '#334155',
+  fontSize: 12,
+  padding: '6px 10px',
+  cursor: 'pointer'
+};
+
 export default function NotificationDock() {
   const [open, setOpen] = useState(false);
   const [payload, setPayload] = useState<Payload>({ notifications: [], unreadCount: 0 });
 
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
       try {
         const response = await fetch('/api/notifications?limit=8', { cache: 'no-store' });
@@ -87,24 +99,48 @@ export default function NotificationDock() {
           });
         }
       } catch {
-        if (!cancelled) setPayload({ notifications: [], unreadCount: 0, errorMessage: 'Notifications unavailable.' });
+        if (!cancelled) {
+          setPayload({ notifications: [], unreadCount: 0, errorMessage: 'Notifications unavailable.' });
+        }
       }
     }
+
     void load();
     const timer = window.setInterval(() => { void load(); }, 120_000);
-    return () => { cancelled = true; window.clearInterval(timer); };
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, []);
 
   return <div className="notification-dock" data-notification-dock="true" style={dockStyle}>
-    <button type="button" className="notification-dock-button" style={buttonStyle} aria-haspopup="dialog" aria-expanded={open} aria-label="Open notifications" onClick={() => setOpen((value) => !value)}>
-      <span aria-hidden="true">N</span>
+    <button
+      type="button"
+      className="notification-dock-button"
+      style={buttonStyle}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-label="Open notifications"
+      onClick={() => setOpen((value) => !value)}
+    >
+      <span aria-hidden="true">🔔</span>
       {payload.unreadCount > 0 && <strong style={badgeStyle}>{payload.unreadCount > 9 ? '9+' : payload.unreadCount}</strong>}
     </button>
+
     {open && <section className="notification-dock-popover" style={popoverStyle} role="dialog" aria-label="Notifications">
-      <header style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><strong>Notifications</strong><button type="button" onClick={() => setOpen(false)} aria-label="Close notifications">Close</button></header>
-      {payload.errorMessage && <p className="notification-dock-empty" style={{ color: '#64748b' }}>{payload.errorMessage}</p>}
-      {!payload.errorMessage && payload.notifications.length === 0 && <p className="notification-dock-empty" style={{ color: '#64748b' }}>No notifications yet.</p>}
-      {!payload.errorMessage && payload.notifications.map((item) => <a key={item.id} className={`notification-dock-item ${item.severity}`} style={itemStyle} href={item.href || '#'}><span style={{ fontWeight: 900 }}>{item.title}</span>{item.body && <small style={{ color: '#64748b' }}>{item.body}</small>}</a>)}
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <strong>Notifications</strong>
+        <button type="button" style={closeStyle} onClick={() => setOpen(false)} aria-label="Close notifications">Close</button>
+      </header>
+
+      {payload.errorMessage && <p className="notification-dock-empty" style={{ color: '#64748b', margin: 0 }}>{payload.errorMessage}</p>}
+      {!payload.errorMessage && payload.notifications.length === 0 && <p className="notification-dock-empty" style={{ color: '#64748b', margin: 0 }}>No notifications yet.</p>}
+      {!payload.errorMessage && payload.notifications.map((item) => (
+        <a key={item.id} className={`notification-dock-item ${item.severity}`} style={itemStyle} href={item.href || '#'}>
+          <span style={{ fontWeight: 900 }}>{item.title}</span>
+          {item.body && <small style={{ color: '#64748b' }}>{item.body}</small>}
+        </a>
+      ))}
     </section>}
   </div>;
 }
