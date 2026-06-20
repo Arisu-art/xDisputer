@@ -56,32 +56,6 @@
     gap: 10px !important;
   }
 
-  body[data-theme-contract="xdisputer-unified"] .app-shell:has(> .sidebar + .main-area) .header .output-limit-reset-chip {
-    min-height: 76px !important;
-    width: 100% !important;
-    max-width: 300px !important;
-    padding: 11px 12px !important;
-    border-radius: 18px !important;
-    grid-template-columns: minmax(0, 1fr) minmax(74px, .6fr) !important;
-    gap: 9px !important;
-    box-shadow: none !important;
-    background: rgba(239, 246, 255, .76) !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell:has(> .sidebar + .main-area) .header .output-limit-reset-chip span,
-  body[data-theme-contract="xdisputer-unified"] .app-shell:has(> .sidebar + .main-area) .header .output-limit-reset-chip small {
-    font-size: 9px !important;
-    line-height: 1.15 !important;
-    letter-spacing: .08em !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell:has(> .sidebar + .main-area) .header .output-limit-reset-chip strong {
-    font-size: clamp(15px, 1.05vw, 19px) !important;
-    line-height: .95 !important;
-    letter-spacing: -.04em !important;
-    overflow-wrap: normal !important;
-  }
-
   body[data-theme-contract="xdisputer-unified"] .app-shell .sidebar .workspace-account-card {
     top: clamp(116px, 8vw, 142px) !important;
     right: clamp(36px, 3vw, 60px) !important;
@@ -112,7 +86,7 @@
 
   body[data-theme-contract="xdisputer-unified"] .app-shell:has(> .sidebar + .main-area) .dashboard-command-header-row {
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px) !important;
+    grid-template-columns: minmax(0, 1fr) !important;
     gap: clamp(18px, 2.2vw, 30px) !important;
     align-items: center !important;
   }
@@ -122,13 +96,6 @@
     line-height: .92 !important;
     letter-spacing: -.08em !important;
     max-width: 760px !important;
-  }
-
-  body[data-theme-contract="xdisputer-unified"] .app-shell:has(> .sidebar + .main-area) .dashboard-command-card .output-limit-reset-chip {
-    min-height: 112px !important;
-    max-width: 360px !important;
-    justify-self: end !important;
-    align-self: start !important;
   }
 
   body[data-theme-contract="xdisputer-unified"] .app-shell:has(> .sidebar + .main-area) .dashboard-operational-metrics {
