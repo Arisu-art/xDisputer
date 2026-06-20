@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 const scripts = packageJson.scripts || {};
@@ -13,6 +13,10 @@ const forbiddenAutowriteScripts = [
   'apply-manager-template-generation-wiring.mjs'
 ];
 
+const guardBundleRunner = existsSync('scripts/guard-bundle-runner.mjs')
+  ? readFileSync('scripts/guard-bundle-runner.mjs', 'utf8')
+  : '';
+
 for (const [name, command] of Object.entries(scripts)) {
   if (name.startsWith('ai:')) continue;
   if (name === 'ui-source:guard') continue;
@@ -21,9 +25,31 @@ for (const [name, command] of Object.entries(scripts)) {
   }
 }
 
-if (!String(scripts.predev || '').includes('phase14-local-safety-check.mjs') || !String(scripts.predev || '').includes('ui-source:guard')) failures.push('predev must run verification-only safety and UI guards.');
-if (!String(scripts.pretypecheck || '').includes('phase14-local-safety-check.mjs') || !String(scripts.pretypecheck || '').includes('ui-source:guard')) failures.push('pretypecheck must run verification-only safety and UI guards.');
-if (!String(scripts.prebuild || '').includes('phase14-local-safety-check.mjs') || !String(scripts.prebuild || '').includes('ui-source:guard')) failures.push('prebuild must run verification-only safety and UI guards.');
+function usesExplicitVerificationChain(command) {
+  const value = String(command || '');
+  return value.includes('phase14-local-safety-check.mjs') && value.includes('ui-source:guard');
+}
+
+function preflightBundleIsVerificationOnly() {
+  return guardBundleRunner.includes("preflight: [") &&
+    guardBundleRunner.includes("scripts/phase14-local-safety-check.mjs") &&
+    guardBundleRunner.includes("['bundle', ['ui-source']]") &&
+    guardBundleRunner.includes("scripts/console-roadmap-guard.mjs") &&
+    guardBundleRunner.includes("scripts/template-execution-guard.mjs");
+}
+
+function usesCachedVerificationBundle(command) {
+  const value = String(command || '');
+  return value.includes('guard-bundle-runner.mjs preflight') && preflightBundleIsVerificationOnly();
+}
+
+function isVerificationOnlyLifecycle(command) {
+  return usesExplicitVerificationChain(command) || usesCachedVerificationBundle(command);
+}
+
+if (!isVerificationOnlyLifecycle(scripts.predev)) failures.push('predev must run verification-only safety and UI guards.');
+if (!isVerificationOnlyLifecycle(scripts.pretypecheck)) failures.push('pretypecheck must run verification-only safety and UI guards.');
+if (!isVerificationOnlyLifecycle(scripts.prebuild)) failures.push('prebuild must run verification-only safety and UI guards.');
 
 if (failures.length) {
   console.error('\nNo-autowrite UI guard failed.');
