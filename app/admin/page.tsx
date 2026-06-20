@@ -1,6 +1,7 @@
 import ConsoleNavLink from '../../components/ConsoleNavLink';
 import ManagerConsoleShell from '../../components/ManagerConsoleShell';
 import ManagerKpiGrid from '../../src/features/manager-console/components/ManagerKpiGrid';
+import { emptyDirectoryResult, formatDate, money, outputUsage, statusText, stringParam, uniqueAccounts } from '../../src/features/manager-console/admin-page-presenters';
 import { headers } from 'next/headers';
 import { ensureManagerInviteCode } from '../../lib/saas/account-management';
 import {
@@ -21,15 +22,6 @@ type PageProps = {
     message?: string | string[];
   }>;
 };
-
-const emptyDirectoryResult: AccountDirectoryListResult = { accounts: [], total: 0, page: 1, pageSize: 8, errorMessage: null };
-
-function stringParam(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
-function formatDate(value: string | null | undefined) { if (!value) return '—'; const date = new Date(value); if (Number.isNaN(date.getTime())) return '—'; return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(date); }
-function money(value: number) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value); }
-function statusText(value: string | null | undefined) { if (value === 'pending_manager_assignment') return 'Waiting for invite'; if (value === 'pending_manager_approval') return 'Pending approval'; if (value === 'active') return 'Active'; if (value === 'suspended') return 'Paused'; if (value === 'disabled') return 'Disabled'; return value || 'Pending'; }
-function outputUsage(entitlements: EntitlementLimitMap, accountId: string) { const row = entitlements[accountId]; return `${row?.output_used_today || 0}/${typeof row?.effective_output_limit === 'number' ? row.effective_output_limit : 'Default'} outputs today`; }
-function uniqueAccounts(...groups: AccountDirectoryRow[][]) { const map = new Map<string, AccountDirectoryRow>(); groups.flat().forEach((account) => map.set(account.id, account)); return Array.from(map.values()); }
 
 function ControlForm({ profileId, intent, label, primary = false }: { profileId: string; intent: string; label: string; primary?: boolean }) { return <form action="/api/control/profile" method="post"><input type="hidden" name="profileId" value={profileId} /><input type="hidden" name="intent" value={intent} /><button type="submit" className={`admin-action-button ${primary ? 'primary' : ''}`}>{label}</button></form>; }
 function PayrollSettingsForm({ managerId, accountId, settings }: { managerId: string; accountId: string; settings: ManagerUserSettingMap[string] | undefined }) { const current = settings || defaultManagerUserSetting(managerId, accountId); return <form action="/api/manager-console/payroll" method="post" className="manager-user-settings-form"><input type="hidden" name="profileId" value={accountId} /><label><span>Regular</span><select name="isRegular" defaultValue={current.is_regular ? 'true' : 'false'}><option value="true">Regular</option><option value="false">Non-regular</option></select></label><label><span>Rate/output</span><input name="rate" inputMode="decimal" defaultValue={String(current.rate || 0)} /></label><label><span>Salary</span><input name="salary" inputMode="decimal" defaultValue={String(current.salary || 0)} /></label><label className="manager-user-settings-notes"><span>Note</span><input name="notes" defaultValue={current.notes || ''} placeholder="Optional output activity or access note" /></label><button type="submit" className="admin-action-button primary">Save metadata</button></form>; }
