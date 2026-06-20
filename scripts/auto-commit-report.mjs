@@ -61,19 +61,25 @@ function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, '-');
 }
 
-function parseStatusLine(line) {
-  const match = line.match(/^(.{1,2})\\s+(.+)$/);
-  if (!match) return { status: line.slice(0, 2), path: line.trim(), oldPath: null };
+function parseStatusEntries(output) {
+  const entries = output.split('\0').filter(Boolean);
+  const files = [];
 
-  const status = match[1].padEnd(2, ' ');
-  const rawPath = match[2].trim();
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+    const status = entry.slice(0, 2);
+    const path = entry.slice(3);
+    let oldPath = null;
 
-  if (rawPath.includes(' -> ')) {
-    const [from, to] = rawPath.split(' -> ');
-    return { status, path: to.trim(), oldPath: from.trim() };
+    if ((status.includes('R') || status.includes('C')) && entries[index + 1]) {
+      oldPath = entries[index + 1];
+      index += 1;
+    }
+
+    files.push({ status, path, oldPath });
   }
 
-  return { status, path: rawPath, oldPath: null };
+  return files;
 }
 
 function shouldTrack(path) {
@@ -190,8 +196,8 @@ function main() {
   const inside = readGit(['rev-parse', '--is-inside-work-tree'], { optional: true });
   if (inside !== 'true') throw new Error('Run this command inside the xDisputer Git repository.');
   const headBefore = readGit(['rev-parse', 'HEAD']);
-  const statusOutput = readGit(['status', '--porcelain']);
-  const files = statusOutput.split(/\r?\n/).filter(Boolean).map(parseStatusLine).filter((item) => shouldTrack(item.path));
+  const statusOutput = readGit(['status', '--porcelain=v1', '-z']);
+  const files = parseStatusEntries(statusOutput).filter((item) => shouldTrack(item.path));
 
   if (!files.length) {
     console.log('No trackable local changes detected. Nothing to auto-commit.');
@@ -208,7 +214,7 @@ function main() {
   }
 
   runVerification();
-  run('git', ['add', reportPath, ...files.map((item) => item.path)]);
+  run('git', ['add', '--', reportPath, ...files.map((item) => item.path)]);
   run('git', ['commit', '-m', commitMessage]);
 
   if (push) run('git', ['push', 'origin', 'main']);
