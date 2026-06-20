@@ -24,7 +24,7 @@ for (const marker of [
   '## F5. Popover, workflow, and card geometry are still validated mainly by guards instead of dedicated UI contracts'
 ]) must(canvas, marker, 'canvas missing frontend marker: ' + marker);
 
-must(canvas, 'npm run backend-frontend-refactor:guard', 'canvas must expose verification command');
+must(canvas, 'node scripts/backend-frontend-refactor-guard.mjs', 'canvas must expose verification command');
 must(contract, 'backendRefactorProblems', 'contract must declare backend refactor problems');
 must(contract, 'frontendRefactorProblems', 'contract must declare frontend refactor problems');
 must(contract, 'backendCount: backendRefactorProblems.length', 'contract must expose backend count');
