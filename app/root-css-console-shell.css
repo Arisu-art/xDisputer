@@ -1,0 +1,23 @@
+/* Phase 7 root CSS bundle: console shell and account rail */
+@import './obsidian-console.css';
+@import './xdisputer-shell-compact.css';
+@import './workspace-account-controls.css';
+@import './client-account-popover-ratio.css';
+@import './account-popover-compact-retirement.css';
+@import './admin-monitor.css';
+@import './manager-console-workflow.css';
+@import './control-dashboard-lists.css';
+@import './production-ui-lock.css';
+@import './professional-console-layout.css';
+@import './global-depth-system.css';
+@import './account-menu-system.css';
+@import './account-menu-ratio-system.css';
+@import './report-workbench-system.css';
+@import './template-workspace-hubs.css';
+@import './dynamic-template-intelligence.css';
+@import './client-template-runtime.css';
+@import './manager-owned-docx-studio.css';
+@import './final-console-account-rail.css';
+@import './notification-account-rail.css';
+@import './final-responsive-integrity.css';
+@import './console-debug-overlay.css';
