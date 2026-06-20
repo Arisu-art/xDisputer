@@ -1,13 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import AiInsightPanel from './AiInsightPanel';
-import { runAiUiReview, type AiUiClientState } from '../lib/ai/ai-ui-client';
-import type { AiUiFinding, AiUiResult, AiUiSuggestedAction } from '../lib/ai/ai-ui-result';
+import AiInsightPanel, { type ReviewClientState, type ReviewFinding, type ReviewPanelResult, type ReviewSuggestedAction } from './AiInsightPanel';
 import type { LetterReference, Round } from '../lib/reference-store';
 import type { ExhibitKind, TemplateExhibits } from '../lib/template-exhibits';
 import type { CanonicalTemplateField, TemplateContract } from '../lib/template-contracts';
-import type { JsonObject } from '../lib/ai/ai-types';
 
 const GOVERNANCE_SLOTS = [
   'CLIENT_IDENTITY',
@@ -51,13 +48,9 @@ function contractFields(contract?: TemplateContract) {
 
 function coveredSlots(contracts: Array<TemplateContract | undefined>) {
   const covered = new Set<string>();
-
   contracts.forEach((contract) => {
-    contractFields(contract).forEach((field) => {
-      covered.add(CANONICAL_TO_GOVERNANCE[field]);
-    });
+    contractFields(contract).forEach((field) => covered.add(CANONICAL_TO_GOVERNANCE[field]));
   });
-
   return covered;
 }
 
@@ -65,25 +58,17 @@ function exhibitEntries(exhibits?: TemplateExhibits) {
   return Object.entries(exhibits || {}) as Array<[ExhibitKind, NonNullable<TemplateExhibits[ExhibitKind]> | null]>;
 }
 
-function buildFindings(round: Round, slots: LetterReference[], exhibits?: TemplateExhibits): AiUiFinding[] {
+function buildFindings(round: Round, slots: LetterReference[], exhibits?: TemplateExhibits): ReviewFinding[] {
   const contracts = [...slots.map((slot) => slot.contract), ...exhibitEntries(exhibits).map(([, asset]) => asset?.contract)];
   const covered = coveredSlots(contracts);
-  const findings: AiUiFinding[] = [];
+  const findings: ReviewFinding[] = [];
   const configuredLetters = slots.filter((slot) => Boolean(slot.file));
   const missingLetters = slots.filter((slot) => !slot.file);
   const configuredExhibits = exhibitEntries(exhibits).filter(([, asset]) => Boolean(asset));
 
-  if (missingLetters.length > 0) {
-    findings.push({ severity: 'blocker', title: 'Letter template slots incomplete', detail: `${round} is missing ${missingLetters.map((slot) => slot.name).join(', ')}.` });
-  }
-
-  if (!configuredExhibits.some(([kind]) => kind === 'FCRA')) {
-    findings.push({ severity: 'warning', title: 'Static legal exhibit not configured', detail: 'FCRA legal exhibit is not currently attached to this round.' });
-  }
-
-  if (!configuredExhibits.some(([kind]) => kind === 'ATTACHMENT')) {
-    findings.push({ severity: 'warning', title: 'Attachment exhibit not configured', detail: 'Attachment exhibit is not currently attached to this round.' });
-  }
+  if (missingLetters.length > 0) findings.push({ severity: 'blocker', title: 'Letter template slots incomplete', detail: `${round} is missing ${missingLetters.map((slot) => slot.name).join(', ')}.` });
+  if (!configuredExhibits.some(([kind]) => kind === 'FCRA')) findings.push({ severity: 'warning', title: 'Static legal exhibit not configured', detail: 'FCRA legal exhibit is not currently attached to this round.' });
+  if (!configuredExhibits.some(([kind]) => kind === 'ATTACHMENT')) findings.push({ severity: 'warning', title: 'Attachment exhibit not configured', detail: 'Attachment exhibit is not currently attached to this round.' });
 
   GOVERNANCE_SLOTS.forEach((slot) => {
     if (!covered.has(slot) && slot !== 'STATIC_APPENDIX') {
@@ -92,88 +77,56 @@ function buildFindings(round: Round, slots: LetterReference[], exhibits?: Templa
   });
 
   contracts.forEach((contract) => {
-    if (contract?.validation.status === 'BLOCKED') {
-      findings.push({ severity: 'blocker', title: `${contract.kind} template is blocked`, detail: contract.validation.errors[0] || 'Template contract validation reported a blocked status.' });
-    }
-    if (contract?.validation.warnings.length) {
-      findings.push({ severity: 'warning', title: `${contract.kind} template warnings`, detail: contract.validation.warnings.slice(0, 2).join(' ') });
-    }
+    if (contract?.validation.status === 'BLOCKED') findings.push({ severity: 'blocker', title: `${contract.kind} template is blocked`, detail: contract.validation.errors[0] || 'Template contract validation reported a blocked status.' });
+    if (contract?.validation.warnings.length) findings.push({ severity: 'warning', title: `${contract.kind} template warnings`, detail: contract.validation.warnings.slice(0, 2).join(' ') });
   });
 
-  if (!findings.length && configuredLetters.length) {
-    findings.push({ severity: 'info', title: 'Template intelligence is clear', detail: 'Configured templates have no deterministic blockers. AI can still summarize slot coverage for review.' });
-  }
-
-  if (!configuredLetters.length) {
-    findings.push({ severity: 'blocker', title: 'No letter templates configured', detail: 'Upload or assign at least one letter template before using this round for generation.' });
-  }
+  if (!findings.length && configuredLetters.length) findings.push({ severity: 'info', title: 'Template intelligence is clear', detail: 'Configured templates have no deterministic blockers.' });
+  if (!configuredLetters.length) findings.push({ severity: 'blocker', title: 'No letter templates configured', detail: 'Upload or assign at least one letter template before using this round for generation.' });
 
   return findings;
 }
 
-function buildActions(findings: AiUiFinding[]): AiUiSuggestedAction[] {
-  const actions: AiUiSuggestedAction[] = [];
-
+function buildActions(findings: ReviewFinding[]): ReviewSuggestedAction[] {
+  const actions: ReviewSuggestedAction[] = [];
   if (findings.some((finding) => finding.title.includes('Letter template slots incomplete') || finding.title.includes('No letter templates'))) {
     actions.push({ id: 'upload-letter-template', label: 'Upload or assign missing letter templates', requiresApproval: false });
   }
-
   if (findings.some((finding) => finding.title.includes('Governance slot needs review'))) {
     actions.push({ id: 'review-template-contract', label: 'Review template contract and placeholders', requiresApproval: false });
   }
-
   if (findings.some((finding) => finding.title.includes('exhibit not configured'))) {
     actions.push({ id: 'review-exhibit-setup', label: 'Review required packet exhibits', requiresApproval: false });
   }
-
   return actions;
 }
 
-function templateMetadata(slots: LetterReference[], exhibits?: TemplateExhibits): JsonObject {
-  const letters = slots.map((slot) => ({
-    id: slot.id,
-    name: slot.name,
-    type: slot.type,
-    hasFile: Boolean(slot.file),
-    file: slot.file || null,
-    validationStatus: slot.contract?.validation.status || null,
-    missingFields: slot.contract?.validation.missingFields || [],
-    warnings: slot.contract?.validation.warnings || []
-  }));
-  const exhibitValues = exhibitEntries(exhibits).map(([kind, asset]) => ({
-    kind,
-    hasAsset: Boolean(asset),
-    name: asset?.name || null,
-    mode: asset?.mode || null,
-    validationStatus: asset?.contract?.validation.status || null,
-    missingFields: asset?.contract?.validation.missingFields || [],
-    warnings: asset?.contract?.validation.warnings || []
-  }));
-
-  return { letters, exhibits: exhibitValues } as unknown as JsonObject;
+function summarize(findings: ReviewFinding[]) {
+  const blockers = findings.filter((finding) => finding.severity === 'blocker').length;
+  const warnings = findings.filter((finding) => finding.severity === 'warning').length;
+  if (blockers > 0) return `${blockers} blocker(s) and ${warnings} warning(s) need template review.`;
+  if (warnings > 0) return `${warnings} warning(s) detected in the active template configuration.`;
+  return 'Deterministic template review is clear.';
 }
 
 export default function TemplateIntelligencePanel({ round, slots, managedExhibits }: Props) {
-  const [status, setStatus] = useState<AiUiClientState>('idle');
-  const [result, setResult] = useState<AiUiResult | null>(null);
+  const [status, setStatus] = useState<ReviewClientState>('idle');
+  const [result, setResult] = useState<ReviewPanelResult | null>(null);
   const findings = useMemo(() => buildFindings(round, slots, managedExhibits), [round, slots, managedExhibits]);
   const actions = useMemo(() => buildActions(findings), [findings]);
 
-  async function runReview() {
+  function runReview() {
     setStatus('loading');
-    const next = await runAiUiReview({
-      mode: 'template_intelligence',
-      message: 'Analyze active template slot coverage and explain template readiness. Do not activate, archive, upload, or mutate templates.',
-      metadata: {
-        round,
-        governanceSlots: [...GOVERNANCE_SLOTS],
-        templateSummary: templateMetadata(slots, managedExhibits)
-      },
-      deterministicFindings: findings,
-      deterministicActions: actions
-    });
+    const next: ReviewPanelResult = {
+      summary: summarize(findings),
+      findings,
+      suggestedActions: actions,
+      requestId: 'deterministic-template-review',
+      modelName: 'deterministic',
+      latencyMs: 0
+    };
     setResult(next);
-    setStatus(next.findings.some((finding) => finding.title === 'AI review unavailable') ? 'error' : 'ready');
+    setStatus(findings.some((finding) => finding.severity === 'blocker') ? 'error' : 'ready');
   }
 
   return (
@@ -182,7 +135,7 @@ export default function TemplateIntelligencePanel({ round, slots, managedExhibit
       description="Explains slot coverage, missing template contracts, and packet-readiness risks without changing template authority or assets."
       status={status}
       result={result}
-      actionLabel="Analyze templates with AI"
+      actionLabel="Run template review"
       onRun={runReview}
     />
   );
