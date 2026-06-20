@@ -47,7 +47,6 @@ function reportNavItems(scope: Scope): ConsoleNavItem[] {
   if (scope === 'master') return [
     { href: '/master', label: 'Monitoring' },
     { href: '/master/accounts', label: 'Accounts' },
-    { href: '/master/workspaces', label: 'Workspaces' },
     { href: '/master/reports', label: 'Reports', active: true },
     { href: '/master/audit', label: 'Audit log' },
     { href: '/master/system', label: 'System health' },
