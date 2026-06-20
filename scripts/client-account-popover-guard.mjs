@@ -21,14 +21,24 @@ const css = read('app/client-account-popover-ratio.css');
 const accountMenu = read('components/console/AccountMenu.tsx');
 const workspace = read('components/LetterGeneratorWorkspaceV2.tsx');
 
+const retiredDynamicChip = 'OutputLimit' + 'ResetChip';
+const retiredStaticChip = 'Static' + 'Entitlement' + 'Chip';
+const retiredChipClass = 'output-limit' + '-reset-chip';
+const retiredChipMain = 'output-limit' + '-chip-main';
+const retiredStaticClass = 'performance-static' + '-entitlement-chip';
+
 must(layout, "import './client-account-popover-ratio.css';", 'root layout must load client account popover CSS');
 must(css, '--client-account-popover-contract: canonical-console-account-dock', 'client must use canonical console account dock contract');
 must(css, 'main.app-shell[data-client-console-shell="true"]', 'client shell scoped selector missing');
 must(css, 'data-console-role="client"', 'client role selector missing');
 must(css, 'grid-template-columns: minmax(0, 3fr) var(--account-dock-width)', 'client account dock must use shared 75/25-style grid');
-must(css, '.workspace-header-actions .output-limit-reset-chip', 'duplicate header output-limit chip must be handled');
-must(css, 'display: none !important', 'duplicate header output-limit chip must be hidden');
-must(css, '.dashboard-command-card .output-limit-reset-chip', 'dashboard output-limit chip must remain active');
+
+mustNot(css, retiredChipClass, 'client account CSS must not reference retired output chip class');
+mustNot(css, retiredChipMain, 'client account CSS must not reference retired output chip internals');
+mustNot(css, retiredStaticClass, 'client account CSS must not reference retired static chip class');
+mustNot(workspace, retiredDynamicChip, 'client workspace must not mount retired dynamic output chip');
+mustNot(workspace, retiredStaticChip, 'client workspace must not mount retired static entitlement chip');
+
 must(accountMenu, "type ConsoleRole = 'manager' | 'master' | 'client'", 'canonical account menu must support client role');
 must(accountMenu, "if (role === 'client') return 'Client workspace account'", 'client account role label missing');
 must(workspace, "import AccountMenu from './console/AccountMenu';", 'client workspace must import canonical AccountMenu');
