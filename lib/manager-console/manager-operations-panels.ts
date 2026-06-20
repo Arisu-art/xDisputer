@@ -1,4 +1,5 @@
 export type ManagerOperationsPanel = 'monitoring' | 'access' | 'reports' | 'output_activity' | 'requests';
+export type ManagerOperationsPanelInput = ManagerOperationsPanel | 'payroll' | 'output-activity';
 
 export const managerOperationsPanels: Array<{ id: ManagerOperationsPanel; label: string; href: string; purpose: string }> = [
   { id: 'monitoring', label: 'Monitoring', href: '/admin?panel=monitoring', purpose: 'Monitor outputs and operational status of assigned users.' },
@@ -17,7 +18,8 @@ export function normalizeManagerOperationsPanel(value: string | string[] | undef
   return 'monitoring';
 }
 
-export function managerOperationsNavItems(activePanel: ManagerOperationsPanel) {
+export function managerOperationsNavItems(activePanelInput: ManagerOperationsPanelInput) {
+  const activePanel = normalizeManagerOperationsPanel(activePanelInput);
   return [
     ...managerOperationsPanels.map((panel) => ({ href: panel.href, label: panel.label, active: panel.id === activePanel })),
     { href: '/manager-workspace', label: 'Switch mode', kind: 'workspace-switch' as const }
