@@ -7,6 +7,10 @@ const must = (source, marker, label) => { if (!source.includes(marker)) failures
 
 const canvas = read('docs/roadmaps/backend-frontend-refactor-canvas.md');
 const contract = read('src/features/architecture/backend-frontend-refactor-contract.ts');
+const guardRegistry = read('src/features/architecture/ui-guard-contract-registry.ts');
+const rootCssContract = read('src/features/app-shell/root-css-ownership-contract.ts');
+const figmaHandoff = read('src/features/design/figma-surface-handoff.ts');
+const generationContract = read('src/features/generation-runs/generation-run-route-contract.ts');
 
 for (const marker of [
   '## B1. Generation route is too large and mixes multiple responsibilities',
@@ -29,6 +33,10 @@ must(contract, 'backendRefactorProblems', 'contract must declare backend refacto
 must(contract, 'frontendRefactorProblems', 'contract must declare frontend refactor problems');
 must(contract, 'backendCount: backendRefactorProblems.length', 'contract must expose backend count');
 must(contract, 'frontendCount: frontendRefactorProblems.length', 'contract must expose frontend count');
+must(guardRegistry, 'uiGuardContractRegistry', 'guard registry must exist');
+must(rootCssContract, 'rootCssOwnershipContract', 'root CSS ownership contract must exist');
+must(figmaHandoff, 'figmaSurfaceHandoff', 'Figma handoff map must exist');
+must(generationContract, 'generationRunRouteContract', 'generation route contract must exist');
 
 if (!existsSync('src/features/manager-console/payroll-settings-service.ts')) failures.push('manager payroll settings service must exist');
 if (!existsSync('src/features/account-profile/account-profile-revalidation.ts')) failures.push('account profile revalidation helper must exist');
