@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { markDirectNotificationsRead } from '../../../../lib/notifications/notification-service';
 import { createSupabaseServerClient } from '../../../../lib/supabase/server';
+import { markNotificationsReadForCurrentUser } from '../../../../src/features/notifications/notification-api-service';
 
 const jsonHeaders = {
   'Cache-Control': 'no-store'
@@ -8,17 +8,10 @@ const jsonHeaders = {
 
 export async function POST() {
   const supabase = await createSupabaseServerClient();
-  const { data: userResult } = await supabase.auth.getUser();
-  const user = userResult.user;
-
-  if (!user) {
-    return NextResponse.json({ updatedCount: 0 }, { status: 401, headers: jsonHeaders });
-  }
-
-  const result = await markDirectNotificationsRead({ supabase, userId: user.id });
+  const result = await markNotificationsReadForCurrentUser(supabase);
 
   return NextResponse.json(
     { updatedCount: result.updatedCount, errorMessage: result.errorMessage },
-    { headers: jsonHeaders }
+    { status: result.status, headers: jsonHeaders }
   );
 }
