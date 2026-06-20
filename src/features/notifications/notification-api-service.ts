@@ -1,0 +1,39 @@
+import type { createSupabaseServerClient } from '../../../lib/supabase/server';
+import { ensureUserProfile } from '../../../lib/supabase/roles';
+import { listNotifications, markDirectNotificationsRead } from '../../../lib/notifications/notification-service';
+import { normalizeNotificationRole } from '../../../lib/notifications/notification-types';
+
+export type NotificationApiPayload = {
+  notifications: Awaited<ReturnType<typeof listNotifications>>['notifications'];
+  unreadCount: number;
+  errorMessage: string | null;
+  status: number;
+};
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+export async function loadNotificationsForCurrentUser(supabase: SupabaseServerClient, limit = 8): Promise<NotificationApiPayload> {
+  const { data: userResult } = await supabase.auth.getUser();
+  const user = userResult.user;
+  if (!user) return { notifications: [], unreadCount: 0, errorMessage: null, status: 401 };
+
+  const profile = await ensureUserProfile(supabase, user);
+  const role = normalizeNotificationRole(profile?.role);
+  const result = await listNotifications({ supabase, userId: user.id, role, limit });
+
+  return {
+    notifications: result.notifications,
+    unreadCount: result.unreadCount,
+    errorMessage: result.errorMessage,
+    status: 200
+  };
+}
+
+export async function markNotificationsReadForCurrentUser(supabase: SupabaseServerClient) {
+  const { data: userResult } = await supabase.auth.getUser();
+  const user = userResult.user;
+  if (!user) return { updatedCount: 0, errorMessage: null, status: 401 };
+
+  const result = await markDirectNotificationsRead({ supabase, userId: user.id });
+  return { updatedCount: result.updatedCount, errorMessage: result.errorMessage, status: 200 };
+}
