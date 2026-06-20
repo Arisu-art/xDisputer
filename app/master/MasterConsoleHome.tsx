@@ -22,8 +22,6 @@ function SnapshotFooter({ count, total, href }: { count: number; total: number; 
 const masterNavItems = [
   { href: '/master', label: 'Monitoring', active: true },
   { href: '/master/accounts', label: 'All accounts' },
-  { href: '/master/workspaces', label: 'Workspaces' },
-  { href: '/master/ui-workspace', label: 'UI workspace' },
   { href: '/master/reports', label: 'Reports' },
   { href: '/master/audit', label: 'Audit log' },
   { href: '/master/system', label: 'System health' }
@@ -50,7 +48,7 @@ export default async function MasterConsoleHome({ searchParams }: PageProps) {
   const email = profile?.email || user.email || 'Master account';
 
   return <ConsoleShell role="master" mode="operations" email={email} accountLabel="Master account" brandSubtitle="Master console" sidebarSectionTitle="Operations" navItems={masterNavItems} switchTarget="/admin" switchTargetLabel="Manager console" navAriaLabel="Master navigation" activeNavUsesConsoleLink>
-    <header className="admin-monitor-header native-command-hero master-compact-hero"><div><p>Master operations</p><h1>Manager command center.</h1><span>Compact workspace RPC reads keep this dashboard fast while account directories stay paginated.</span></div></header>
+    <header className="admin-monitor-header native-command-hero master-compact-hero"><div><p>Master operations</p><h1>Manager command center.</h1><span>Compact account RPC reads keep this dashboard fast while account directories stay paginated.</span></div></header>
     {controlStatus && <section className={`admin-monitor-card admin-feedback-card ${controlStatus === 'ok' ? 'success' : 'error'}`}><strong>{controlStatus === 'ok' ? 'Action completed' : 'Action failed'}</strong><span>{controlStatus === 'ok' ? 'The console has refreshed with the latest account state.' : controlMessage || 'Unknown error.'}</span></section>}
     {queryError ? <section className="admin-monitor-card"><div className="admin-monitor-empty">Could not load account records: {queryError}</div></section> : <><MasterKpiGrid summary={summary} attentionTotal={attentionTotal} /><section className="admin-power-grid"><article className="admin-monitor-card native-operation-card dashboard-snapshot-card"><div className="admin-monitor-card-header"><div><p>Monitoring</p><h2>Attention queue</h2></div><ConsoleNavLink className="dashboard-card-link" href="/master/accounts?view=pending">View pending</ConsoleNavLink></div><StatusList accounts={attention} /><SnapshotFooter count={attention.length} total={attentionTotal} href="/master/accounts?view=pending" /></article><article className="admin-monitor-card native-operation-card dashboard-snapshot-card"><div className="admin-monitor-card-header"><div><p>Coverage</p><h2>Client-manager assignment</h2></div><ConsoleNavLink className="dashboard-card-link" href="/master/accounts?view=clients">View clients</ConsoleNavLink></div><div className="dashboard-snapshot-list"><div className="admin-power-list"><span>Linked clients: {summary.linked}</span><span>Unassigned clients: {summary.unassigned}</span><span>Managers available: {summary.managers}</span><span>Coverage rate: {coverageRate}%</span></div></div><SnapshotFooter count={4} total={4} href="/master/accounts?view=clients" /></article></section></>}
   </ConsoleShell>;
