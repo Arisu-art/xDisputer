@@ -10,6 +10,9 @@ const shell = read('components/console/ConsoleShell.tsx');
 const accountMenu = read('components/console/AccountMenu.tsx');
 const debuggerMount = read('components/console/RenderDebuggerMount.tsx');
 const admin = read('app/admin/page.tsx');
+const masterHome = read('app/master/MasterConsoleHome.tsx');
+const managerKpis = read('src/features/manager-console/components/ManagerKpiGrid.tsx');
+const masterKpis = read('src/features/master-console/components/MasterKpiGrid.tsx');
 const panels = read('lib/manager-console/manager-operations-panels.ts');
 const manifest = read('lib/console/contracts/navigation-manifest.ts');
 const performance = read('src/features/performance/performance-contract.ts');
@@ -23,6 +26,10 @@ mustNot(debuggerMount, "process.env.NODE_ENV !== 'production') return true", 'de
 must(panels, "'output_activity'", 'manager operations must use output_activity id');
 mustNot(admin, 'function PayrollPanel', 'manager admin page must not expose PayrollPanel');
 must(admin, 'OutputActivityPanel', 'manager admin page must expose OutputActivityPanel');
+must(admin, 'ManagerKpiGrid', 'manager admin page must use feature-owned KPI grid');
+must(managerKpis, 'manager-console-kpi-grid', 'manager KPI grid component must preserve premium card layout');
+must(masterHome, 'MasterKpiGrid', 'master home must use feature-owned KPI grid');
+must(masterKpis, 'master-monitoring-stats', 'master KPI grid component must preserve master stats layout');
 must(manifest, "'master-governance'", 'master governance manifest must stay wired through shared console shell');
 must(performance, 'debugPanelDefault', 'performance contract must define debug panel default rule');
 
