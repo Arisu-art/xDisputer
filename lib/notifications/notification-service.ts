@@ -8,8 +8,8 @@ type RawNotificationRow = {
   id: string;
   title: string;
   body: string | null;
-  href?: string | null;
-  severity?: string | null;
+  href: string | null;
+  severity: string | null;
   read_at: string | null;
   created_at: string;
 };
@@ -38,44 +38,15 @@ function safeLimit(value: number | undefined) {
   return Math.max(1, Math.min(40, Math.floor(value || 12)));
 }
 
-function missingOptionalColumn(message: string | undefined) {
-  return Boolean(message && (
-    message.includes('notifications.href') ||
-    message.includes('notifications.severity')
-  ));
-}
-
-function missingRoleColumn(message: string | undefined) {
-  return Boolean(message && message.includes('recipient_role'));
-}
-
 async function queryNotifications(input: {
   supabase: SupabaseServerClient;
   column: 'recipient_user_id' | 'recipient_role';
   value: string;
   limit: number;
 }) {
-  const full = await input.supabase
-    .from('notifications')
-    .select('id,title,body,href,severity,read_at,created_at')
-    .eq(input.column, input.value)
-    .order('created_at', { ascending: false })
-    .limit(input.limit);
-
-  if (!full.error || !missingOptionalColumn(full.error.message)) return full;
-
-  const withoutHref = await input.supabase
-    .from('notifications')
-    .select('id,title,body,severity,read_at,created_at')
-    .eq(input.column, input.value)
-    .order('created_at', { ascending: false })
-    .limit(input.limit);
-
-  if (!withoutHref.error || !missingOptionalColumn(withoutHref.error.message)) return withoutHref;
-
   return input.supabase
     .from('notifications')
-    .select('id,title,body,read_at,created_at')
+    .select('id,title,body,href,severity,read_at,created_at')
     .eq(input.column, input.value)
     .order('created_at', { ascending: false })
     .limit(input.limit);
@@ -91,13 +62,6 @@ export async function listNotifications({ supabase, userId, role, limit }: ListN
     limit: cappedLimit
   });
 
-  const roleWide = await queryNotifications({
-    supabase,
-    column: 'recipient_role',
-    value: role,
-    limit: cappedLimit
-  });
-
   if (direct.error) {
     return {
       notifications: [] as NotificationRecord[],
@@ -106,7 +70,14 @@ export async function listNotifications({ supabase, userId, role, limit }: ListN
     };
   }
 
-  if (roleWide.error && !missingRoleColumn(roleWide.error.message)) {
+  const roleWide = await queryNotifications({
+    supabase,
+    column: 'recipient_role',
+    value: role,
+    limit: cappedLimit
+  });
+
+  if (roleWide.error) {
     return {
       notifications: [] as NotificationRecord[],
       unreadCount: 0,
@@ -114,10 +85,9 @@ export async function listNotifications({ supabase, userId, role, limit }: ListN
     };
   }
 
-  const roleRows = roleWide.error ? [] : (roleWide.data || []);
   const merged = [
     ...((direct.data || []) as RawNotificationRow[]),
-    ...(roleRows as RawNotificationRow[])
+    ...((roleWide.data || []) as RawNotificationRow[])
   ];
 
   const unique = Array.from(new Map(merged.map((item) => [item.id, item])).values())
