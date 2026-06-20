@@ -11,6 +11,8 @@ const clientAccount = read('app/client-account-popover-ratio.css');
 const clientLayout = read('app/client-workspace-layout-lock.css');
 const accountRatio = read('app/account-menu-ratio-system.css');
 const layout = read('app/layout.tsx');
+const consoleBundle = read('app/root-css-console-shell.css');
+const contractsBundle = read('app/root-css-contracts.css');
 const retiredA = 'output-limit' + '-reset-chip';
 const retiredB = 'output-limit' + '-chip-main';
 const retiredC = 'performance-static' + '-entitlement-chip';
@@ -23,8 +25,13 @@ must(clientAccount, '--client-account-popover-contract: canonical-console-accoun
 must(clientLayout, '--client-workspace-content-max', 'client layout CSS must own content max token');
 must(clientLayout, '.dashboard-command-card', 'client layout CSS must own dashboard geometry');
 must(accountRatio, 'data-manager-account-anchor="header-ratio-grid"', 'shared account ratio CSS must own header-ratio-grid dock');
-must(layout, "import './client-account-popover-ratio.css';", 'root layout must import client account owner CSS');
-must(layout, "import './client-workspace-layout-lock.css';", 'root layout must import client layout owner CSS');
+
+const clientAccountImported = layout.includes("import './client-account-popover-ratio.css';") || consoleBundle.includes("@import './client-account-popover-ratio.css';");
+const clientLayoutImported = layout.includes("import './client-workspace-layout-lock.css';") || contractsBundle.includes("@import './client-workspace-layout-lock.css';");
+
+if (!clientAccountImported) failures.push('root layout must import client account owner CSS');
+if (!clientLayoutImported) failures.push('root layout must import client layout owner CSS');
+
 mustNot(clientAccount, retiredA, 'client account CSS must not keep retired chip selector');
 mustNot(clientAccount, retiredB, 'client account CSS must not keep retired chip internals');
 mustNot(clientAccount, retiredC, 'client account CSS must not keep retired static chip selector');
