@@ -62,12 +62,17 @@ function timestamp() {
 }
 
 function parseStatusLine(line) {
-  const status = line.slice(0, 2);
-  const rawPath = line.slice(3);
+  const match = line.match(/^(.{1,2})\\s+(.+)$/);
+  if (!match) return { status: line.slice(0, 2), path: line.trim(), oldPath: null };
+
+  const status = match[1].padEnd(2, ' ');
+  const rawPath = match[2].trim();
+
   if (rawPath.includes(' -> ')) {
     const [from, to] = rawPath.split(' -> ');
-    return { status, path: to, oldPath: from };
+    return { status, path: to.trim(), oldPath: from.trim() };
   }
+
   return { status, path: rawPath, oldPath: null };
 }
 
