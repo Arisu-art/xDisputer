@@ -8,9 +8,10 @@ const mustNot = (source, marker, label) => { if (source.includes(marker)) failur
 
 const canvas = read('docs/notification-ui-fbis-canvas.md');
 const contract = read('src/features/notifications/notification-ui-contract.ts');
+const ownership = read('src/features/notifications/notification-ownership-contract.ts');
 const service = read('lib/notifications/notification-service.ts');
 const writer = read('lib/notifications/notification-write-service.ts');
-const dock = read('components/notifications/NotificationDock.tsx');
+const dock = read('components/notifications/OwnedNotificationDock.tsx');
 const shell = read('components/console/ConsoleShell.tsx');
 const accountMenu = read('components/console/AccountMenu.tsx');
 const migration = read('supabase/migrations/20260620123000_notifications_recipient_role_safe_schema.sql');
@@ -19,15 +20,17 @@ must(canvas, 'Traceability Canvas', 'notification canvas must document traceabil
 must(canvas, 'Behavior Control ECS', 'notification canvas must document ECS');
 must(canvas, 'Impact Prediction CIG', 'notification canvas must document CIG');
 must(canvas, 'Structure Isolation FBIS', 'notification canvas must document FBIS');
-must(contract, 'missingRoleColumnFallback', 'notification contract must define missing role column fallback');
-must(service, 'missingRoleColumn', 'notification read service must handle missing recipient_role');
-must(service, 'roleWide.error && !missingRoleColumn', 'role-wide query error must be optional when recipient_role is missing');
-must(writer, 'includeRole', 'notification write service must support role-column fallback');
-must(writer, 'lastError?.includes(\'recipient_role\')', 'role-only insert must be non-fatal when role column is absent');
-must(dock, 'data-notification-dock="true"', 'NotificationDock must keep ownership marker');
-must(dock, '🔔', 'NotificationDock must use bell icon surface');
-must(dock, '120_000', 'NotificationDock polling must stay throttled');
-must(accountMenu, '<NotificationDock />', 'AccountMenu must own NotificationDock');
+must(contract, 'strict-canonical-columns', 'notification contract must declare strict schema mode');
+must(ownership, 'ownerComponent', 'notification ownership contract must exist');
+must(service, ".select('id,title,body,href,severity,read_at,created_at')", 'notification read service must use canonical columns');
+mustNot(service, 'missingRoleColumn', 'notification read service must not keep role fallback');
+mustNot(service, 'missingOptionalColumn', 'notification read service must not keep optional-column fallback');
+mustNot(writer, 'includeRole', 'notification write service must not keep role-column fallback toggles');
+mustNot(writer, 'attempts = [', 'notification write service must not keep compatibility insert attempts');
+must(dock, 'data-notification-dock="true"', 'OwnedNotificationDock must keep ownership marker');
+must(dock, 'data-notification-dock-owner="true"', 'OwnedNotificationDock must own its style contract');
+must(dock, '120_000', 'OwnedNotificationDock polling must stay throttled');
+must(accountMenu, '<NotificationDock />', 'AccountMenu must own NotificationDock alias');
 mustNot(shell, '<NotificationDock', 'ConsoleShell must not mount NotificationDock directly');
 must(migration, 'add column if not exists recipient_role', 'recipient_role migration must be present');
 must(migration, "notify pgrst, 'reload schema'", 'migration must reload schema cache');
