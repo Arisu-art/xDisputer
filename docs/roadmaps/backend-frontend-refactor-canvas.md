@@ -309,7 +309,7 @@ Prefer feature contract registries that guards read, instead of hardcoding all o
 # Verification
 
 ```bash
-npm run backend-frontend-refactor:guard
+node scripts/backend-frontend-refactor-guard.mjs
 npm run manager-console:guard
 npm run ui-source:guard
 npm run typecheck
