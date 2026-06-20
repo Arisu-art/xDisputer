@@ -77,6 +77,7 @@ import './dynamic-template-intelligence.css';
 import './client-template-runtime.css';
 import './manager-owned-docx-studio.css';
 import './final-console-account-rail.css';
+import './notification-account-rail.css';
 import './final-responsive-integrity.css';
 import './console-debug-overlay.css';
 import './client-workspace-layout-lock.css';
