@@ -16,11 +16,12 @@ const adaptiveB = 'adaptive' + '-launch';
 const retiredPaths = [
   'app/api/' + 'ai/route.ts',
   'lib/' + 'ai',
-  'components/AiInsightPanel.tsx',
   'components/AdaptiveCommandCenter.tsx',
   'components/OutputLimitResetChip.tsx',
   'app/output-limit-chip.css',
-  'middleware.ts'
+  'middleware.ts',
+  'scripts/repair-dashboard-visible-output-chip.mjs',
+  'scripts/repair-letter-workspace-header-chip.mjs'
 ];
 const retiredMarkers = [dynamicChip, staticChip, chipClass, chipMain, staticClass, assistPhrase, adaptiveA, adaptiveB];
 
