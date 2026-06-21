@@ -8,6 +8,7 @@ import './account-menu-ratio-system.css';
 import './final-console-account-rail.css';
 import './client-account-popover-ratio.css';
 import './account-popover-compact-retirement.css';
+import './account-bell-avatar-row.css';
 import './template-workspace-hubs.css';
 import './client-template-runtime.css';
 import './dynamic-template-intelligence.css';
