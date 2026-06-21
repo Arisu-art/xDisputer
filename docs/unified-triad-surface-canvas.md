@@ -1,41 +1,36 @@
-# Unified Triad Surface Canvas
+# Unified Native Surface Canvas
 
 ## Title
 
-**xDisputer Unified Triad Surface Canvas — One Layout Behavior, Three Professional Themes, Zero Overflow Drift**
+**xDisputer Unified Native Surface Canvas — One Layout Behavior, One Native Surface, Zero Overflow Drift**
 
 ## Main problem
 
-The website already has a global theme, a triad theme, layout contracts, and instant interaction rules. The remaining problem is that side navigation, headers, cards, filters, labels, chips, borders, and data surfaces can still feel slightly different across client, manager, master, auth, template, source, report, and audit environments.
+The website already has a global theme contract, shared surface contracts, layout contracts, and instant interaction rules. The remaining problem was that old role-theme forks and legacy shell layers still existed beside the native console system.
 
-The fix is a dedicated surface-contract workspace that sits between theme identity and final geometry:
+The fix is one native surface-contract workspace that sits between theme tokens and final geometry:
 
 ```text
 ui-theme-contracts.css              = base tokens
-ui-theme-triad.css                  = Client/Auth Aurora, Manager Graphite, Master Executive
 unified-surface-contracts.css       = shared surface behavior across all users
+native-client-console.css           = client shell alignment to native console
 instant-interaction-performance.css = fast hover/tap/loading feedback
 ui-layout-contracts.css             = final geometry owner
 ```
 
 ## Strong analogy
 
-xDisputer is a production office with three departments:
+xDisputer is one production office, not three separate decorated offices.
 
-```text
-Client/Auth Aurora   = front desk
-Manager Graphite     = operations floor
-Master Executive     = command office
-```
-
-Each department can have its own accent, but every desk, drawer, label, folder, border, and navigation path must follow the same office standard.
+Client, manager, and master users can have different functions, but every desk, drawer, label, border, card, sidebar, and navigation path must follow one office standard.
 
 ## Existing logic merged
 
 This canvas merges and improves existing logic:
 
 - `app/ui-theme-contracts.css` for shared color, type, radius, buttons, inputs, skeletons, and status tones.
-- `app/ui-theme-triad.css` for the three professional surface identities.
+- `app/unified-surface-contracts.css` for one native surface behavior.
+- `app/native-client-console.css` for client alignment with the same native shell language.
 - `app/instant-interaction-performance.css` for fast float and loading feedback.
 - `app/ui-layout-contracts.css` for final grid/flex/sidebar/header geometry.
 - `components/console/ConsoleShell.tsx` for manager/master role-aware shell metadata.
@@ -49,7 +44,6 @@ This canvas merges and improves existing logic:
 - Manager users
 - Master users
 - Auth users
-- Future support/admin/AI review users
 
 ### What
 
@@ -57,7 +51,7 @@ The unified surface contract owns shared behavior for:
 
 - side navigation behavior
 - header orientation
-- context/eyebrow labels
+- context labels
 - cards and panels
 - chips, badges, status labels
 - filters, pagers, and data tables
@@ -67,13 +61,14 @@ The unified surface contract owns shared behavior for:
 
 ### When
 
-Use the unified surface contract when a visual issue appears across more than one role or feature.
+Use the unified native surface contract when a visual issue appears across more than one role or feature.
 
 ### Where
 
 ```text
 app/unified-surface-contracts.css
-scripts/unified-surface-contract-guard.mjs
+app/native-client-console.css
+scripts/theme-governance-contract-guard.mjs
 docs/unified-triad-surface-canvas.md
 ```
 
@@ -87,8 +82,8 @@ A SaaS product feels professional when users can move between client, manager, m
 request comes in
 → classify the issue
 → if color/token/action/input: use ui-theme-contracts.css
-→ else if broad role identity: use ui-theme-triad.css
 → else if shared sidebars/headers/cards/chips/borders/tables: use unified-surface-contracts.css
+→ else if client shell must align to native console: use native-client-console.css
 → else if hover/tap/sluggishness/loading feedback: use instant-interaction-performance.css
 → else if grid/flex/responsive order/overflow geometry: use ui-layout-contracts.css
 → else if data/auth/RLS/API: inspect backend/Supabase, not CSS
@@ -112,22 +107,16 @@ Examples:
 
 ### Customized
 
-Role identity stays in the triad layer:
+Role function stays in component logic, not global theme forks.
 
-```text
-Client/Auth Aurora
-Manager Graphite
-Master Executive
-```
-
-Feature-specific component logic stays in the component owner.
+Local visual emphasis belongs in the existing unified theme hooks, not in a separate client/manager/master theme layer.
 
 ## What loads first
 
 - root layout
 - global theme tokens
-- triad theme identity
 - unified surface behavior
+- client shell alignment layer
 - instant interaction rules
 - final layout contracts
 
@@ -137,7 +126,6 @@ Feature-specific component logic stays in the component owner.
 - account datasets
 - reports
 - audit events
-- AI reviews
 - generated outputs
 
 ## What is cached
@@ -174,6 +162,8 @@ Feature-specific component logic stays in the component owner.
 
 ```text
 Do not create a new global theme for a single route.
+Do not reintroduce triad role themes.
+Do not import obsidian or compact shell CSS into root bundles.
 Do not put backend/auth/RLS fixes in CSS.
 Do not override final geometry in theme files.
 Do not animate width, height, margin, padding, top, or left.
@@ -181,7 +171,6 @@ Do not use transition-property: all.
 Do not add blur or heavy backdrop effects for core cards.
 Do not allow horizontal overflow to hide real layout bugs.
 Do not make manager/master/client navigation behave differently unless the function requires it.
-Do not duplicate large page headers and small context labels.
 Do not hardcode one-off borders, radii, or chips when the surface contract covers them.
 ```
 
@@ -193,6 +182,6 @@ Do not hardcode one-off borders, radii, or chips when the surface contract cover
 - Chips and badges are compact and consistent.
 - Data filters and pagers feel like one surface.
 - Tables scroll horizontally inside their own wrapper, not the whole page.
-- Auth screens no longer rely on expensive blur.
-- Three themes remain distinct but behave as one product.
+- Client aligns with manager/master native console language.
+- Old triad/obsidian/compact layers stay retired.
 - Guards, typecheck, and build pass.
