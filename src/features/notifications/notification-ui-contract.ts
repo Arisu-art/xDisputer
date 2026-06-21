@@ -10,7 +10,7 @@ export const notificationUiContract = {
   behavior: {
     directAudience: 'recipient_user_id',
     roleAudience: 'recipient_role',
-    schemaMode: 'strict-canonical-columns',
+    schemaMode: 'canonical-read-with-compatibility-fallback',
     popoverLayout: 'absolute-contained-no-content-push'
   }
 } as const;
