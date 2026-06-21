@@ -24,15 +24,13 @@ const retiredDynamicChip = 'OutputLimit' + 'ResetChip';
 const retiredStaticChip = 'Static' + 'Entitlement' + 'Chip';
 const retiredChipClass = 'output-limit' + '-reset-chip';
 
-function hasExplicitNotificationProjection(source) {
-  const requiredColumns = ['id', 'title', 'body', 'href', 'severity', 'read_at', 'created_at'];
-  const hasFullProjection = requiredColumns.every((column) => source.includes(column));
-  const hasFallbackProjection = source.includes("'id,title,created_at'") || source.includes('"id,title,created_at"');
-  const usesProjectionVariable = source.includes('.select(input.select)');
+function hasStrictCanonicalNotificationProjection(source) {
+  const hasCanonicalProjection = source.includes(".select('id,title,body,href,severity,read_at,created_at')");
   const hasNoWildcardNotificationSelect = !/\.from\('notifications'\)[\s\S]{0,240}\.select\(['"]\*['"]\)/.test(source);
-  const keepsSelectBeforeFilters = source.includes('.select(input.select)') && source.indexOf('.select(input.select)') < source.indexOf('.eq(input.column, input.value)');
+  const keepsSelectBeforeFilters = source.includes(".select('id,title,body,href,severity,read_at,created_at')") && source.indexOf(".select('id,title,body,href,severity,read_at,created_at')") < source.indexOf('.eq(input.column, input.value)');
+  const hasNoOptionalProjectionFallback = !source.includes('fallbackSelect') && !source.includes('MinimalNotificationRow') && !source.includes('missingOptionalColumn');
 
-  return hasFullProjection && hasFallbackProjection && usesProjectionVariable && hasNoWildcardNotificationSelect && keepsSelectBeforeFilters;
+  return hasCanonicalProjection && hasNoWildcardNotificationSelect && keepsSelectBeforeFilters && hasNoOptionalProjectionFallback;
 }
 
 must(debuggerMount, "dynamic(() => import('./RenderDebugger')", 'debugger must stay dynamically imported');
@@ -40,7 +38,7 @@ must(debuggerMount, 'NEXT_PUBLIC_XDISPUTER_DEBUG_PANEL', 'debugger must require 
 mustNot(debuggerMount, "process.env.NODE_ENV !== 'production') return true", 'debugger must not auto-enable in development');
 must(accountMenu, '<NotificationDock />', 'account rail must own notification dock');
 mustNot(shell, '<NotificationDock', 'console shell must not mount notification dock directly');
-mustPass(hasExplicitNotificationProjection(notifications), 'notification queries must select explicit columns');
+mustPass(hasStrictCanonicalNotificationProjection(notifications), 'notification queries must select explicit columns');
 must(notifications, '.limit(', 'notification queries must limit rows');
 must(notificationContract, 'pollIntervalMs: 120_000', 'notification polling contract must be throttled to 120 seconds');
 must(notificationDock, 'notificationOwnershipContract.pollIntervalMs', 'notification dock must read throttled polling from ownership contract');
