@@ -6,6 +6,8 @@ import './root-css-console-shell.css';
 import './root-css-contracts.css';
 import './account-menu-ratio-system.css';
 import './final-console-account-rail.css';
+import './client-account-popover-ratio.css';
+import './account-popover-compact-retirement.css';
 import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebuggerMount from '../components/console/RenderDebuggerMount';
