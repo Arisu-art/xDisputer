@@ -10,9 +10,11 @@ const admin = read('app/admin/page.tsx');
 const panels = read('lib/manager-console/manager-operations-panels.ts');
 const css = read('app/manager-console-workflow.css');
 const layout = read('app/layout.tsx');
+const consoleShellBundle = read('app/root-css-console-shell.css');
 const payrollRoute = read('app/api/manager-console/payroll/route.ts');
 const settings = read('lib/saas/manager-user-settings.ts');
 const accountRoute = read('app/api/account/profile/route.ts');
+const accountRevalidation = read('src/features/account-profile/account-profile-revalidation.ts');
 const accountMenu = read('components/console/AccountMenu.tsx');
 
 for (const label of ['Monitoring', 'Access control of user', 'Report', 'Output Activity', 'Request']) {
@@ -35,10 +37,23 @@ must(admin, 'payrollAmount', 'manager output activity must compute from settings
 must(settings, 'manager_user_settings', 'manager user settings helper missing table contract');
 must(payrollRoute, 'manager_user_settings', 'payroll route must save manager metadata');
 must(css, 'manager-console-kpi-grid', 'manager console CSS missing KPI layout');
-must(layout, "import './manager-console-workflow.css';", 'root layout must load manager console workflow CSS');
+
+if (!layout.includes("import './manager-console-workflow.css';") && !consoleShellBundle.includes("@import './manager-console-workflow.css';")) {
+  failures.push('root layout must load manager console workflow CSS');
+}
+
 must(accountRoute, 'account_settings_name', 'account profile route must carry saved display name for immediate UI refresh');
-must(accountRoute, "revalidatePath('/workspace')", 'account profile route must revalidate client workspace');
-must(accountRoute, "revalidatePath('/admin')", 'account profile route must revalidate manager console');
+
+const revalidatesClientWorkspace = accountRoute.includes("revalidatePath('/workspace')") || (
+  accountRoute.includes('revalidateAccountProfileRoutes(next)') && accountRevalidation.includes("'/workspace'")
+);
+if (!revalidatesClientWorkspace) failures.push('account profile route must revalidate client workspace');
+
+const revalidatesManagerConsole = accountRoute.includes("revalidatePath('/admin')") || (
+  accountRoute.includes('revalidateAccountProfileRoutes(next)') && accountRevalidation.includes("'/admin'")
+);
+if (!revalidatesManagerConsole) failures.push('account profile route must revalidate manager console');
+
 must(accountMenu, 'displayNameFromUrl', 'account menu must read saved display name from redirect state');
 must(accountMenu, 'setLocalDisplayName(savedName)', 'account menu must update display name immediately');
 
