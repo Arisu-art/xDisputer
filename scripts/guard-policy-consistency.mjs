@@ -78,6 +78,22 @@ function checkNotificationSchemaPolicy() {
   }
 }
 
+function collectLayoutCssRequirements(source) {
+  const required = [];
+  const patterns = [
+    /must\(layout,\s*['"]import '\.\/([^'"]+\.css)';['"]/g,
+    /has\(\s*['"]app\/layout\.tsx['"]\s*,\s*['"]import '\.\/([^'"]+\.css)';['"]\s*\)/g
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) {
+      required.push(match[1]);
+    }
+  }
+
+  return required;
+}
+
 function checkRootCssImportContracts() {
   const layout = read('app/layout.tsx');
   const guardFiles = listFiles('scripts', (file) => file.endsWith('-guard.mjs'));
@@ -85,9 +101,8 @@ function checkRootCssImportContracts() {
 
   for (const file of guardFiles) {
     const source = read(file);
-    const pattern = /must\(layout,\s*['"]import '\.\/([^'"]+\.css)';['"]/g;
-    for (const match of source.matchAll(pattern)) {
-      requiredImports.set(match[1], file);
+    for (const cssFile of collectLayoutCssRequirements(source)) {
+      requiredImports.set(cssFile, file);
     }
   }
 
