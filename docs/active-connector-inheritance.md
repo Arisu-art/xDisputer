@@ -19,6 +19,8 @@ It prevents future work from guessing the active repository, database target, de
 
 ## Active local commands
 
+The active local runner file is `scripts/xdisputer-active-sync.sh`.
+
 Use this when local/Codespace work should match current `main` and run verification:
 
 ```bash

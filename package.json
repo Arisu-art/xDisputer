@@ -74,7 +74,9 @@
     "active:sync:db": "npm run active:sync -- --sync-db --verify",
     "notification-ui:guard": "node scripts/notification-ui-frontend-guard.mjs",
     "assistant-chip-retirement:guard": "node scripts/assistant-chip-retirement-guard.mjs",
-    "repo-rearchitecture:guard": "node scripts/repo-rearchitecture-roadmap-guard.mjs"
+    "repo-rearchitecture:guard": "node scripts/repo-rearchitecture-roadmap-guard.mjs",
+    "dependency-lock:doctor": "node scripts/dependency-lock-doctor.mjs",
+    "dependency-lock:repair": "node scripts/dependency-lock-doctor.mjs --repair"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
