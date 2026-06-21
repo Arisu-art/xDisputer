@@ -10,12 +10,14 @@ const CACHE_FILE = path.join(CACHE_DIR, 'guard-bundle-cache.json');
 
 const bundles = {
   performance: [
+    ['node', ['scripts/guard-policy-canvas-guard.mjs']],
     ['node', ['scripts/guard-policy-consistency.mjs']],
     ['node', ['scripts/performance-boost-guard.mjs']],
     ['node', ['scripts/feature-ownership-guard.mjs']],
     ['node', ['scripts/repo-precision-audit.mjs']]
   ],
   'ui-source': [
+    ['node', ['scripts/guard-policy-canvas-guard.mjs']],
     ['node', ['scripts/guard-policy-consistency.mjs']],
     ['node', ['scripts/no-autowrite-ui-guard.mjs']],
     ['node', ['scripts/ui-shell-registry-guard.mjs']],
@@ -46,6 +48,7 @@ const bundles = {
     ['node', ['scripts/manager-visible-switch-contract-guard.mjs']]
   ],
   preflight: [
+    ['node', ['scripts/guard-policy-canvas-guard.mjs']],
     ['node', ['scripts/guard-policy-consistency.mjs']],
     ['node', ['scripts/phase14-local-safety-check.mjs']],
     ['node', ['scripts/repair-generation-blocked-panel.mjs']],
