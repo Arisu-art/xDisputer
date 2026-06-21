@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import TemplatePacketConfigurator from './TemplatePacketConfigurator';
-import TemplateIntelligencePanel from './TemplateIntelligencePanel';
+import TemplateIntelligencePanel from './z_test_file';
 import { rounds, type LetterReference, type Round } from '../lib/reference-store';
 import type { TemplateExhibits } from '../lib/template-exhibits';
 import type { LetterType } from '../lib/letter-engine';
@@ -116,7 +116,7 @@ export default function TemplateProgressiveWorkspace({
               ) : null}
             </div>
           </header>
-          <TemplateIntelligencePanel round={round} slots={slots} managedExhibits={managedExhibits} />
+          <TemplateIntelligencePanel />
           <div className="template-packet-selection-grid">
             <button type="button" className="template-packet-choice primary" onClick={() => choosePacket('DISPUTE')}>
               <span className="template-selection-tag">Standard packet</span>
@@ -153,7 +153,7 @@ export default function TemplateProgressiveWorkspace({
               ) : null}
             </div>
           </header>
-          <TemplateIntelligencePanel round={round} slots={slots} managedExhibits={managedExhibits} />
+          <TemplateIntelligencePanel />
           <TemplatePacketConfigurator round={round} slots={slots} supportingReady={supportingReady} focusedPacket={packet} embedded canManageTemplates={authority.canUpload} managerTemplateScope={managerTemplateScope} managedExhibits={managedExhibits} onUploadLetter={onUploadLetter} onRemoveLetter={onRemoveLetter} onExhibitsChange={onExhibitsChange} onTemplateMutation={onTemplateMutation} onMessage={onMessage} />
         </section>
       ) : null}
