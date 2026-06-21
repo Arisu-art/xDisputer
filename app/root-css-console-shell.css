@@ -1,6 +1,4 @@
-/* Phase 7 root CSS bundle: console shell and account rail */
-@import './obsidian-console.css';
-@import './xdisputer-shell-compact.css';
+/* Unified native console bundle */
 @import './workspace-account-controls.css';
 @import './client-account-popover-ratio.css';
 @import './account-popover-compact-retirement.css';
