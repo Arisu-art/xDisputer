@@ -63,7 +63,7 @@ fi
 ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$ROOT_DIR"
 
-EXPECTED_REMOTE_PATTERN='Arisu-art/xDisputer(?:\.git)?$'
+EXPECTED_REMOTE_KEY='github.com/arisu-art/xdisputer'
 EXPECTED_BRANCH='main'
 
 log() {
@@ -83,8 +83,26 @@ has_npm_script() {
   node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts[process.argv[1]] ? 0 : 1)" "$1" >/dev/null 2>&1
 }
 
+normalize_remote_url() {
+  local value="$1"
+
+  value="${value%/}"
+  value="${value%.git}"
+  value="${value#https://}"
+  value="${value#http://}"
+  value="${value#ssh://}"
+  value="${value#git://}"
+  value="${value#git@}"
+  value="${value#*@}"
+  value="${value/:/\/}"
+  value="${value%/}"
+
+  printf '%s' "$value" | tr '[:upper:]' '[:lower:]'
+}
+
 need_command git
 need_command npm
+need_command tr
 
 log "xDisputer active sync started"
 log "Root: $ROOT_DIR"
@@ -98,8 +116,9 @@ if [[ -z "$remote_url" ]]; then
   fail "Git remote origin is missing. Reconnect origin to https://github.com/Arisu-art/xDisputer.git"
 fi
 
-if [[ ! "$remote_url" =~ $EXPECTED_REMOTE_PATTERN ]]; then
-  fail "Refusing to sync unexpected remote: $remote_url"
+remote_key="$(normalize_remote_url "$remote_url")"
+if [[ "$remote_key" != "$EXPECTED_REMOTE_KEY" ]]; then
+  fail "Refusing to sync unexpected remote: $remote_url. Expected Arisu-art/xDisputer from github.com."
 fi
 log "Git remote verified: $remote_url"
 
