@@ -110,8 +110,8 @@ function collectRequiredRootCssImports() {
     /has\(\s*['"]app\/layout\.tsx['"]\s*,\s*['"]import '\.\/([^'"]+\.css)';['"]\s*\)/g
   ];
 
-  for (const guard of walk('scripts', (file) => file.endsWith('-guard.mjs'))) {
-    const source = read(guard);
+  for (const script of walk('scripts', (file) => file.endsWith('.mjs'))) {
+    const source = read(script);
     for (const pattern of patterns) {
       for (const match of source.matchAll(pattern)) cssFiles.add(match[1]);
     }
@@ -123,7 +123,7 @@ function collectRequiredRootCssImports() {
 function checkRootCssPolicy() {
   const layout = read('app/layout.tsx');
   for (const cssFile of collectRequiredRootCssImports()) {
-    if (!exists(`app/${cssFile}`)) fail(`guard requires missing app CSS file: app/${cssFile}`);
+    if (!exists(`app/${cssFile}`)) fail(`script requires missing app CSS file: app/${cssFile}`);
     if (!layout.includes(`import './${cssFile}';`)) fail(`root layout missing required CSS import: ${cssFile}`);
   }
 }
