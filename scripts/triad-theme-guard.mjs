@@ -1,22 +1,23 @@
+#!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs';
 
 const failures = [];
-const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : (failures.push(`Missing ${path}`), '');
+const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : '';
 const has = (path, text, message) => { if (!read(path).includes(text)) failures.push(message); };
+const not = (path, text, message) => { if (read(path).includes(text)) failures.push(message); };
 
-has('app/layout.tsx', "import './ui-theme-triad.css';", 'layout must import triad theme');
-has('app/ui-theme-triad.css', '--x-triad-theme: ready', 'triad readiness token missing');
-has('app/ui-theme-triad.css', 'client-aurora', 'client aurora theme missing');
-has('app/ui-theme-triad.css', 'manager-graphite', 'manager graphite theme missing');
-has('app/ui-theme-triad.css', 'master-executive', 'master executive theme missing');
-has('app/ui-theme-triad.css', 'xTriadSurfaceEnter', 'triad animation missing');
-has('app/ui-theme-triad.css', 'prefers-reduced-motion', 'reduced motion fallback missing');
-has('lib/ui-intelligence/theme-governance.ts', 'app/ui-theme-triad.css', 'typed governance must include triad owner file');
+has('app/root-css-contracts.css', "@import './ui-theme-contracts.css';", 'root contracts must keep unified theme contracts');
+has('app/root-css-contracts.css', "@import './unified-surface-contracts.css';", 'root contracts must keep unified surface contracts');
+not('app/root-css-contracts.css', "@import './ui-theme-triad.css';", 'triad theme must stay retired from root contracts');
+not('app/root-css-console-shell.css', "@import './obsidian-console.css';", 'obsidian shell theme must stay retired');
+not('app/root-css-console-shell.css', "@import './xdisputer-shell-compact.css';", 'compact shell theme must stay retired');
+has('lib/ui-intelligence/theme-governance.ts', 'Do not reintroduce client aurora, manager graphite, or master executive theme forks.', 'theme governance must record triad retirement');
+has('docs/unified-triad-surface-canvas.md', 'Unified Native Surface Canvas', 'native surface canvas must replace triad canvas');
 
 if (failures.length) {
-  console.error('Triad theme guard failed.');
+  console.error('Triad theme retirement guard failed.');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('Triad theme guard passed.');
+console.log('Triad theme retirement guard passed.');
