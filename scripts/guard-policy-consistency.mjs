@@ -35,11 +35,15 @@ function warn(message) {
   warnings.push(message);
 }
 
+function listPolicyScripts() {
+  return listFiles('scripts', (file) => file.endsWith('.mjs'));
+}
+
 function checkNotificationSchemaPolicy() {
   const contract = read('src/features/notifications/notification-ui-contract.ts');
   const readService = read('lib/notifications/notification-service.ts');
   const writeService = read('lib/notifications/notification-write-service.ts');
-  const guardFiles = listFiles('scripts', (file) => file.endsWith('-guard.mjs'));
+  const scripts = listPolicyScripts();
   const strictMode = contract.includes('strict-canonical-columns');
 
   if (!strictMode) {
@@ -61,7 +65,7 @@ function checkNotificationSchemaPolicy() {
     }
   }
 
-  for (const file of guardFiles) {
+  for (const file of scripts) {
     const source = read(file);
     const staleFallbackRequirements = [
       'notification reads must tolerate optional column drift',
@@ -96,24 +100,24 @@ function collectLayoutCssRequirements(source) {
 
 function checkRootCssImportContracts() {
   const layout = read('app/layout.tsx');
-  const guardFiles = listFiles('scripts', (file) => file.endsWith('-guard.mjs'));
+  const scripts = listPolicyScripts();
   const requiredImports = new Map();
 
-  for (const file of guardFiles) {
+  for (const file of scripts) {
     const source = read(file);
     for (const cssFile of collectLayoutCssRequirements(source)) {
       requiredImports.set(cssFile, file);
     }
   }
 
-  for (const [cssFile, guardFile] of requiredImports) {
+  for (const [cssFile, scriptFile] of requiredImports) {
     const importLine = `import './${cssFile}';`;
     if (!existsSync(join(ROOT, 'app', cssFile))) {
-      fail(`${guardFile} requires missing root CSS file app/${cssFile}.`);
+      fail(`${scriptFile} requires missing root CSS file app/${cssFile}.`);
       continue;
     }
     if (!layout.includes(importLine)) {
-      fail(`${guardFile} requires root layout CSS import: ${importLine}`);
+      fail(`${scriptFile} requires root layout CSS import: ${importLine}`);
     }
   }
 }
@@ -151,6 +155,9 @@ function checkPackageLockPolicy() {
 
 function checkGuardBundleCoverage() {
   const runner = read('scripts/guard-bundle-runner.mjs');
+  if (!runner.includes('scripts/guard-policy-canvas-guard-v2.mjs')) {
+    warn('guard-policy-canvas-guard-v2 is not wired into guard-bundle-runner.mjs yet.');
+  }
   if (!runner.includes('scripts/guard-policy-consistency.mjs')) {
     warn('guard-policy-consistency is not wired into guard-bundle-runner.mjs yet.');
   }
