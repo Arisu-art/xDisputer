@@ -9,6 +9,7 @@
     "ui-intelligence:guard": "node scripts/ui-intelligence-guard.mjs",
     "ui-intelligence:report": "node scripts/ui-intelligence-report.mjs",
     "ui-intelligence:map": "node scripts/ui-intelligence-map.mjs",
+    "guard-policy:guard": "node scripts/guard-policy-canvas-guard.mjs && node scripts/guard-policy-consistency.mjs",
     "performance:guard": "node scripts/guard-bundle-runner.mjs performance",
     "repo-precision:audit": "node scripts/repo-precision-audit.mjs",
     "feature-ownership:guard": "node scripts/feature-ownership-guard.mjs",
