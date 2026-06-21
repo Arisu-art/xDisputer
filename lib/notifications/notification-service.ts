@@ -14,18 +14,12 @@ type RawNotificationRow = {
   created_at: string;
 };
 
-type MinimalNotificationRow = Pick<RawNotificationRow, 'id' | 'title' | 'created_at'>;
-
 type ListNotificationsInput = {
   supabase: SupabaseServerClient;
   userId: string;
   role: NotificationAudienceRole;
   limit?: number;
 };
-
-const fullSelect = 'id,title,body,href,severity,read_at,created_at';
-const fallbackSelect = 'id,title,created_at';
-const projectionOptionalColumns = ['body', 'href', 'severity', 'read_at'];
 
 function toNotificationRecord(row: RawNotificationRow): NotificationRecord {
   return {
@@ -39,33 +33,9 @@ function toNotificationRecord(row: RawNotificationRow): NotificationRecord {
   };
 }
 
-function withFallbackProjection(row: MinimalNotificationRow): RawNotificationRow {
-  return {
-    id: row.id,
-    title: row.title,
-    body: null,
-    href: null,
-    severity: null,
-    read_at: null,
-    created_at: row.created_at
-  };
-}
-
 function safeLimit(value: number | undefined) {
   if (!Number.isFinite(value)) return 12;
   return Math.max(1, Math.min(40, Math.floor(value || 12)));
-}
-
-export function missingOptionalColumn(message: string | undefined, column: string) {
-  return Boolean(message && message.includes(column) && (
-    message.includes('does not exist') ||
-    message.includes('schema cache') ||
-    message.includes('Could not find')
-  ));
-}
-
-function hasProjectionDrift(message: string | undefined) {
-  return projectionOptionalColumns.some((column) => missingOptionalColumn(message, column));
 }
 
 function buildNotificationsQuery(input: {
@@ -73,11 +43,10 @@ function buildNotificationsQuery(input: {
   column: 'recipient_user_id' | 'recipient_role';
   value: string;
   limit: number;
-  select: string;
 }) {
   return input.supabase
     .from('notifications')
-    .select(input.select)
+    .select('id,title,body,href,severity,read_at,created_at')
     .eq(input.column, input.value)
     .order('created_at', { ascending: false })
     .limit(input.limit);
@@ -89,29 +58,13 @@ async function queryNotifications(input: {
   value: string;
   limit: number;
 }) {
-  const full = await buildNotificationsQuery({ ...input, select: fullSelect });
-  if (!full.error) {
-    return {
-      data: (full.data || []) as RawNotificationRow[],
-      error: null
-    };
-  }
-
-  if (input.column === 'recipient_role' && missingOptionalColumn(full.error.message, 'recipient_role')) {
-    return { data: [] as RawNotificationRow[], error: null };
-  }
-
-  if (!hasProjectionDrift(full.error.message)) {
-    return { data: [] as RawNotificationRow[], error: full.error };
-  }
-
-  const minimal = await buildNotificationsQuery({ ...input, select: fallbackSelect });
-  if (minimal.error) {
-    return { data: [] as RawNotificationRow[], error: minimal.error };
+  const result = await buildNotificationsQuery(input);
+  if (result.error) {
+    return { data: [] as RawNotificationRow[], error: result.error };
   }
 
   return {
-    data: ((minimal.data || []) as MinimalNotificationRow[]).map(withFallbackProjection),
+    data: (result.data || []) as RawNotificationRow[],
     error: null
   };
 }
