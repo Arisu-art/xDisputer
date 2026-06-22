@@ -1,0 +1,164 @@
+/* Manager payroll metadata modal contract.
+   Owns instant client-side salary lock, red no-circle close button, and aligned payroll fields. */
+
+:root {
+  --manager-payroll-modal-contract: instant-salary-lock-red-x;
+}
+
+.manager-user-settings-client-modal {
+  display: grid !important;
+  place-items: stretch !important;
+}
+
+.manager-user-settings-open {
+  min-height: 42px !important;
+  width: 100% !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: #1e293b !important;
+  cursor: pointer !important;
+  font: inherit !important;
+  font-size: .88rem !important;
+  font-weight: 950 !important;
+  padding: .55rem .9rem !important;
+  text-align: left !important;
+}
+
+.manager-user-settings-open::after {
+  content: "+";
+  float: right;
+  width: 28px !important;
+  height: 28px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  border-radius: 999px !important;
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+}
+
+.manager-user-settings-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147482500 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 1rem !important;
+  background: rgba(15, 23, 42, .24) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.manager-user-settings-modal {
+  position: relative !important;
+  width: min(760px, calc(100vw - 2rem)) !important;
+  max-height: min(720px, calc(100vh - 2rem)) !important;
+  overflow: auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: start !important;
+  gap: .85rem !important;
+  padding: 3rem clamp(1rem, 2vw, 1.4rem) clamp(1rem, 2vw, 1.4rem) !important;
+  border: 1px solid rgba(203, 213, 225, .95) !important;
+  border-radius: 28px !important;
+  background: #ffffff !important;
+  box-shadow: 0 32px 90px rgba(15, 23, 42, .24) !important;
+}
+
+.metadata-modal-close {
+  position: absolute !important;
+  top: .45rem !important;
+  right: .7rem !important;
+  z-index: 2 !important;
+  width: 30px !important;
+  height: 30px !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #dc2626 !important;
+  cursor: pointer !important;
+  font: 950 1.45rem/1 Arial, sans-serif !important;
+  box-shadow: none !important;
+}
+
+.metadata-modal-close:hover,
+.metadata-modal-close:focus-visible {
+  color: #991b1b !important;
+  outline: 2px solid rgba(220, 38, 38, .28) !important;
+  outline-offset: 3px !important;
+}
+
+.manager-user-settings-modal label {
+  display: grid !important;
+  align-self: start !important;
+  gap: .45rem !important;
+  min-width: 0 !important;
+}
+
+.manager-user-settings-modal label span {
+  letter-spacing: .16em !important;
+  text-transform: uppercase !important;
+  font-size: .68rem !important;
+  font-weight: 950 !important;
+  color: #0f172a !important;
+}
+
+.manager-user-settings-modal input,
+.manager-user-settings-modal select {
+  width: 100% !important;
+  min-height: 46px !important;
+  border-radius: 16px !important;
+}
+
+.manager-user-settings-modal .client-status-job-field,
+.manager-user-settings-modal .manager-user-settings-notes,
+.manager-user-settings-modal .metadata-salary-field,
+.manager-user-settings-modal .metadata-output-rate-field {
+  grid-column: span 1 !important;
+}
+
+.manager-user-settings-modal .metadata-rule-hint {
+  grid-column: 1 / -1 !important;
+  margin: -.35rem 0 0 !important;
+  padding: .65rem .8rem !important;
+  border: 1px solid rgba(191, 219, 254, .86) !important;
+  border-radius: 16px !important;
+  background: #eff6ff !important;
+  color: #475569 !important;
+  font-size: .78rem !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.manager-user-settings-modal .metadata-salary-field.is-locked input,
+.manager-user-settings-modal .metadata-salary-field input:disabled {
+  cursor: not-allowed !important;
+  color: #64748b !important;
+  background: #f1f5f9 !important;
+  border-style: dashed !important;
+}
+
+.manager-user-settings-modal .metadata-salary-field small {
+  color: #64748b !important;
+  font-size: .75rem !important;
+  font-weight: 800 !important;
+}
+
+.manager-user-settings-modal .admin-action-button.primary {
+  grid-column: 1 / -1 !important;
+}
+
+@media (max-width: 860px) {
+  .manager-user-settings-modal {
+    grid-template-columns: 1fr !important;
+  }
+
+  .manager-user-settings-modal .client-status-job-field,
+  .manager-user-settings-modal .manager-user-settings-notes,
+  .manager-user-settings-modal .metadata-salary-field,
+  .manager-user-settings-modal .metadata-output-rate-field,
+  .manager-user-settings-modal .metadata-rule-hint {
+    grid-column: 1 !important;
+  }
+}
