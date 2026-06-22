@@ -7,6 +7,7 @@ export type WorkspacePreferences = {
   strictValidation: boolean;
   openTrackerAfterFinalization: boolean;
   guidanceMode: GuidanceMode;
+  perOutputGenerationDefault: boolean;
 };
 
 const KEY = 'lettergenerator-workspace-preferences-v1';
@@ -19,7 +20,8 @@ export const defaultWorkspacePreferences: WorkspacePreferences = {
   defaultRound: '1st Round',
   strictValidation: false,
   openTrackerAfterFinalization: false,
-  guidanceMode: 'guided'
+  guidanceMode: 'guided',
+  perOutputGenerationDefault: false
 };
 
 export function loadWorkspacePreferences(): WorkspacePreferences {
@@ -30,7 +32,8 @@ export function loadWorkspacePreferences(): WorkspacePreferences {
       defaultRound: saved.defaultRound || defaultWorkspacePreferences.defaultRound,
       strictValidation: Boolean(saved.strictValidation),
       openTrackerAfterFinalization: Boolean(saved.openTrackerAfterFinalization),
-      guidanceMode: normalizeGuidanceMode(saved.guidanceMode)
+      guidanceMode: normalizeGuidanceMode(saved.guidanceMode),
+      perOutputGenerationDefault: Boolean(saved.perOutputGenerationDefault)
     };
   } catch {
     return defaultWorkspacePreferences;
@@ -41,7 +44,8 @@ export function saveWorkspacePreferences(preferences: WorkspacePreferences) {
   const normalized: WorkspacePreferences = {
     ...defaultWorkspacePreferences,
     ...preferences,
-    guidanceMode: normalizeGuidanceMode(preferences.guidanceMode)
+    guidanceMode: normalizeGuidanceMode(preferences.guidanceMode),
+    perOutputGenerationDefault: Boolean(preferences.perOutputGenerationDefault)
   };
 
   if (typeof window !== 'undefined') localStorage.setItem(KEY, JSON.stringify(normalized));
