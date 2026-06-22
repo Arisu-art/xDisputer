@@ -1,0 +1,29 @@
+/* Output Activity unread notification badge.
+   Reads notification hrefs and mirrors unread activity count onto manager sidebar links. */
+
+:root {
+  --output-activity-unread-badge-contract: notification-href-unread-count;
+}
+
+[data-output-activity-unread-count] {
+  position: relative !important;
+  padding-right: 2.75rem !important;
+}
+
+[data-output-activity-unread-badge="true"] {
+  position: absolute !important;
+  top: 50% !important;
+  right: .75rem !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  display: grid !important;
+  place-items: center !important;
+  transform: translateY(-50%) !important;
+  border-radius: 999px !important;
+  background: #dc2626 !important;
+  color: #fff !important;
+  font-size: .68rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  box-shadow: 0 8px 20px rgba(220, 38, 38, .32) !important;
+}
