@@ -22,23 +22,23 @@ export type WorkflowRailProps = {
   steps?: readonly WorkflowStep[];
 };
 
-export default function WorkflowRail({ activeStep = 'source-data', blockers = [], steps = defaultSteps }: WorkflowRailProps) {
-  const normalizedSteps = steps.map((step) => ({
-    ...step,
-    state: blockers.length && step.id === activeStep ? 'blocked' : step.id === activeStep ? 'active' : step.state
-  }));
+export default function WorkflowRail({ blockers = [] }: WorkflowRailProps) {
+  const visibleBlockers = blockers.filter((item) => item.trim()).slice(0, 4);
+  if (!visibleBlockers.length) return null;
 
-  return <aside className="generation-workflow-rail" data-modernization-feature="generation" data-modernization-owner="src/features/generation" aria-label="Generation workflow status">
+  return <aside className="generation-workflow-rail generation-client-error-rail" data-modernization-feature="generation" data-modernization-owner="src/features/generation" data-client-error-only="true" aria-label="Client action needed">
     <div className="generation-workflow-rail-header">
-      <p className="eyebrow">Workflow control</p>
-      <strong>Generation readiness</strong>
-      <span>{blockers.length ? `${blockers.length} visible blocker${blockers.length === 1 ? '' : 's'}` : 'Current step is ready'}</span>
+      <p className="eyebrow">Action needed</p>
+      <strong>{visibleBlockers.length === 1 ? 'Fix this issue' : 'Fix these issues'}</strong>
+      <span>{visibleBlockers[0]}</span>
     </div>
     <ol className="generation-workflow-rail-list">
-      {normalizedSteps.map((step, index) => <li key={step.id} data-step-state={step.state} aria-current={step.id === activeStep ? 'step' : undefined}>
+      {visibleBlockers.map((reason, index) => <li key={`${reason}-${index}`} data-step-state="blocked">
         <span>{String(index + 1).padStart(2, '0')}</span>
-        <div><strong>{step.label}</strong><small>{step.detail}</small></div>
+        <div><strong>Client blocker</strong><small>{reason}</small></div>
       </li>)}
     </ol>
   </aside>;
 }
+
+export { defaultSteps };
