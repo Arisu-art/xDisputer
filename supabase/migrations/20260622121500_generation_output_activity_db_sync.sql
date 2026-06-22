@@ -1,6 +1,5 @@
 -- Database-owned generation -> manager output activity and notification sync.
--- This is the permanent fallback/repair path: even if the Next.js side bridge is stale,
--- every generated run can create one manager activity row and one manager notification.
+-- Permanent safety net: every generated run can create one manager activity row and one manager notification.
 
 alter table if exists public.generation_runs
   add column if not exists per_output_pay boolean not null default false;
@@ -30,8 +29,7 @@ declare
   existing_activity_id uuid;
   inserted_notification_id uuid;
 begin
-  select *
-  into run_row
+  select * into run_row
   from public.generation_runs
   where id = generation_run_id_input;
 
@@ -78,21 +76,14 @@ begin
   end;
 
   note_value := nullif(left(regexp_replace(coalesce(setting_row.notes, ''), '\s+', ' ', 'g'), 300), '');
-  href_value := case
-    when is_per_output_value then '/admin/output-activity-v2?filter=per_output'
-    else '/admin/output-activity-v2?filter=not_per_output'
-  end;
-  title_value := case
-    when is_per_output_value then 'Per-output client generated a letter'
-    else 'Fulltime Output generated'
-  end;
+  href_value := case when is_per_output_value then '/admin/output-activity-v2?filter=per_output' else '/admin/output-activity-v2?filter=not_per_output' end;
+  title_value := case when is_per_output_value then 'Per-output client generated a letter' else 'Fulltime Output generated' end;
   body_value := case
     when is_per_output_value then coalesce(client_row.full_name, client_row.email, 'A disputer') || ' generated ' || output_count_value::text || ' output item(s) for ' || coalesce(run_row.client_name, 'Unknown client') || '. Confirm it before it affects salary.'
     else coalesce(client_row.full_name, client_row.email, 'A disputer') || ' generated ' || output_count_value::text || ' fulltime output item(s) for ' || coalesce(run_row.client_name, 'Unknown client') || '. No confirmation is required.'
   end;
 
-  select id
-  into existing_activity_id
+  select id into existing_activity_id
   from public.manager_disputer_output_approvals
   where generation_run_id = run_row.id
   order by created_at desc
@@ -131,12 +122,10 @@ begin
       run_row.client_name,
       is_per_output_value,
       now()
-    )
-    returning id into existing_activity_id;
+    ) returning id into existing_activity_id;
   end if;
 
-  select id
-  into inserted_notification_id
+  select id into inserted_notification_id
   from public.notifications
   where recipient_user_id = manager_id_value
     and created_by = run_row.owner_id
@@ -164,8 +153,7 @@ begin
       href_value,
       case when is_per_output_value then 'warning' else 'info' end,
       run_row.owner_id
-    )
-    returning id into inserted_notification_id;
+    ) returning id into inserted_notification_id;
   end if;
 
   return query select existing_activity_id, inserted_notification_id, 'synced'::text;
@@ -174,12 +162,24 @@ $$;
 
 grant execute on function public.sync_generation_output_activity_v1(uuid) to authenticated;
 
+create or replace function public.sync_generation_output_activity_trigger_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.sync_generation_output_activity_v1(new.id);
+  return new;
+end;
+$$;
+
 drop trigger if exists generation_runs_sync_output_activity on public.generation_runs;
 create trigger generation_runs_sync_output_activity
 after insert on public.generation_runs
 for each row
 when (new.output_status = 'generated')
-execute function public.sync_generation_output_activity_v1(new.id);
+execute function public.sync_generation_output_activity_trigger_v1();
 
 -- Backfill recent generated runs that were missed by older app code.
 do $$
