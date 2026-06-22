@@ -1,18 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createSupabaseBrowserClient } from '../lib/supabase/browser';
 
-type EntitlementPayload = {
-  outputLimit: number | null;
-  outputUsedToday: number;
-  outputRemainingToday: number | null;
-  resetAt: string | null;
-  resetSeconds: number | null;
-  allowed: boolean;
-  message: string | null;
-  source?: string | null;
-  serverTime?: string | null;
-};
+type EntitlementPayload = { outputLimit: number | null; outputUsedToday: number; outputRemainingToday: number | null; resetAt: string | null; resetSeconds: number | null; allowed: boolean; message: string | null; source?: string | null; serverTime?: string | null };
 
 function formatDuration(seconds: number | null) {
   if (seconds === null) return 'Calculating';
@@ -27,11 +18,8 @@ function formatDuration(seconds: number | null) {
 
 function formatResetAt(value: string | null) {
   if (!value) return '12:00 AM US ET';
-  try {
-    return `${new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }).format(new Date(value))} US ET`;
-  } catch {
-    return '12:00 AM US ET';
-  }
+  try { return `${new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }).format(new Date(value))} US ET`; }
+  catch { return '12:00 AM US ET'; }
 }
 
 function isEntitlementPayload(value: unknown): value is EntitlementPayload {
@@ -53,10 +41,7 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   const load = useCallback(async () => {
-    const response = await fetch(`/api/client/output-entitlement?t=${Date.now()}`, {
-      cache: 'no-store',
-      headers: { accept: 'application/json', 'cache-control': 'no-store' }
-    });
+    const response = await fetch(`/api/client/output-entitlement?t=${Date.now()}`, { cache: 'no-store', headers: { accept: 'application/json', 'cache-control': 'no-store' } });
     if (!response.ok) return;
     const payload = await response.json();
     const next = payload.entitlement as EntitlementPayload | undefined;
@@ -66,34 +51,43 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
   }, []);
 
   useEffect(() => {
-    function handleUpdate(event: Event) {
+    let cancelled = false;
+    const supabase = createSupabaseBrowserClient();
+    const refresh = () => { if (!cancelled) void load(); };
+    const handleUpdate = (event: Event) => {
       const detail = (event as CustomEvent).detail;
       if (isEntitlementPayload(detail)) {
         setEntitlement(detail);
         setSecondsLeft(typeof detail.resetSeconds === 'number' ? detail.resetSeconds : null);
-      } else {
-        void load();
-      }
-    }
+      } else refresh();
+    };
+    const handleVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
 
-    function handleVisibility() {
-      if (document.visibilityState === 'visible') void load();
-    }
-
-    void load();
-    const polling = window.setInterval(() => { void load(); }, 5000);
+    refresh();
     window.addEventListener('focus', handleUpdate);
     window.addEventListener('online', handleUpdate);
     window.addEventListener('xdisputer:output-entitlement-updated', handleUpdate);
     window.addEventListener('xdisputer:output-entitlement-refresh', handleUpdate);
     document.addEventListener('visibilitychange', handleVisibility);
+
+    void supabase.auth.getUser().then(({ data }) => {
+      const userId = data.user?.id;
+      if (!userId || cancelled) return;
+      supabase
+        .channel(`client-output-entitlement-${userId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'client_entitlement_limits', filter: `client_id=eq.${userId}` }, refresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'generation_runs', filter: `owner_id=eq.${userId}` }, refresh)
+        .subscribe(() => refresh());
+    }).catch(() => undefined);
+
     return () => {
-      window.clearInterval(polling);
+      cancelled = true;
       window.removeEventListener('focus', handleUpdate);
       window.removeEventListener('online', handleUpdate);
       window.removeEventListener('xdisputer:output-entitlement-updated', handleUpdate);
       window.removeEventListener('xdisputer:output-entitlement-refresh', handleUpdate);
       document.removeEventListener('visibilitychange', handleVisibility);
+      void supabase.removeAllChannels();
     };
   }, [load]);
 
@@ -102,15 +96,11 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
   useEffect(() => {
     if (!paused || typeof secondsLeft !== 'number') return;
     const step = countdownStep(secondsLeft);
-    const timer = window.setTimeout(() => {
-      setSecondsLeft((value) => typeof value === 'number' ? Math.max(0, value - step.decrement) : value);
-    }, step.delay);
+    const timer = window.setTimeout(() => setSecondsLeft((value) => typeof value === 'number' ? Math.max(0, value - step.decrement) : value), step.delay);
     return () => window.clearTimeout(timer);
   }, [paused, secondsLeft]);
 
-  useEffect(() => {
-    if (secondsLeft === 0) void load();
-  }, [secondsLeft, load]);
+  useEffect(() => { if (secondsLeft === 0) void load(); }, [secondsLeft, load]);
 
   const usageLabel = useMemo(() => {
     if (!entitlement) return 'Checking daily output limit';
@@ -120,7 +110,7 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
 
   if (!paused) return <>{children}</>;
 
-  return <main className="client-output-limit-pause" aria-label="Daily output limit reached" data-output-entitlement-sync="fast-poll-no-store">
+  return <main className="client-output-limit-pause" aria-label="Daily output limit reached" data-output-entitlement-sync="realtime-no-store">
     <section className="client-output-limit-pause-card">
       <p className="eyebrow">Daily allowance reached</p>
       <h1>Workspace pauses until reset</h1>
