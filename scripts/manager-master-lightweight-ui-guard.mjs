@@ -33,9 +33,10 @@ must(densityCss, '--account-popover-close-contract: x-close-when-open', 'open me
 must(densityCss, '--account-metadata-layout-contract: status-note-salary-rate', 'manager metadata popover must keep status/note then salary/rate layout contract');
 must(densityCss, '.manager-user-settings-details[open] > summary::after', 'metadata popover summary must become the X close control');
 must(densityCss, 'content: "×"', 'metadata popover close control must render X');
-must(densityCss, 'transform: translate(338px, -330px)', 'metadata X close control must be anchored to the popover top-right, not floating above the header');
+must(densityCss, 'transform: translate(325px, -132px)', 'metadata X close control must be inside the popover top-right, not floating above the header');
 must(densityCss, '.client-status-job-field', 'metadata popover must group client status/job description');
 must(densityCss, '.manager-user-settings-notes', 'metadata popover must include note field');
+must(densityCss, '.metadata-rule-hint', 'metadata popover must move explanatory copy out of the first row so note aligns with status');
 must(densityCss, '.metadata-salary-field', 'metadata popover must include salary field');
 must(densityCss, '.metadata-output-rate-field', 'metadata popover must include output per rate field');
 must(densityCss, '.manager-user-settings-details[open] .manager-user-settings-form', 'metadata editor must become a popover when opened');
@@ -62,6 +63,7 @@ must(admin, 'Client status / job description', 'manager metadata editor must lab
 must(admin, '<option value="full_time">Full-time</option>', 'manager metadata editor must use Full-time label');
 must(admin, '<option value="output_based">Per-output</option>', 'manager metadata editor must support per-output profile');
 must(admin, 'className="manager-user-settings-notes"', 'manager metadata editor must include notes');
+must(admin, 'className="metadata-rule-hint"', 'manager metadata editor must move explanatory copy below the first row');
 must(admin, 'name="baseSalary"', 'manager metadata editor must save salary through baseSalary');
 must(admin, 'name="perOutputRate"', 'manager metadata editor must save output per rate');
 mustNot(admin, 'Manager owner', 'manager metadata editor must not expose manager owner in manager page popover');
