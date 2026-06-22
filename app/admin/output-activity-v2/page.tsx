@@ -59,12 +59,14 @@ function filterHref(filter: OutputActivityFilter) {
 }
 
 async function syncRecentGeneratedOutputActivity(supabase: any, managerId: string) {
-  await supabase
-    .rpc('sync_manager_recent_generation_output_activity_v1', {
+  try {
+    await supabase.rpc('sync_manager_recent_generation_output_activity_v1', {
       manager_id_input: managerId,
       max_rows: 50
-    })
-    .catch(() => null);
+    });
+  } catch {
+    // The page must still render if the self-healing RPC has not been applied yet.
+  }
 }
 
 function FilterTabs({ active, counts }: { active: OutputActivityFilter; counts: OutputActivityCounts }) {
