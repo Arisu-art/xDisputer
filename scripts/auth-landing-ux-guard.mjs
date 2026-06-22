@@ -28,16 +28,20 @@ mustNot(landing, 'saas-public-cta', 'landing page must not render duplicate hero
 
 must(login, 'native-auth-page', 'login page must use native auth page shell');
 must(login, 'native-auth-card', 'login page must use native auth card');
-must(login, 'native-auth-hero', 'login page must show native auth hero panel');
+must(login, 'native-auth-hero', 'login page must keep hero markup available for future responsive previews');
 must(login, 'Sign in to workspace', 'login primary action must be explicit and workspace-oriented');
 
 must(signup, 'native-auth-page', 'signup page must use native auth page shell');
 must(signup, 'native-auth-card', 'signup page must use native auth card');
-must(signup, 'native-auth-hero', 'signup page must show native auth hero panel');
+must(signup, 'native-auth-hero', 'signup page must keep hero markup available for future responsive previews');
 must(signup, 'Create secure account', 'signup primary action must be explicit and secure');
 
-must(authCss, 'grid-template-columns: minmax(320px, 0.92fr) minmax(360px, 1.08fr)', 'auth CSS must use native split-panel layout');
-must(authCss, '.saas-auth-hero', 'auth CSS must style hero preview panel');
+must(authCss, '--native-auth-centered-card-max: 560px', 'auth CSS must define centered auth card max width');
+must(authCss, 'grid-template-columns: minmax(0, var(--native-auth-centered-card-max))', 'auth CSS must center login/signup as single-card layout');
+must(authCss, 'place-content: center !important', 'auth CSS must center the auth card on the page');
+must(authCss, '.saas-auth-page[data-auth-surface="sign-in"] .saas-auth-hero', 'auth CSS must scope sign-in hero retirement');
+must(authCss, '.saas-auth-page[data-auth-surface="sign-up"] .saas-auth-hero', 'auth CSS must scope sign-up hero retirement');
+must(authCss, 'display: none !important', 'auth CSS must hide auth side hero for centered login/signup');
 must(authCss, '.saas-auth-status-row', 'auth CSS must style native status row');
 must(publicCss, '.saas-public-cta{display:none!important}', 'public CSS must hard-retire duplicate hero CTA styling');
 must(publicCss, '.saas-public-flow-summary', 'public CSS must style non-clickable workflow summary');
