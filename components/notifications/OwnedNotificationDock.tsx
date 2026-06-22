@@ -129,7 +129,7 @@ export default function OwnedNotificationDock() {
     return () => window.clearInterval(timer);
   }, [load]);
 
-  async function markVisibleRead() {
+  async function markAllRead() {
     await fetch(notificationOwnershipContract.readEndpoint, { method: 'POST' }).catch(() => null);
     await load();
   }
@@ -151,7 +151,7 @@ export default function OwnedNotificationDock() {
         <button type="button" className="notification-dock-close" onClick={() => setOpen(false)} aria-label="Close notifications">Close</button>
       </header>
       <div className="notification-dock-actions" aria-label="Notification actions">
-        <button type="button" className="notification-dock-action" onClick={markVisibleRead}>Mark visible read</button>
+        <button type="button" className="notification-dock-action" onClick={markAllRead}>Mark all read</button>
         <button type="button" className="notification-dock-action danger" onClick={clearReadOnly}>Clear read only</button>
       </div>
       {payload.errorMessage && <p className="notification-dock-empty">{payload.errorMessage}</p>}
