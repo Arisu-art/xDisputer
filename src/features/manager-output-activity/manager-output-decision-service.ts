@@ -15,7 +15,6 @@ function amount(value: FormDataEntryValue | null) {
 export function decisionStatus(action: string) {
   if (action === 'confirm') return outputActivityContract.status.approved;
   if (action === 'reject') return outputActivityContract.status.rejected;
-  if (action === 'paid') return outputActivityContract.status.paid;
   return '';
 }
 
@@ -41,18 +40,23 @@ export async function applyManagerOutputDecision(request: NextRequest) {
   if (!status) return { ok: false as const, message: 'Invalid manager decision.' };
   if (existing.data.is_per_output !== true) return { ok: false as const, message: 'This generated output is not per-output, so no manager confirmation is required.' };
   if ((action === 'confirm' || action === 'reject') && existing.data.status !== outputActivityContract.status.pending) return { ok: false as const, message: 'Only pending per-output items can be confirmed or returned.' };
-  if (action === 'paid' && existing.data.status !== outputActivityContract.status.approved) return { ok: false as const, message: 'Only confirmed outputs can be marked paid.' };
 
   const patch = status === outputActivityContract.status.approved
     ? { status, rate_amount: rate, approved_at: new Date().toISOString(), updated_at: new Date().toISOString() }
-    : status === outputActivityContract.status.rejected
-      ? { status, rejected_at: new Date().toISOString(), updated_at: new Date().toISOString() }
-      : { status, paid_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    : { status, rejected_at: new Date().toISOString(), updated_at: new Date().toISOString() };
 
   const updated = await supabase.from('manager_disputer_output_approvals').update(patch).eq('manager_id', user.id).eq('id', id);
   if (updated.error) return { ok: false as const, message: updated.error.message };
 
-  await createNotification({ supabase, createdBy: user.id, recipientUserId: existing.data.disputer_id, title: status === outputActivityContract.status.approved ? 'Per-output letter confirmed' : status === outputActivityContract.status.rejected ? 'Per-output letter returned' : 'Per-output letter paid', body: existing.data.output_label, href: '/workspace', severity: status === outputActivityContract.status.rejected ? 'error' : 'success' });
+  await createNotification({
+    supabase,
+    createdBy: user.id,
+    recipientUserId: existing.data.disputer_id,
+    title: status === outputActivityContract.status.approved ? 'Per-output letter confirmed' : 'Per-output letter returned',
+    body: existing.data.output_label,
+    href: '/workspace',
+    severity: status === outputActivityContract.status.rejected ? 'error' : 'success'
+  });
 
-  return { ok: true as const, message: 'Output decision saved.' };
+  return { ok: true as const, message: status === outputActivityContract.status.approved ? 'Output confirmed.' : 'Output returned.' };
 }
