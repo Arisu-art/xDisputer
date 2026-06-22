@@ -18,7 +18,9 @@ type EntitlementRow = {
 
 function noStoreJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
-  response.headers.set('Cache-Control', 'no-store, max-age=0');
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
   return response;
 }
 
@@ -93,11 +95,14 @@ function normalizeEntitlement(row: EntitlementRow | null, source: 'daily' | 'fal
     outputLimit,
     outputUsedToday: used,
     outputRemainingToday: remaining,
-    resetAt: reset.resetAt,
-    resetSeconds: reset.resetSeconds,
-    allowed: row?.allowed !== false,
-    message: row?.message || (source === 'fallback' ? 'Using configured output limit fallback. Apply the daily entitlement SQL migration for exact daily usage.' : null),
-    source
+    resetAt: row?.reset_at || reset.resetAt,
+    resetSeconds: typeof row?.reset_seconds === 'number' ? row.reset_seconds : reset.resetSeconds,
+    allowed: outputLimit === null ? true : row?.allowed !== false && remaining !== 0,
+    message: outputLimit !== null && remaining === 0
+      ? row?.message || 'Daily output limit reached. Your workspace unlocks when the limit is increased or at the next reset.'
+      : row?.message || (source === 'fallback' ? 'Using configured output limit fallback. Apply the daily entitlement SQL migration for exact daily usage.' : null),
+    source,
+    serverTime: new Date().toISOString()
   };
 }
 
