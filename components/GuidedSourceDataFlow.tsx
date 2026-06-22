@@ -161,6 +161,7 @@ export default function GuidedSourceDataFlow({
   const [confirmRestore, setConfirmRestore] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
   const [scopeConfirmed, setScopeConfirmed] = useState(false);
+  const [readinessAttempted, setReadinessAttempted] = useState(false);
   const affidavitPanel = useRef<HTMLElement | null>(null);
 
   const evidenceReady = evidence.supporting.length > 0;
@@ -177,7 +178,12 @@ export default function GuidedSourceDataFlow({
     ...(!strictTemplateReady ? [`Required letter template missing: ${missingLetters.join(', ')}.`] : []),
     ...sourceWarnings.slice(0, 3).map((warning) => warning.message)
   ]);
-  const generateDescribedBy = !packetReady && generationBlockReasons.length ? 'generation-blocked-reasons' : undefined;
+  const visibleClientErrorReasons = uniqueBlockers([
+    ...(validationMessage ? [validationMessage] : []),
+    ...(stage === 'EVIDENCE' && readinessAttempted && !packetReady ? generationBlockReasons : [])
+  ]);
+  const showClientErrorRail = visibleClientErrorReasons.length > 0;
+  const generateDescribedBy = readinessAttempted && !packetReady && generationBlockReasons.length ? 'generation-blocked-reasons' : undefined;
   const showStage = (next: Stage) => runSharedTransition(() => setStage(next), 'stage');
   const workflowActiveStep = activeWorkflowStepForStage(stage);
 
@@ -220,6 +226,7 @@ export default function GuidedSourceDataFlow({
     setConfirmRestore(false);
     setValidationMessage('');
     setScopeConfirmed(false);
+    setReadinessAttempted(false);
   }, [evidenceKey, source]);
 
   async function uploadFile(file?: File) {
@@ -240,6 +247,7 @@ export default function GuidedSourceDataFlow({
     setConfirmRestore(false);
     setValidationMessage('');
     setScopeConfirmed(false);
+    setReadinessAttempted(false);
   }
 
   function requestRestore() {
@@ -256,9 +264,11 @@ export default function GuidedSourceDataFlow({
     setConfirmRestore(false);
     setValidationMessage('');
     setScopeConfirmed(false);
+    setReadinessAttempted(false);
   }
 
   function lockSource() {
+    setReadinessAttempted(true);
     const blocker = firstSourceDataReadinessBlocker({
       verified,
       hasRoutes: routes.length > 0,
@@ -276,17 +286,20 @@ export default function GuidedSourceDataFlow({
 
     setValidationMessage('');
     setScopeConfirmed(false);
+    setReadinessAttempted(false);
     showStage('REVIEW');
     onMessage('Source data locked. Review and confirm packet scope by bureau.');
   }
 
   function confirmScope() {
     setScopeConfirmed(true);
+    setReadinessAttempted(false);
     showStage('EVIDENCE');
     onMessage('Packet scope confirmed. Upload Supporting Documents evidence to continue.');
   }
 
   function confirmEvidence() {
+    setReadinessAttempted(true);
     if (!evidenceReady) {
       onMessage('Supporting Documents are required. Upload at least one evidence image to continue.');
       return;
@@ -295,12 +308,13 @@ export default function GuidedSourceDataFlow({
       onMessage(generationBlockReasons[0] || 'Review packet scope, required templates, and supporting documents before generating.');
       return;
     }
+    setReadinessAttempted(false);
     void onGenerate();
   }
 
   return (
     <div className="guided-source-workspace progressive-source-workspace" data-performance-slice="lazy-evidence-stage">
-      <WorkflowRail activeStep={workflowActiveStep} blockers={generationBlockReasons} />
+      {showClientErrorRail && <WorkflowRail activeStep={workflowActiveStep} blockers={visibleClientErrorReasons} />}
       {stage === 'SOURCE' && method === 'CHOOSE' && !source && (
         <section className="panel source-progressive-stage source-intake-stage shared-stage-surface" style={{ viewTransitionName: 'source-work-stage' }}>
           <SourceStageHeader eyebrow="Step 01 · Source Notepad" title="Upload or review client Notepad data" description="Upload a Notepad/TXT source file into a clean canvas. The original is protected, the working draft stays editable, and FTC fields are not added during normalization." />
@@ -344,7 +358,7 @@ export default function GuidedSourceDataFlow({
               {source && !originalSource && <button type="button" className="secondary-button" onClick={() => onImportSource(source, 'Saved manual draft as original')}>Protect this draft</button>}
               {verified && <div className="source-record-summary"><p className="eyebrow">Detected client</p><strong>{parsed.name}</strong><span>{routes.length} output route{routes.length === 1 ? '' : 's'} detected</span></div>}
             </aside>
-            <textarea className="guided-source-text source-focused-text" value={source} onChange={(event) => { setValidationMessage(''); setScopeConfirmed(false); onEditSource(event.target.value); }} placeholder="Type or paste Notepad/TXT source data here. Pasting edits this draft and does not replace the protected original." />
+            <textarea className="guided-source-text source-focused-text" value={source} onChange={(event) => { setValidationMessage(''); setReadinessAttempted(false); setScopeConfirmed(false); onEditSource(event.target.value); }} placeholder="Type or paste Notepad/TXT source data here. Pasting edits this draft and does not replace the protected original." />
           </div>
           {pendingImport && <div className="source-safety-confirm" role="alertdialog" aria-label="Confirm source replacement"><div><strong>Replace working source with this Notepad/TXT?</strong><p>Your current working draft will be saved as a recovery copy before the new source is imported. Existing generated outputs will be cleared because source data changed.</p></div><div><button type="button" className="secondary-button" onClick={() => setPendingImport(null)}>Cancel</button><button type="button" className="action-button" onClick={confirmImport}>Save draft and import</button></div></div>}
           {confirmRestore && <div className="source-safety-confirm" role="alertdialog" aria-label="Confirm restore original source"><div><strong>Restore the protected imported original?</strong><p>Your current draft will first be stored as a recovery copy. Supporting evidence stays attached; generated output is cleared until you regenerate from the restored source.</p></div><div><button type="button" className="secondary-button" onClick={() => setConfirmRestore(false)}>Cancel</button><button type="button" className="action-button" onClick={performRestore}>Save draft and restore</button></div></div>}
@@ -380,7 +394,7 @@ export default function GuidedSourceDataFlow({
           <SourceStageHeader eyebrow="Step 03 · Required evidence" title="Supporting documents" description="Upload and arrange evidence for packet position 02. The resulting PDF is included in every applicable final packet.">
             <div className="source-stage-actions"><button type="button" className="secondary-button" onClick={() => showStage('REVIEW')}>Back to Review</button><button type="button" className="action-button" aria-describedby={generateDescribedBy} aria-disabled={!packetReady || busy} disabled={busy || !packetReady} onClick={confirmEvidence}>{busy ? 'Generating packet…' : 'Generate Ordered Review Package'}</button></div>
           </SourceStageHeader>
-          {!packetReady && generationBlockReasons.length > 0 && <section id="generation-blocked-reasons" className="source-review generation-blocked-reasons" role="alert" aria-live="polite"><strong>Generation blocked</strong>{generationBlockReasons.map((reason, index) => <p key={`generation-blocker-${index}`}>{reason}</p>)}</section>}
+          {readinessAttempted && !packetReady && generationBlockReasons.length > 0 && <section id="generation-blocked-reasons" className="source-review generation-blocked-reasons" role="alert" aria-live="polite"><strong>Generation blocked</strong>{generationBlockReasons.map((reason, index) => <p key={`generation-blocker-${index}`}>{reason}</p>)}</section>}
           <SourceReviewAiPanel {...sourceReviewProps} />
           {evidenceKey && <LazyEvidenceStage storageKey={evidenceKey} clientName={parsed.name} onChanged={onEvidenceChanged} onMessage={onMessage} />}
         </section>
