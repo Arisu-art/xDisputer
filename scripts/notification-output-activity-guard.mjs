@@ -9,6 +9,10 @@ const mustPass = (condition, label) => { if (!condition) failures.push(label); }
 
 const generation = read('app/api/generation-runs/route.ts');
 const clientWorkspace = read('components/LetterGeneratorWorkspaceV2.tsx');
+const clientIntentCard = read('components/ClientPerOutputIntentCard.tsx');
+const clientPayrollMount = read('components/client/ClientPayrollProfileSyncMount.tsx');
+const clientPayrollRoute = read('app/api/client/payroll-profile/route.ts');
+const clientPayrollMigration = read('supabase/migrations/20260622113000_client_payroll_profile_rpc.sql');
 const workspacePreferences = read('lib/workspace-preferences.ts');
 const outputPage = read('app/admin/output-activity-v2/page.tsx');
 const outputMigration = read('supabase/migrations/20260622102000_output_activity_per_output_flow.sql');
@@ -63,8 +67,19 @@ must(generation, "profileForcesPerOutput ? 'Client profile is per-output", 'gene
 must(generation, 'outputActivityContract.sourceGeneratedPayable', 'generation route must mark payable generated outputs');
 must(generation, 'outputActivityContract.sourceGeneratedRecorded', 'generation route must mark generated-only outputs');
 must(generation, 'status: isPerOutput ? outputActivityContract.status.pending : outputActivityContract.status.recorded', 'generation route must only require manager confirmation for per-output items');
-must(clientWorkspace, 'data-output-activity-client-intent="true"', 'client workspace must expose per-output intent before generation');
+must(clientWorkspace, 'ClientPerOutputIntentCard', 'client workspace must use payroll-aware per-output intent card');
 must(clientWorkspace, 'perOutputPay: preferences.perOutputGenerationDefault', 'client generation payload must include per-output intent');
+must(clientIntentCard, '/api/client/payroll-profile', 'client per-output intent card must read payroll profile before generation');
+must(clientIntentCard, 'next.isOutputBased && preferences.perOutputGenerationDefault !== true', 'client per-output intent card must force default on for output-based profiles');
+must(clientIntentCard, 'Per-output required', 'client per-output intent card must lock output-based profile copy');
+must(clientIntentCard, 'Make this packet per-output', 'full-time client must get optional per-output add-on control');
+must(clientPayrollMount, 'data-output-activity-client-intent="true"', 'client payroll mount must sync rendered source-data intent card');
+must(clientPayrollMount, 'writePerOutputDefault(true)', 'client payroll mount must persist per-output default for output-based profiles');
+must(clientPayrollMount, 'input.disabled = true', 'client payroll mount must disable per-output checkbox for output-based profiles');
+must(clientPayrollRoute, "supabase.rpc('client_payroll_profile_v1')", 'client payroll profile route must use client-visible RPC');
+must(clientPayrollMigration, 'security definer', 'client payroll profile RPC must safely expose own payroll profile');
+must(clientPayrollMigration, 'grant execute on function public.client_payroll_profile_v1() to authenticated', 'client payroll profile RPC must be callable by authenticated clients');
+must(clientPayrollMigration, 'user_id = current_profile.id', 'client payroll profile RPC must only return current user payroll setting');
 must(workspacePreferences, 'perOutputGenerationDefault', 'workspace preferences must persist per-output generation default');
 must(outputPage, 'FilterTabs', 'manager output activity page must expose all/per-output/generated-only filters');
 must(outputPage, 'normalizeOutputActivityFilter', 'manager output activity page must normalize output filter');
