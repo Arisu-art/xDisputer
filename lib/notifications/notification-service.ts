@@ -134,3 +134,21 @@ export async function markDirectNotificationsRead({
   if (result.error) return { updatedCount: 0, errorMessage: result.error.message };
   return { updatedCount: result.data ? result.data.length : 0, errorMessage: null };
 }
+
+export async function clearDirectReadNotifications({
+  supabase,
+  userId
+}: {
+  supabase: SupabaseServerClient;
+  userId: string;
+}) {
+  const result = await supabase
+    .from('notifications')
+    .delete()
+    .eq('recipient_user_id', userId)
+    .not('read_at', 'is', null)
+    .select('id');
+
+  if (result.error) return { clearedCount: 0, errorMessage: result.error.message };
+  return { clearedCount: result.data ? result.data.length : 0, errorMessage: null };
+}
