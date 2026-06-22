@@ -45,9 +45,7 @@ function normalizeDailyEntitlement(row: any) {
 
 async function readDailyEntitlement(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, ownerId: string) {
   const daily = await supabase.rpc('access_client_daily_output_entitlement_v1', { owner_id_input: ownerId });
-
   if (!daily.error || !isMissingRpcError(daily.error.message)) return daily;
-
   return supabase.rpc('access_check_generation_output_limit_v1', { owner_id_input: ownerId });
 }
 
@@ -56,12 +54,20 @@ function outputCountFromManifest(manifest: any) {
   return Math.max(1, outputs.length || Number(manifest?.outputCount || 1));
 }
 
+function routeSummaryFromManifest(manifest: any) {
+  const outputs = Array.isArray(manifest?.outputs) ? manifest.outputs : [];
+  const routes = outputs.map((item: any) => [item?.bureau, item?.type].filter(Boolean).join(' ')).filter(Boolean);
+  return Array.from(new Set(routes)).slice(0, 6).join(', ') || null;
+}
+
 async function notifyManagerForGeneratedOutput(input: {
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  generationRunId: string;
   disputerId: string;
   clientName: string;
   round: string;
   manifest: unknown;
+  perOutputPay: boolean;
 }) {
   const profile = await input.supabase
     .from('profiles')
@@ -74,33 +80,42 @@ async function notifyManagerForGeneratedOutput(input: {
 
   const outputCount = outputCountFromManifest(input.manifest);
   const label = `${input.clientName} · ${input.round} generated output`;
+  const isPerOutput = input.perOutputPay === true;
   const activity = await input.supabase
     .from('manager_disputer_output_approvals')
     .insert({
       manager_id: managerId,
       disputer_id: input.disputerId,
+      generation_run_id: input.generationRunId,
       output_label: label,
       output_count: outputCount,
       rate_amount: outputActivityContract.defaultRateAmount,
-      status: outputActivityContract.status.pending,
-      source: outputActivityContract.sourceGenerated,
-      notes: 'Generated successfully. Manager must confirm before this affects payday.',
+      status: isPerOutput ? outputActivityContract.status.pending : outputActivityContract.status.recorded,
+      source: isPerOutput ? outputActivityContract.sourceGeneratedPayable : outputActivityContract.sourceGeneratedRecorded,
+      payday_label: null,
+      notes: isPerOutput ? 'Client marked this generated letter as per-output. Manager confirmation is required before payday.' : 'Client generated this letter as not per-output. No payday confirmation required.',
+      round_label: input.round,
+      letter_route: routeSummaryFromManifest(input.manifest),
+      client_name: input.clientName,
+      is_per_output: isPerOutput,
       updated_at: new Date().toISOString()
     })
     .select('id')
     .single();
 
-  await createNotification({
-    supabase: input.supabase,
-    createdBy: input.disputerId,
-    recipientUserId: managerId,
-    title: 'Output ready for confirmation',
-    body: `${profile.data?.full_name || profile.data?.email || 'A disputer'} generated ${outputCount} output item(s) for ${input.clientName}. Confirm or reject before payday.`,
-    href: '/admin/output-activity-v2',
-    severity: 'warning'
-  });
+  if (isPerOutput) {
+    await createNotification({
+      supabase: input.supabase,
+      createdBy: input.disputerId,
+      recipientUserId: managerId,
+      title: 'Per-output letter needs confirmation',
+      body: `${profile.data?.full_name || profile.data?.email || 'A disputer'} generated ${outputCount} output item(s) for ${input.clientName}. Confirm it before it affects salary.`,
+      href: '/admin/output-activity-v2?filter=per_output',
+      severity: 'warning'
+    });
+  }
 
-  return { activityId: activity.data?.id || null, notification: activity.error ? 'activity-warning' as const : 'created' as const };
+  return { activityId: activity.data?.id || null, notification: activity.error ? 'activity-warning' as const : (isPerOutput ? 'created' as const : 'recorded' as const) };
 }
 
 export async function GET(request: NextRequest) {
@@ -113,10 +128,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const { data: userResult, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !userResult.user) {
-      return noStoreJson({ error: userError?.message || 'No authenticated user.' }, { status: 401 });
-    }
+    if (userError || !userResult.user) return noStoreJson({ error: userError?.message || 'No authenticated user.' }, { status: 401 });
 
     const { data, error } = await supabase
       .from('generation_runs')
@@ -126,26 +138,10 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    await logSystemEvent(supabase, {
-      requestId,
-      routePath: '/api/generation-runs',
-      eventType: 'generation_runs_list',
-      eventStatus: 'success',
-      durationMs: Date.now() - startedAt,
-      metadata: { count: Array.isArray(data) ? data.length : 0 }
-    });
-
+    await logSystemEvent(supabase, { requestId, routePath: '/api/generation-runs', eventType: 'generation_runs_list', eventStatus: 'success', durationMs: Date.now() - startedAt, metadata: { count: Array.isArray(data) ? data.length : 0 } });
     return noStoreJson({ runs: data || [] });
   } catch (error) {
-    await logSystemEvent(supabase, {
-      requestId,
-      routePath: '/api/generation-runs',
-      eventType: 'generation_runs_list',
-      eventStatus: 'error',
-      durationMs: Date.now() - startedAt,
-      safeMessage: safeErrorMessage(error)
-    });
-
+    await logSystemEvent(supabase, { requestId, routePath: '/api/generation-runs', eventType: 'generation_runs_list', eventStatus: 'error', durationMs: Date.now() - startedAt, safeMessage: safeErrorMessage(error) });
     return noStoreJson({ error: safeErrorMessage(error) }, { status: 500 });
   }
 }
@@ -160,116 +156,58 @@ export async function POST(request: NextRequest) {
 
   try {
     const { data: userResult, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !userResult.user) {
-      return noStoreJson({ error: userError?.message || 'No authenticated user.' }, { status: 401 });
-    }
+    if (userError || !userResult.user) return noStoreJson({ error: userError?.message || 'No authenticated user.' }, { status: 401 });
 
     const body = await request.json().catch(() => null);
-
     const clientName = String(body?.clientName || '').trim() || 'Unknown client';
     const round = String(body?.round || '').trim();
     const status = String(body?.status || 'generated').trim();
     const manifest = body?.manifest;
+    const perOutputPay = body?.perOutputPay === true;
 
-    if (!allowedRounds.includes(round)) {
-      return noStoreJson({ error: 'Invalid generation round.' }, { status: 400 });
-    }
-
-    if (!allowedStatuses.includes(status)) {
-      return noStoreJson({ error: 'Invalid generation status.' }, { status: 400 });
-    }
-
-    if (!manifest || typeof manifest !== 'object') {
-      return noStoreJson({ error: 'Generation manifest is required.' }, { status: 400 });
-    }
+    if (!allowedRounds.includes(round)) return noStoreJson({ error: 'Invalid generation round.' }, { status: 400 });
+    if (!allowedStatuses.includes(status)) return noStoreJson({ error: 'Invalid generation status.' }, { status: 400 });
+    if (!manifest || typeof manifest !== 'object') return noStoreJson({ error: 'Generation manifest is required.' }, { status: 400 });
 
     if (status !== 'failed') {
       const limitCheck = await readDailyEntitlement(supabase, userResult.user.id);
-
-      if (limitCheck.error && !isMissingRpcError(limitCheck.error.message)) {
-        throw limitCheck.error;
-      }
-
+      if (limitCheck.error && !isMissingRpcError(limitCheck.error.message)) throw limitCheck.error;
       const limitRow = Array.isArray(limitCheck.data) ? limitCheck.data[0] : null;
       const entitlement = normalizeDailyEntitlement(limitRow);
-
       if (entitlement && entitlement.allowed === false) {
-        await logSystemEvent(supabase, {
-          requestId,
-          routePath: '/api/generation-runs',
-          eventType: 'generation_output_limit_blocked',
-          eventStatus: 'warning',
-          durationMs: Date.now() - startedAt,
-          safeMessage: entitlement.message || 'Daily output limit reached.',
-          metadata: entitlement
-        });
-
-        return noStoreJson({
-          error: entitlement.message || 'Daily output limit reached.',
-          entitlement
-        }, { status: 403 });
+        await logSystemEvent(supabase, { requestId, routePath: '/api/generation-runs', eventType: 'generation_output_limit_blocked', eventStatus: 'warning', durationMs: Date.now() - startedAt, safeMessage: entitlement.message || 'Daily output limit reached.', metadata: entitlement });
+        return noStoreJson({ error: entitlement.message || 'Daily output limit reached.', entitlement }, { status: 403 });
       }
     }
 
     const { data, error } = await supabase
       .from('generation_runs')
-      .insert({
-        owner_id: userResult.user.id,
-        client_name: clientName,
-        round_label: round,
-        manifest_json: manifest,
-        output_status: status
-      })
+      .insert({ owner_id: userResult.user.id, client_name: clientName, round_label: round, manifest_json: manifest, output_status: status })
       .select('id, client_name, round_label, output_status, created_at')
       .single();
 
     if (error) throw error;
 
     const outputActivity = status === 'generated'
-      ? await notifyManagerForGeneratedOutput({ supabase, disputerId: userResult.user.id, clientName, round, manifest }).catch((error) => ({ activityId: null, notification: safeErrorMessage(error) }))
+      ? await notifyManagerForGeneratedOutput({ supabase, generationRunId: data.id, disputerId: userResult.user.id, clientName, round, manifest, perOutputPay }).catch((error) => ({ activityId: null, notification: safeErrorMessage(error) }))
       : null;
 
     const integrityError = await recordGenerationIntegrity(supabase, {
       generationRunId: data.id,
       eventType: 'generation_run_recorded',
       manifest,
-      rules: {
-        allowedRounds,
-        allowedStatuses,
-        selectedRound: round,
-        selectedStatus: status
-      },
+      rules: { allowedRounds, allowedStatuses, selectedRound: round, selectedStatus: status, perOutputPay },
       status: status === 'failed' ? 'failed' : 'recorded',
-      metadata: { clientName, round, status, outputActivity }
+      metadata: { clientName, round, status, perOutputPay, outputActivity }
     });
 
-    await logSystemEvent(supabase, {
-      requestId,
-      routePath: '/api/generation-runs',
-      eventType: 'generation_run_create',
-      eventStatus: integrityError ? 'warning' : 'success',
-      durationMs: Date.now() - startedAt,
-      safeMessage: integrityError,
-      metadata: { generationRunId: data.id, round, status, outputActivity }
-    });
+    await logSystemEvent(supabase, { requestId, routePath: '/api/generation-runs', eventType: 'generation_run_create', eventStatus: integrityError ? 'warning' : 'success', durationMs: Date.now() - startedAt, safeMessage: integrityError, metadata: { generationRunId: data.id, round, status, perOutputPay, outputActivity } });
 
     const afterLimit = status === 'failed' ? null : await readDailyEntitlement(supabase, userResult.user.id);
-    const entitlement = afterLimit && !afterLimit.error && Array.isArray(afterLimit.data)
-      ? normalizeDailyEntitlement(afterLimit.data[0])
-      : null;
-
+    const entitlement = afterLimit && !afterLimit.error && Array.isArray(afterLimit.data) ? normalizeDailyEntitlement(afterLimit.data[0]) : null;
     return noStoreJson({ run: data, entitlement, outputActivity });
   } catch (error) {
-    await logSystemEvent(supabase, {
-      requestId,
-      routePath: '/api/generation-runs',
-      eventType: 'generation_run_create',
-      eventStatus: 'error',
-      durationMs: Date.now() - startedAt,
-      safeMessage: safeErrorMessage(error)
-    });
-
+    await logSystemEvent(supabase, { requestId, routePath: '/api/generation-runs', eventType: 'generation_run_create', eventStatus: 'error', durationMs: Date.now() - startedAt, safeMessage: safeErrorMessage(error) });
     return noStoreJson({ error: safeErrorMessage(error) }, { status: 500 });
   }
 }
