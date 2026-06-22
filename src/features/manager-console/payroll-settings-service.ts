@@ -41,8 +41,8 @@ export function readPayrollForm(formData: FormData): PayrollFormInput {
 
 export function buildManagerPayrollSettingsRecord(input: PayrollFormInput, managerId: string) {
   const employmentType = normalizeEmploymentType(input);
-  const baseSalary = numberValue(input.baseSalary || input.salary);
   const perOutputRate = numberValue(input.perOutputRate || input.rate);
+  const baseSalary = employmentType === 'output_based' ? 0 : numberValue(input.baseSalary || input.salary);
 
   return {
     manager_id: managerId,
