@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createSupabaseServerClient } from '../../../lib/supabase/server';
+import { createSupabaseAdminClient } from '../../../lib/supabase/admin';
 import { workspaceAccessErrorResponse } from '../../../lib/saas/access-entitlement';
 import { recordGenerationIntegrity } from '../../../lib/saas/integrity-ledger';
 import { logSystemEvent, requestIdFrom, safeErrorMessage } from '../../../lib/saas/system-observability';
@@ -11,6 +12,8 @@ export const revalidate = 0;
 
 const allowedRounds = ['1st Round', '2nd Round', '3rd Round', 'Final'];
 const allowedStatuses = ['generated', 'downloaded', 'failed'];
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 function noStoreJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
@@ -35,7 +38,7 @@ function normalizeDailyEntitlement(row: any) {
   };
 }
 
-async function readDailyEntitlement(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, ownerId: string) {
+async function readDailyEntitlement(supabase: SupabaseServerClient, ownerId: string) {
   const daily = await supabase.rpc('access_client_daily_output_entitlement_v1', { owner_id_input: ownerId });
   if (!daily.error || !isMissingRpcError(daily.error.message)) return daily;
   return supabase.rpc('access_check_generation_output_limit_v1', { owner_id_input: ownerId });
@@ -66,7 +69,6 @@ function managerSettingNote(row: any) {
 }
 
 async function notifyManagerForGeneratedOutput(input: {
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
   generationRunId: string;
   disputerId: string;
   clientName: string;
@@ -74,16 +76,26 @@ async function notifyManagerForGeneratedOutput(input: {
   manifest: unknown;
   perOutputPay: boolean;
 }) {
-  const profile = await input.supabase.from('profiles').select('manager_id, full_name, email').eq('id', input.disputerId).maybeSingle();
-  const managerId = profile.data?.manager_id;
-  if (!managerId) return { activityId: null as string | null, notification: 'no-manager' as const };
+  const admin = createSupabaseAdminClient();
+  const profile = await admin
+    .from('profiles')
+    .select('manager_id, full_name, email')
+    .eq('id', input.disputerId)
+    .maybeSingle();
 
-  const managerSetting = await input.supabase
+  if (profile.error) throw new Error(profile.error.message);
+
+  const managerId = profile.data?.manager_id;
+  if (!managerId) return { activityId: null as string | null, notification: 'no-manager' as const, errorMessage: 'Disputer has no manager_id assigned.' };
+
+  const managerSetting = await admin
     .from('manager_user_settings')
     .select('employment_type,is_regular,per_output_rate,rate,notes')
     .eq('manager_id', managerId)
     .eq('user_id', input.disputerId)
     .maybeSingle();
+
+  if (managerSetting.error) throw new Error(managerSetting.error.message);
 
   const profileForcesPerOutput = managerSettingIsOutputBased(managerSetting.data);
   const isPerOutput = profileForcesPerOutput || input.perOutputPay === true;
@@ -92,7 +104,7 @@ async function notifyManagerForGeneratedOutput(input: {
   const label = `${input.clientName} · ${input.round} generated output`;
   const note = managerSettingNote(managerSetting.data) || 'No manager note set';
 
-  const activity = await input.supabase
+  const activity = await admin
     .from('manager_disputer_output_approvals')
     .insert({
       manager_id: managerId,
@@ -114,8 +126,10 @@ async function notifyManagerForGeneratedOutput(input: {
     .select('id')
     .single();
 
-  await createNotification({
-    supabase: input.supabase,
+  if (activity.error) throw new Error(activity.error.message);
+
+  const notification = await createNotification({
+    supabase: admin as SupabaseServerClient,
     createdBy: input.disputerId,
     recipientUserId: managerId,
     title: isPerOutput ? (profileForcesPerOutput ? 'Per-output client generated a letter' : 'Per-output add-on needs confirmation') : 'Fulltime Output generated',
@@ -126,7 +140,14 @@ async function notifyManagerForGeneratedOutput(input: {
     severity: isPerOutput ? 'warning' : 'info'
   });
 
-  return { activityId: activity.data?.id || null, notification: activity.error ? 'activity-warning' as const : (isPerOutput ? 'created' as const : 'recorded' as const), forcedByProfile: profileForcesPerOutput };
+  if (!notification.ok) throw new Error(notification.errorMessage || 'Manager notification insert failed.');
+
+  return {
+    activityId: activity.data?.id || null,
+    notification: isPerOutput ? 'created' as const : 'recorded' as const,
+    notificationId: notification.notificationId || null,
+    forcedByProfile: profileForcesPerOutput
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -180,9 +201,11 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase.from('generation_runs').insert({ owner_id: userResult.user.id, client_name: clientName, round_label: round, manifest_json: manifest, output_status: status }).select('id, client_name, round_label, output_status, created_at').single();
     if (error) throw error;
-    const outputActivity = status === 'generated' ? await notifyManagerForGeneratedOutput({ supabase, generationRunId: data.id, disputerId: userResult.user.id, clientName, round, manifest, perOutputPay }).catch((error) => ({ activityId: null, notification: safeErrorMessage(error) })) : null;
+    const outputActivity = status === 'generated'
+      ? await notifyManagerForGeneratedOutput({ generationRunId: data.id, disputerId: userResult.user.id, clientName, round, manifest, perOutputPay }).catch((error) => ({ activityId: null, notification: 'failed' as const, errorMessage: safeErrorMessage(error) }))
+      : null;
     const integrityError = await recordGenerationIntegrity(supabase, { generationRunId: data.id, eventType: 'generation_run_recorded', manifest, rules: { allowedRounds, allowedStatuses, selectedRound: round, selectedStatus: status, perOutputPay }, status: status === 'failed' ? 'failed' : 'recorded', metadata: { clientName, round, status, perOutputPay, outputActivity } });
-    await logSystemEvent(supabase, { requestId, routePath: '/api/generation-runs', eventType: 'generation_run_create', eventStatus: integrityError ? 'warning' : 'success', durationMs: Date.now() - startedAt, safeMessage: integrityError, metadata: { generationRunId: data.id, round, status, perOutputPay, outputActivity } });
+    await logSystemEvent(supabase, { requestId, routePath: '/api/generation-runs', eventType: 'generation_run_create', eventStatus: integrityError || (outputActivity && 'errorMessage' in outputActivity && outputActivity.errorMessage) ? 'warning' : 'success', durationMs: Date.now() - startedAt, safeMessage: integrityError || (outputActivity && 'errorMessage' in outputActivity ? outputActivity.errorMessage : null), metadata: { generationRunId: data.id, round, status, perOutputPay, outputActivity } });
     const afterLimit = status === 'failed' ? null : await readDailyEntitlement(supabase, userResult.user.id);
     const entitlement = afterLimit && !afterLimit.error && Array.isArray(afterLimit.data) ? normalizeDailyEntitlement(afterLimit.data[0]) : null;
     return noStoreJson({ run: data, entitlement, outputActivity });
