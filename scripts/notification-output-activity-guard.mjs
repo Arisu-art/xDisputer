@@ -57,6 +57,9 @@ function hasCanonicalNotificationSchema(...sources) {
 
 must(generation, 'notifyManagerForGeneratedOutput', 'generation route must create output activity records');
 must(generation, 'perOutputPay', 'generation route must accept client per-output intent');
+must(generation, 'managerSettingIsOutputBased', 'generation route must inspect manager payroll profile');
+must(generation, 'profileForcesPerOutput || input.perOutputPay === true', 'output-based profiles must force every generated output into per-output confirmation');
+must(generation, "profileForcesPerOutput ? 'Client profile is per-output", 'generation route must explain forced per-output profile rule');
 must(generation, 'outputActivityContract.sourceGeneratedPayable', 'generation route must mark payable generated outputs');
 must(generation, 'outputActivityContract.sourceGeneratedRecorded', 'generation route must mark generated-only outputs');
 must(generation, 'status: isPerOutput ? outputActivityContract.status.pending : outputActivityContract.status.recorded', 'generation route must only require manager confirmation for per-output items');
