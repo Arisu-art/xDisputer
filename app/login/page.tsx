@@ -11,37 +11,45 @@ export default async function LoginPage({
   const message = params?.message;
 
   return (
-    <main className="saas-auth-page">
-      <section className="saas-auth-panel">
-        <div className="saas-auth-brand">
+    <main className="saas-auth-page native-auth-page" data-auth-surface="sign-in">
+      <section className="saas-auth-panel native-auth-card" aria-label="Sign in to xDisputer">
+        <Link href="/" className="saas-auth-home-link">← Back to xDisputer</Link>
+
+        <div className="saas-auth-brand native-auth-brand">
           <span className="saas-auth-logo">xD</span>
           <div>
-            <p className="saas-auth-eyebrow">xDisputer SaaS</p>
-            <h1>Welcome back</h1>
+            <p className="saas-auth-eyebrow">Secure account access</p>
+            <h1>Welcome back.</h1>
           </div>
         </div>
 
         <p className="saas-auth-copy">
-          Sign in to access your protected document operations workspace.
+          Continue into your protected document operations workspace with a verified xDisputer session.
         </p>
+
+        <div className="saas-auth-status-row" aria-label="Security highlights">
+          <span>Role-aware routing</span>
+          <span>Protected session</span>
+          <span>Native workspace</span>
+        </div>
 
         {error && <div className="saas-auth-alert error">{error}</div>}
         {message && <div className="saas-auth-alert success">{message}</div>}
 
-        <form action="/auth/sign-in" method="post" className="saas-auth-form">
+        <form action="/auth/sign-in" method="post" className="saas-auth-form native-auth-form">
           <input type="hidden" name="next" value={next} />
 
           <label>
             <span>Email address</span>
-            <input name="email" type="email" required placeholder="you@example.com" />
+            <input name="email" type="email" required placeholder="you@example.com" autoComplete="email" />
           </label>
 
           <label>
             <span>Password</span>
-            <input name="password" type="password" required placeholder="Enter your password" />
+            <input name="password" type="password" required placeholder="Enter your password" autoComplete="current-password" />
           </label>
 
-          <button type="submit">Sign in</button>
+          <button type="submit">Sign in to workspace</button>
         </form>
 
         <p className="saas-auth-switch">
@@ -49,22 +57,22 @@ export default async function LoginPage({
         </p>
       </section>
 
-      <aside className="saas-auth-hero">
+      <aside className="saas-auth-hero native-auth-hero" aria-label="xDisputer workspace preview">
         <p className="saas-auth-eyebrow">Document operations platform</p>
-        <h2>Run dispute packets, client cases, and filing workflows from one secure SaaS workspace.</h2>
+        <h2>One secure entry point for packets, templates, source data, and filing workflows.</h2>
 
-        <div className="saas-auth-feature-grid">
+        <div className="saas-auth-feature-grid native-auth-feature-grid">
           <div>
-            <strong>Admin console</strong>
-            <span>Manage users, roles, cases, and operations.</span>
+            <strong>Manager console</strong>
+            <span>Approve clients, monitor cases, and manage output workflows.</span>
           </div>
           <div>
             <strong>Client workspace</strong>
-            <span>Protected access for document packet workflows.</span>
+            <span>Access packet workflows through a clean approval-gated experience.</span>
           </div>
           <div>
-            <strong>Supabase auth</strong>
-            <span>Account creation, sessions, and role-backed access.</span>
+            <strong>Native design</strong>
+            <span>Matches the rounded, high-contrast xDisputer console system.</span>
           </div>
         </div>
       </aside>
