@@ -17,46 +17,6 @@ type Props = {
   switchTargetLabel: string;
 };
 
-const ACCOUNT_RAIL_CONTRACT_CSS = `
-  @media (min-width: 761px) {
-    .admin-monitor-main[data-console-header-grid="true"] {
-      --account-dock-width: minmax(260px, 1fr) !important;
-      --account-dock-height: clamp(136px, 10vw, 152px) !important;
-      grid-template-columns: minmax(0, 3fr) var(--account-dock-width) !important;
-      grid-template-rows: var(--account-dock-height) auto !important;
-    }
-    .admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"] {
-      grid-column: 2 !important;
-      grid-row: 1 !important;
-      min-width: 260px !important;
-      width: 100% !important;
-      height: var(--account-dock-height) !important;
-      max-height: var(--account-dock-height) !important;
-      align-self: start !important;
-      justify-self: stretch !important;
-      position: relative !important;
-    }
-    .admin-monitor-main[data-console-header-grid="true"] > [data-console-header-primary="true"],
-    .admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:first-of-type,
-    .admin-monitor-main[data-console-header-grid="true"] > .native-command-hero:first-of-type {
-      grid-column: 1 !important;
-      grid-row: 1 !important;
-      height: var(--account-dock-height) !important;
-      max-height: var(--account-dock-height) !important;
-      margin: 0 !important;
-    }
-  }
-  @media (max-width: 1020px) and (min-width: 761px) {
-    .admin-monitor-main[data-console-header-grid="true"] {
-      --account-dock-width: minmax(220px, .86fr) !important;
-      grid-template-columns: minmax(0, 2.8fr) var(--account-dock-width) !important;
-    }
-    .admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"] {
-      min-width: 220px !important;
-    }
-  }
-`;
-
 function cleanDisplayName(value?: string | null) {
   return value?.trim().replace(/\s+/g, ' ') || '';
 }
@@ -133,8 +93,7 @@ export default function AccountMenu({ role, mode, email, displayName, accountLab
     };
   }, [open]);
 
-  return <div ref={rootRef} className="manager-header-account-dock" data-console-component="AccountMenu" data-console-account-menu="true" data-console-account-role={role} data-console-mode={mode} data-manager-account-menu="true" data-manager-account-anchor="header-ratio-grid" data-manager-account-layout="header-75-25-avatar-only" data-manager-account-state={open ? 'open' : 'closed'} data-manager-account-popover-align="same-rail">
-    <style data-account-rail-contract="true">{ACCOUNT_RAIL_CONTRACT_CSS}</style>
+  return <div ref={rootRef} className="manager-header-account-dock" data-console-component="AccountMenu" data-console-account-menu="true" data-console-account-role={role} data-console-mode={mode} data-manager-account-menu="true" data-manager-account-anchor="header-ratio-grid" data-manager-account-layout="compact-sticky-bell-avatar-row" data-manager-account-state={open ? 'open' : 'closed'} data-manager-account-popover-align="same-rail">
     <NotificationDock />
     <button type="button" className="manager-header-account-avatar" aria-haspopup="dialog" aria-expanded={open} aria-controls={popoverId} aria-label={`Open ${accountLabel} account settings`} onClick={() => setOpen((value) => !value)}>{initial}</button>
     {open ? <div id={popoverId} className="manager-account-popover" data-console-account-popover="true" data-manager-account-popover="true" data-manager-account-popover-align="same-rail" role="dialog" aria-label={`${accountLabel} settings`}>
