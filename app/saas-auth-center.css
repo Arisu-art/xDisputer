@@ -321,6 +321,61 @@
   }
 }
 
+/* Final auth centering contract: login and create-account must be centered, not left split. */
+.saas-auth-page[data-auth-surface="sign-in"],
+.saas-auth-page[data-auth-surface="sign-up"] {
+  --native-auth-centered-card-max: 560px;
+  min-height: 100vh;
+  display: grid !important;
+  grid-template-columns: minmax(0, var(--native-auth-centered-card-max)) !important;
+  place-content: center !important;
+  place-items: center !important;
+  justify-content: center !important;
+  align-content: center !important;
+  padding: clamp(1rem, 4vw, 2rem) !important;
+}
+
+.saas-auth-page[data-auth-surface="sign-in"] .saas-auth-panel,
+.saas-auth-page[data-auth-surface="sign-up"] .saas-auth-panel {
+  width: min(100%, var(--native-auth-centered-card-max)) !important;
+  min-height: auto !important;
+  justify-self: center !important;
+  align-self: center !important;
+  text-align: center !important;
+  padding: clamp(1.4rem, 4vw, 3rem) !important;
+}
+
+.saas-auth-page[data-auth-surface="sign-in"] .saas-auth-home-link,
+.saas-auth-page[data-auth-surface="sign-up"] .saas-auth-home-link {
+  justify-self: center !important;
+}
+
+.saas-auth-page[data-auth-surface="sign-in"] .saas-auth-brand,
+.saas-auth-page[data-auth-surface="sign-up"] .saas-auth-brand {
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+
+.saas-auth-page[data-auth-surface="sign-in"] .saas-auth-copy,
+.saas-auth-page[data-auth-surface="sign-up"] .saas-auth-copy,
+.saas-auth-page[data-auth-surface="sign-in"] .saas-auth-switch,
+.saas-auth-page[data-auth-surface="sign-up"] .saas-auth-switch {
+  text-align: center !important;
+  margin-inline: auto !important;
+}
+
+.saas-auth-page[data-auth-surface="sign-in"] .saas-auth-status-row,
+.saas-auth-page[data-auth-surface="sign-up"] .saas-auth-status-row {
+  justify-content: center !important;
+}
+
+.saas-auth-page[data-auth-surface="sign-in"] .saas-auth-hero,
+.saas-auth-page[data-auth-surface="sign-up"] .saas-auth-hero {
+  display: none !important;
+}
+
 .saas-shell {
   min-height: 100vh;
   background:
