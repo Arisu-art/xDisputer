@@ -26,6 +26,7 @@ import './output-activity-unread-badge.css';
 import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebuggerMount from '../components/console/RenderDebuggerMount';
+import OutputActivityRealtimeRefreshMount from '../components/notifications/OutputActivityRealtimeRefreshMount';
 import OutputActivityUnreadBadgeMount from '../components/notifications/OutputActivityUnreadBadgeMount';
 import GlobalTopbarActionsMount from '../components/shell/GlobalTopbarActionsMount';
 import ClientPayrollProfileSyncMount from '../components/client/ClientPayrollProfileSyncMount';
@@ -37,5 +38,5 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body data-theme-contract="xdisputer-unified" data-ui-scope="global" data-ui-quality="production" data-motion-contract="safe"><QueryProvider><ControlNavGlobalTelemetry /><GlobalTopbarActionsMount /><ClientPayrollProfileSyncMount /><OutputActivityUnreadBadgeMount />{children}<Suspense fallback={null}><RenderDebuggerMount /></Suspense></QueryProvider></body></html>;
+  return <html lang="en"><body data-theme-contract="xdisputer-unified" data-ui-scope="global" data-ui-quality="production" data-motion-contract="safe"><QueryProvider><ControlNavGlobalTelemetry /><GlobalTopbarActionsMount /><ClientPayrollProfileSyncMount /><OutputActivityRealtimeRefreshMount /><OutputActivityUnreadBadgeMount />{children}<Suspense fallback={null}><RenderDebuggerMount /></Suspense></QueryProvider></body></html>;
 }
