@@ -19,6 +19,7 @@ import './ui-layout-contracts.css';
 import './console-sticky-compact-header.css';
 import './console-navigation-polish.css';
 import './account-record-density.css';
+import './output-activity-flow.css';
 import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebuggerMount from '../components/console/RenderDebuggerMount';
