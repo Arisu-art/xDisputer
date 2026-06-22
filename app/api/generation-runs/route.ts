@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { data, error } = await supabase.from('generation_runs').insert({ owner_id: userResult.user.id, client_name: clientName, round_label: round, manifest_json: manifest, output_status: status }).select('id, client_name, round_label, output_status, created_at').single();
+    const { data, error } = await supabase.from('generation_runs').insert({ owner_id: userResult.user.id, client_name: clientName, round_label: round, manifest_json: manifest, output_status: status, per_output_pay: perOutputPay }).select('id, client_name, round_label, output_status, created_at').single();
     if (error) throw error;
     const outputActivity = status === 'generated'
       ? await notifyManagerForGeneratedOutput({ generationRunId: data.id, disputerId: userResult.user.id, clientName, round, manifest, perOutputPay }).catch((error) => ({ activityId: null, notification: 'failed' as const, errorMessage: safeErrorMessage(error) }))
