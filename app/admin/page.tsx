@@ -78,8 +78,9 @@ function PayrollSettingsForm({ managerId, account, settings }: { managerId: stri
   const employmentType = employmentTypeFor(current);
   return <form action="/api/manager-console/payroll" method="post" className="manager-user-settings-form">
     <input type="hidden" name="profileId" value={account.id} />
-    <label className="client-status-job-field"><span>Client status / job description</span><select name="employmentType" defaultValue={employmentType}><option value="full_time">Full-time</option><option value="output_based">Per-output</option></select><small>Per-output users require manager confirmation for every generated output. Full-time users keep fixed salary and can receive confirmed per-output add-ons.</small></label>
+    <label className="client-status-job-field"><span>Client status / job description</span><select name="employmentType" defaultValue={employmentType}><option value="full_time">Full-time</option><option value="output_based">Per-output</option></select></label>
     <label className="manager-user-settings-notes"><span>Note</span><input name="notes" defaultValue={current.notes || ''} placeholder="Optional manager note" /></label>
+    <p className="metadata-rule-hint">Per-output users require manager confirmation for every generated output. Full-time users keep fixed salary and can receive confirmed per-output add-ons.</p>
     <label className="metadata-salary-field"><span>Salary</span><input name="baseSalary" inputMode="decimal" defaultValue={String(current.base_salary || current.salary || 0)} /></label>
     <label className="metadata-output-rate-field"><span>Output per rate</span><input name="perOutputRate" inputMode="decimal" defaultValue={String(current.per_output_rate || current.rate || 0)} /></label>
     <button type="submit" className="admin-action-button primary">Save metadata</button>
