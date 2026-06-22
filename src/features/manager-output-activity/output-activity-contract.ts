@@ -25,7 +25,7 @@ export type OutputActivityStatus = keyof typeof outputActivityContract.status;
 export type OutputActivityFilter = typeof outputActivityContract.filters[keyof typeof outputActivityContract.filters];
 
 export function outputActivityStatusLabel(value: string | null | undefined, isPerOutput = true) {
-  if (!isPerOutput || value === outputActivityContract.status.recorded) return 'Generated only';
+  if (!isPerOutput || value === outputActivityContract.status.recorded) return 'Fulltime Output';
   if (value === outputActivityContract.status.approved) return 'Confirmed';
   if (value === outputActivityContract.status.rejected) return 'Returned';
   if (value === outputActivityContract.status.paid) return 'Paid';
