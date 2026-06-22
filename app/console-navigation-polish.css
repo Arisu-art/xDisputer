@@ -4,12 +4,14 @@
 
 :root {
   --console-navigation-polish-contract: unified-sidebar-icons-spacing-motion;
+  --console-single-header-contract: console-header-is-main;
   --console-sidebar-width: clamp(238px, 18vw, 286px);
   --console-sidebar-radius: 30px;
   --console-nav-item-radius: 18px;
   --console-nav-icon-size: 34px;
   --console-nav-transition: 180ms cubic-bezier(.2, .8, .2, 1);
   --console-header-content-gap: clamp(1rem, 1.8vw, 1.35rem);
+  --console-main-header-height: clamp(88px, 6.6vw, 104px);
 }
 
 .admin-monitor-page[data-console-shell="true"],
@@ -151,12 +153,18 @@
 }
 
 .admin-monitor-main[data-console-header-grid="true"] {
+  --account-dock-height: var(--console-main-header-height) !important;
+  grid-template-rows: var(--console-main-header-height) auto !important;
   row-gap: var(--console-header-content-gap) !important;
 }
 
 .admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock[data-manager-account-anchor="header-ratio-grid"] {
   grid-column: 2 !important;
   grid-row: 1 !important;
+  min-height: var(--console-main-header-height) !important;
+  height: var(--console-main-header-height) !important;
+  max-height: var(--console-main-header-height) !important;
+  z-index: 180 !important;
 }
 
 .admin-monitor-main[data-console-header-grid="true"] > [data-console-header-primary="true"],
@@ -164,22 +172,31 @@
 .admin-monitor-main[data-console-header-grid="true"] > .native-command-hero:first-of-type {
   grid-column: 1 !important;
   grid-row: 1 !important;
-  z-index: 140 !important;
+  min-height: var(--console-main-header-height) !important;
+  height: var(--console-main-header-height) !important;
+  max-height: var(--console-main-header-height) !important;
+  z-index: 170 !important;
 }
 
-.admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-panel,
-.admin-monitor-main[data-console-header-grid="true"] > .manager-access-shell,
-.admin-monitor-main[data-console-header-grid="true"] > .manager-console-card,
-.admin-monitor-main[data-console-header-grid="true"] > .manager-workspace-card,
-.admin-monitor-main[data-console-header-grid="true"] > .master-workspace-card,
-.admin-monitor-main[data-console-header-grid="true"] > .panel,
-.admin-monitor-main[data-console-header-grid="true"] > form,
-.admin-monitor-main[data-console-header-grid="true"] > section:not(.manager-header-account-dock):not([data-console-header-primary="true"]):not(:first-child) {
+.admin-monitor-main[data-console-header-grid="true"] > .admin-monitor-header:not([data-console-header-primary="true"]),
+.admin-monitor-main[data-console-header-grid="true"] > .native-command-hero:not([data-console-header-primary="true"]),
+.admin-monitor-main[data-console-header-grid="true"] > [data-extra-console-header="true"] {
+  display: none !important;
+}
+
+.admin-monitor-main[data-console-header-grid="true"] > :not(.manager-header-account-dock):not([data-console-header-primary="true"]):not(style) {
   grid-column: 1 / -1 !important;
   grid-row: auto !important;
   margin-top: 0 !important;
   position: relative !important;
   z-index: 1 !important;
+}
+
+.admin-monitor-main[data-console-header-grid="true"] .manager-console-user-card,
+.admin-monitor-main[data-console-header-grid="true"] .admin-monitor-card,
+.admin-monitor-main[data-console-header-grid="true"] .native-operation-card,
+.admin-monitor-main[data-console-header-grid="true"] .panel {
+  border-radius: clamp(22px, 2vw, 30px) !important;
 }
 
 @media (max-width: 860px) {
