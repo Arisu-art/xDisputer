@@ -15,11 +15,13 @@ type CreateNotificationInput = {
 };
 
 function isMissingNotificationTable(message: string | undefined) {
-  return Boolean(message && (
-    message.includes('notifications') ||
-    message.includes('schema cache') ||
-    message.includes('does not exist')
-  ));
+  if (!message) return false;
+  const lower = message.toLowerCase();
+  return lower.includes('schema cache')
+    || lower.includes('does not exist')
+    || lower.includes('relation "public.notifications" does not exist')
+    || lower.includes('could not find the table')
+    || lower.includes('could not find the function');
 }
 
 function buildNotificationRecord(input: CreateNotificationInput) {
@@ -42,14 +44,15 @@ export async function createNotification(input: CreateNotificationInput) {
   }
 
   const record = buildNotificationRecord({ ...input, title });
-  const result = await input.supabase.from('notifications').insert(record);
-  if (!result.error) return { ok: true, errorMessage: null };
+  const result = await input.supabase.from('notifications').insert(record).select('id').single();
+  if (!result.error) return { ok: true, notificationId: result.data?.id || null, errorMessage: null };
   if (isMissingNotificationTable(result.error.message)) {
-    return { ok: false, errorMessage: null };
+    return { ok: false, notificationId: null, errorMessage: 'Notifications table or schema cache is missing.' };
   }
 
   return {
     ok: false,
+    notificationId: null,
     errorMessage: result.error.message
   };
 }
