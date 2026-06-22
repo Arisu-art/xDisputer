@@ -59,14 +59,19 @@ function filterHref(filter: OutputActivityFilter) {
 }
 
 async function syncRecentGeneratedOutputActivity(supabase: any, managerId: string) {
-  try {
-    await supabase.rpc('sync_manager_recent_generation_output_activity_v1', {
-      manager_id_input: managerId,
-      max_rows: 50
-    });
-  } catch {
-    // The page must still render if the self-healing RPC has not been applied yet.
-  }
+  const activitySync = await supabase.rpc('sync_manager_recent_generation_output_activity_v1', {
+    manager_id_input: managerId,
+    max_rows: 50
+  });
+  const activityError = activitySync.error?.message || null;
+
+  const notificationSync = await supabase.rpc('sync_manager_output_activity_notifications_v1', {
+    manager_id_input: managerId,
+    max_rows: 50
+  });
+  const notificationError = notificationSync.error?.message || null;
+
+  return activityError || notificationError;
 }
 
 function FilterTabs({ active, counts }: { active: OutputActivityFilter; counts: OutputActivityCounts }) {
@@ -147,7 +152,7 @@ export default async function ManagerOutputActivityV2Page({ searchParams }: Page
 
   const active = await listManagerClientDirectory(supabase, { view: 'active', page: 1, pageSize: 25 });
   const ids = active.accounts.map((account) => account.id);
-  await syncRecentGeneratedOutputActivity(supabase, user.id);
+  const syncErrorMessage = await syncRecentGeneratedOutputActivity(supabase, user.id);
   const [settingsResult, activityResult] = await Promise.all([
     listManagerUserSettings(supabase, user.id, ids),
     listManagerOutputApprovals(supabase, user.id, ids, filter)
@@ -186,6 +191,12 @@ export default async function ManagerOutputActivityV2Page({ searchParams }: Page
         <section className={`admin-monitor-card admin-feedback-card ${controlStatus === 'ok' ? 'success' : 'error'}`}>
           <strong>{controlStatus === 'ok' ? 'Output activity updated' : 'Output activity error'}</strong>
           <span>{controlMessage || ''}</span>
+        </section>
+      )}
+      {syncErrorMessage && (
+        <section className="admin-monitor-card admin-feedback-card error">
+          <strong>Output notification sync needs database update</strong>
+          <span>{syncErrorMessage}</span>
         </section>
       )}
       {(active.errorMessage || settingsResult.errorMessage || activityResult.errorMessage) && (
