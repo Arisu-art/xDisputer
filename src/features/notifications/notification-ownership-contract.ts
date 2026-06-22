@@ -4,7 +4,8 @@ export const notificationOwnershipContract = {
   ownerService: 'src/features/notifications/notification-api-service.ts',
   ownerWriteService: 'lib/notifications/notification-write-service.ts',
   realtimeTables: ['notifications', 'manager_disputer_output_approvals'],
-  pollIntervalMs: 5_000,
+  pollIntervalMs: 120_000,
+  warmupRefreshMs: 5_000,
   maxVisibleItems: 8,
   readEndpoint: '/api/notifications/read',
   clearReadEndpoint: '/api/notifications/clear-read'
