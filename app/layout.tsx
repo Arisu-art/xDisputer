@@ -23,6 +23,7 @@ import './manager-payroll-modal.css';
 import './output-activity-flow.css';
 import './client-payroll-profile-flow.css';
 import './output-activity-unread-badge.css';
+import './access-state-lightweight.css';
 import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebuggerMount from '../components/console/RenderDebuggerMount';
