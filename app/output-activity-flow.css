@@ -1,0 +1,151 @@
+/* Output activity confirmation flow.
+   Owns manager filters, per-output confirmation cards, and client per-output intent panel. */
+
+:root {
+  --output-activity-flow-contract: client-intent-manager-confirmation;
+}
+
+.output-activity-filter-tabs,
+.client-per-output-intent-card {
+  display: grid;
+  gap: .75rem;
+}
+
+.output-activity-filter-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.output-activity-filter-tab,
+.client-per-output-intent-card {
+  border: 1px solid rgba(191, 219, 254, .9);
+  border-radius: 24px;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 20px 54px rgba(15, 23, 42, .08);
+}
+
+.output-activity-filter-tab {
+  display: grid;
+  gap: .25rem;
+  padding: .9rem 1rem;
+  color: #1e293b;
+  text-decoration: none;
+}
+
+.output-activity-filter-tab.active {
+  color: #fff;
+  background: linear-gradient(135deg, #081429, #2563eb);
+  border-color: rgba(37, 99, 235, .8);
+}
+
+.output-activity-filter-tab small {
+  color: inherit;
+  opacity: .78;
+}
+
+.output-activity-stack {
+  gap: .85rem !important;
+}
+
+.output-activity-row {
+  display: grid;
+  gap: .85rem;
+  padding: clamp(1rem, 1.4vw, 1.25rem);
+  border: 1px solid rgba(203, 213, 225, .82);
+  border-radius: 26px;
+  background: rgba(255,255,255,.94);
+  box-shadow: 0 22px 62px rgba(15, 23, 42, .08);
+}
+
+.output-activity-row > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .75rem;
+  align-items: start;
+}
+
+.output-activity-row > header strong,
+.output-activity-row > header span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.output-activity-facts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .55rem;
+}
+
+.output-activity-facts span {
+  display: grid;
+  gap: .2rem;
+  min-width: 0;
+  padding: .65rem .75rem;
+  border: 1px solid rgba(191, 219, 254, .9);
+  border-radius: 18px;
+  background: #eff6ff;
+}
+
+.output-activity-facts small,
+.output-activity-facts strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.output-decision-form {
+  display: grid !important;
+  grid-template-columns: minmax(160px, 1fr) auto auto !important;
+  align-items: end !important;
+  gap: .65rem !important;
+}
+
+.output-activity-readonly-note {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  padding: .65rem .85rem;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid rgba(203, 213, 225, .86);
+  color: #475569;
+  font-weight: 800;
+}
+
+.client-per-output-intent-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: clamp(1rem, 1.6vw, 1.25rem);
+}
+
+.client-per-output-intent-card p {
+  margin: 0;
+  color: #64748b;
+}
+
+.client-per-output-intent-card label {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .65rem .85rem;
+  border-radius: 999px;
+  background: #eff6ff;
+  border: 1px solid rgba(191, 219, 254, .9);
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  .output-activity-filter-tabs,
+  .output-activity-facts,
+  .client-per-output-intent-card {
+    grid-template-columns: 1fr;
+  }
+
+  .output-decision-form {
+    grid-template-columns: 1fr !important;
+  }
+}
