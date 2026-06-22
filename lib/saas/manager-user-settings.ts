@@ -186,14 +186,17 @@ export async function listManagerUserSettings(supabase: SupabaseServerClient, ma
 
 export async function listManagerOutputApprovals(supabase: SupabaseServerClient, managerId: string, userIds: string[], filter: OutputActivityFilter = 'all') {
   const ids = Array.from(new Set(userIds.filter(Boolean)));
-  if (!managerId || !ids.length) return { approvals: [] as ManagerOutputApproval[], summary: {} as ManagerOutputSummaryMap, totals: emptyOutputTotals(), errorMessage: null as string | null };
+  if (!managerId) return { approvals: [] as ManagerOutputApproval[], summary: {} as ManagerOutputSummaryMap, totals: emptyOutputTotals(), errorMessage: null as string | null };
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('manager_disputer_output_approvals')
     .select(MANAGER_OUTPUT_APPROVAL_COLUMNS)
     .eq('manager_id', managerId)
-    .in('disputer_id', ids)
     .order('created_at', { ascending: false });
+
+  if (ids.length) query = query.in('disputer_id', ids);
+
+  const { data, error } = await query;
 
   if (error) return { approvals: [] as ManagerOutputApproval[], summary: {} as ManagerOutputSummaryMap, totals: emptyOutputTotals(), errorMessage: isMissingTable(error.message) ? null : error.message };
 
@@ -218,7 +221,6 @@ export async function listManagerOutputApprovals(supabase: SupabaseServerClient,
       totals.recordedCount += 1;
     }
 
-    if (approval.status === 'recorded') current.recordedCount += approval.is_per_output ? 0 : 0;
     if (approval.is_per_output && approval.status === 'pending') {
       current.pendingCount += 1;
       current.pendingExtraPay += approval.output_count * approval.rate_amount;
