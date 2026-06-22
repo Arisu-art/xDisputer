@@ -16,6 +16,7 @@ import './manager-owned-docx-studio.css';
 import './account-bell-avatar-row.css';
 import './ui-theme-contracts.css';
 import './ui-layout-contracts.css';
+import './console-sticky-compact-header.css';
 import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebuggerMount from '../components/console/RenderDebuggerMount';
