@@ -10,6 +10,8 @@ type EntitlementPayload = {
   resetSeconds: number | null;
   allowed: boolean;
   message: string | null;
+  source?: string | null;
+  serverTime?: string | null;
 };
 
 function formatDuration(seconds: number | null) {
@@ -42,12 +44,19 @@ function countdownStep(secondsLeft: number | null) {
   return { delay: 1000, decrement: 1 };
 }
 
+function isPaused(entitlement: EntitlementPayload | null) {
+  return Boolean(entitlement?.outputLimit !== null && (entitlement?.allowed === false || entitlement?.outputRemainingToday === 0));
+}
+
 export default function ClientOutputLimitBoundary({ children }: { children: ReactNode }) {
   const [entitlement, setEntitlement] = useState<EntitlementPayload | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   const load = useCallback(async () => {
-    const response = await fetch('/api/client/output-entitlement', { cache: 'no-store' });
+    const response = await fetch(`/api/client/output-entitlement?t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { accept: 'application/json', 'cache-control': 'no-store' }
+    });
     if (!response.ok) return;
     const payload = await response.json();
     const next = payload.entitlement as EntitlementPayload | undefined;
@@ -72,17 +81,23 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
     }
 
     void load();
+    const polling = window.setInterval(() => { void load(); }, 5000);
+    window.addEventListener('focus', handleUpdate);
+    window.addEventListener('online', handleUpdate);
     window.addEventListener('xdisputer:output-entitlement-updated', handleUpdate);
     window.addEventListener('xdisputer:output-entitlement-refresh', handleUpdate);
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
+      window.clearInterval(polling);
+      window.removeEventListener('focus', handleUpdate);
+      window.removeEventListener('online', handleUpdate);
       window.removeEventListener('xdisputer:output-entitlement-updated', handleUpdate);
       window.removeEventListener('xdisputer:output-entitlement-refresh', handleUpdate);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [load]);
 
-  const paused = entitlement?.outputLimit !== null && (entitlement?.allowed === false || entitlement?.outputRemainingToday === 0);
+  const paused = isPaused(entitlement);
 
   useEffect(() => {
     if (!paused || typeof secondsLeft !== 'number') return;
@@ -105,11 +120,11 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
 
   if (!paused) return <>{children}</>;
 
-  return <main className="client-output-limit-pause" aria-label="Daily output limit reached">
+  return <main className="client-output-limit-pause" aria-label="Daily output limit reached" data-output-entitlement-sync="fast-poll-no-store">
     <section className="client-output-limit-pause-card">
       <p className="eyebrow">Daily allowance reached</p>
       <h1>Workspace pauses until reset</h1>
-      <p>This client used all available outputs for the current US Eastern day. The workspace opens again automatically after reset.</p>
+      <p>This client used all available outputs for the current US Eastern day. The workspace opens again automatically after reset or after the master updates the limit.</p>
       <div className="client-output-limit-pause-grid">
         <article><span>Usage today</span><strong>{usageLabel}</strong><small>{entitlement?.message || 'Generation is paused for this client account.'}</small></article>
         <article><span>Opens in</span><strong>{formatDuration(secondsLeft)}</strong><small>Reset at {formatResetAt(entitlement?.resetAt || null)}</small></article>
