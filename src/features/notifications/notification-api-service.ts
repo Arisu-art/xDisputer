@@ -7,22 +7,32 @@ export type NotificationApiPayload = {
   notifications: Awaited<ReturnType<typeof listNotifications>>['notifications'];
   unreadCount: number;
   errorMessage: string | null;
+  syncErrorMessage?: string | null;
   status: number;
 };
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 async function syncRecentManagerGeneratedOutput(supabase: SupabaseServerClient, managerId: string, role: string) {
-  if (role !== 'manager') return;
+  if (role !== 'manager') return null;
 
   try {
-    await supabase.rpc('sync_manager_recent_generation_output_activity_v1', {
+    const activitySync = await supabase.rpc('sync_manager_recent_generation_output_activity_v1', {
       manager_id_input: managerId,
       max_rows: 50
     });
-  } catch {
-    // Notification loading must remain available even if the self-healing sync RPC is not installed yet.
+    if (activitySync.error) return activitySync.error.message;
+
+    const notificationSync = await supabase.rpc('sync_manager_output_activity_notifications_v1', {
+      manager_id_input: managerId,
+      max_rows: 50
+    });
+    if (notificationSync.error) return notificationSync.error.message;
+  } catch (error) {
+    return error instanceof Error ? error.message : 'Manager notification sync failed.';
   }
+
+  return null;
 }
 
 export async function loadNotificationsForCurrentUser(supabase: SupabaseServerClient, limit = 8): Promise<NotificationApiPayload> {
@@ -32,13 +42,14 @@ export async function loadNotificationsForCurrentUser(supabase: SupabaseServerCl
 
   const profile = await ensureUserProfile(supabase, user);
   const role = normalizeNotificationRole(profile?.role);
-  await syncRecentManagerGeneratedOutput(supabase, user.id, role);
+  const syncErrorMessage = await syncRecentManagerGeneratedOutput(supabase, user.id, role);
   const result = await listNotifications({ supabase, userId: user.id, role, limit });
 
   return {
     notifications: result.notifications,
     unreadCount: result.unreadCount,
     errorMessage: result.errorMessage,
+    syncErrorMessage,
     status: 200
   };
 }
