@@ -14,6 +14,8 @@ const clientPayrollMigration = read('supabase/migrations/20260622113000_client_p
 const generationRlsPolicy = read('supabase/migrations/20260622120000_client_generation_manager_activity_rls.sql');
 const managerSyncRpc = read('supabase/migrations/20260622123000_manager_output_activity_sync_rpc.sql');
 const managerNotificationRepairRpc = read('supabase/migrations/20260622124500_manager_notification_repair_rpc.sql');
+const unifiedGenerationSync = read('supabase/migrations/20260622130000_unified_generation_output_notification_sync.sql');
+const decisionNotificationTrigger = read('supabase/migrations/20260622134500_output_decision_client_notification_trigger.sql');
 const clientPayrollCss = read('app/client-payroll-profile-flow.css');
 const workspacePreferences = read('lib/workspace-preferences.ts');
 const outputPage = read('app/admin/output-activity-v2/page.tsx');
@@ -35,12 +37,11 @@ const notificationUiContract = read('src/features/notifications/notification-ui-
 
 must(layout, 'ClientPayrollProfileSyncMount', 'root layout must mount client payroll profile synchronizer');
 must(layout, 'OutputActivityUnreadBadgeMount', 'root layout must mount output activity unread badge synchronizer');
+must(generation, 'syncGeneratedOutputEverywhere', 'generation route must delegate generated-output sync to one unified function');
 must(generation, 'createSupabaseAdminClient', 'generation output activity must use admin client so manager notification is not blocked by client RLS');
-must(generation, 'const admin = createSupabaseAdminClient()', 'generation notification flow must instantiate admin client in output activity bridge');
+must(generation, "rpc('sync_generation_output_activity_v1'", 'generation route must call canonical DB generation sync RPC');
+must(generation, "rpc('sync_manager_output_activity_notifications_v1'", 'generation route must repair manager notification rows after activity sync');
 must(generation, 'notificationId', 'generation output activity response must include notification id for diagnostics');
-must(generation, 'profileForcesPerOutput || input.perOutputPay === true', 'output-based profiles must force every generated output into per-output confirmation');
-must(generation, "title: isPerOutput ?", 'generation route must notify manager for both per-output and fulltime output');
-must(generation, "filter=not_per_output", 'generation notifications must route fulltime output to its filter');
 must(clientWorkspace, 'data-output-activity-client-intent="true"', 'client workspace must expose source-data per-output intent card');
 must(clientWorkspace, 'perOutputPay: preferences.perOutputGenerationDefault', 'client generation payload must include per-output intent');
 must(clientPayrollMount, '/api/client/payroll-profile', 'client payroll synchronizer must read payroll profile before generation');
@@ -62,6 +63,15 @@ must(managerSyncRpc, 'p.manager_id = manager_id_input', 'manager sync RPC must o
 must(managerNotificationRepairRpc, 'sync_manager_output_activity_notifications_v1', 'DB must include manager notification repair RPC from output activity rows');
 must(managerNotificationRepairRpc, 'exact_href := filter_href ||', 'notification repair RPC must link notifications to exact output activity rows');
 must(managerNotificationRepairRpc, 'alter publication supabase_realtime add table public.notifications', 'notifications table must be added to realtime publication when available');
+must(unifiedGenerationSync, 'sync_generation_output_activity_v1', 'unified DB sync must own generation to activity to notification');
+must(unifiedGenerationSync, 'generation_runs_sync_output_activity', 'unified DB sync must reinstall generation trigger');
+must(unifiedGenerationSync, 'sync_manager_output_activity_notifications_v1', 'unified DB sync must repair manager notifications');
+must(unifiedGenerationSync, 'created_at >= now() - interval \'30 days\'', 'unified DB sync must backfill recent generated runs');
+must(decisionNotificationTrigger, 'sync_output_activity_decision_notification_v1', 'DB must include manager decision to client notification trigger function');
+must(decisionNotificationTrigger, 'manager_output_decision_notify_client', 'DB must include manager decision notification trigger');
+must(decisionNotificationTrigger, "new.status in ('approved', 'rejected')", 'decision trigger must notify only confirm/return states');
+must(decisionNotificationTrigger, 'Per-output letter confirmed', 'decision trigger must notify client on confirmation');
+must(decisionNotificationTrigger, 'Per-output letter returned', 'decision trigger must notify client on rejection');
 must(notificationApiService, "rpc('sync_manager_recent_generation_output_activity_v1'", 'notification API must heal manager generated output before listing notifications');
 must(notificationApiService, "rpc('sync_manager_output_activity_notifications_v1'", 'notification API must repair manager notification rows before listing notifications');
 must(notificationApiService, 'syncErrorMessage', 'notification API service must surface sync diagnostics');
