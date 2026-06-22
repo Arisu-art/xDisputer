@@ -1,6 +1,6 @@
 import type { createSupabaseServerClient } from '../../../lib/supabase/server';
 import { ensureUserProfile } from '../../../lib/supabase/roles';
-import { listNotifications, markDirectNotificationsRead } from '../../../lib/notifications/notification-service';
+import { clearDirectReadNotifications, listNotifications, markDirectNotificationsRead } from '../../../lib/notifications/notification-service';
 import { normalizeNotificationRole } from '../../../lib/notifications/notification-types';
 
 export type NotificationApiPayload = {
@@ -36,4 +36,13 @@ export async function markNotificationsReadForCurrentUser(supabase: SupabaseServ
 
   const result = await markDirectNotificationsRead({ supabase, userId: user.id });
   return { updatedCount: result.updatedCount, errorMessage: result.errorMessage, status: 200 };
+}
+
+export async function clearReadNotificationsForCurrentUser(supabase: SupabaseServerClient) {
+  const { data: userResult } = await supabase.auth.getUser();
+  const user = userResult.user;
+  if (!user) return { clearedCount: 0, errorMessage: null, status: 401 };
+
+  const result = await clearDirectReadNotifications({ supabase, userId: user.id });
+  return { clearedCount: result.clearedCount, errorMessage: result.errorMessage, status: 200 };
 }
