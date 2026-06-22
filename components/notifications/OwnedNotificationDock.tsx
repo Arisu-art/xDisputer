@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { NotificationRecord } from '../../lib/notifications/notification-types';
 import { notificationOwnershipContract } from '../../src/features/notifications/notification-ownership-contract';
 
@@ -46,7 +46,7 @@ const OWNED_NOTIFICATION_DOCK_CSS = `
     position: absolute;
     top: 52px;
     right: 0;
-    width: min(340px, calc(100vw - 32px));
+    width: min(360px, calc(100vw - 32px));
     display: grid;
     gap: 10px;
     padding: 14px;
@@ -55,11 +55,16 @@ const OWNED_NOTIFICATION_DOCK_CSS = `
     background: rgba(255, 255, 255, .98);
     box-shadow: 0 24px 62px rgba(15, 23, 42, .18);
   }
-  .notification-dock-header {
+  .notification-dock-header,
+  .notification-dock-actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+  }
+  .notification-dock-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
   .notification-dock-item {
     display: grid;
@@ -71,14 +76,25 @@ const OWNED_NOTIFICATION_DOCK_CSS = `
     color: #0f172a;
     text-decoration: none;
   }
-  .notification-dock-close {
+  .notification-dock-item.unread {
+    border-color: rgba(96, 165, 250, .85);
+    background: #eff6ff;
+  }
+  .notification-dock-close,
+  .notification-dock-action {
     border: 1px solid rgba(203, 213, 225, .92);
     border-radius: 999px;
     background: #fff;
     color: #334155;
     font-size: 12px;
+    font-weight: 850;
     padding: 6px 10px;
     cursor: pointer;
+  }
+  .notification-dock-action.danger {
+    color: #b91c1c;
+    border-color: rgba(248, 113, 113, .5);
+    background: #fff1f2;
   }
   .notification-dock-empty,
   .notification-dock-item small {
@@ -91,38 +107,37 @@ export default function OwnedNotificationDock() {
   const [open, setOpen] = useState(false);
   const [payload, setPayload] = useState<Payload>({ notifications: [], unreadCount: 0 });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const response = await fetch(`/api/notifications?limit=${notificationOwnershipContract.maxVisibleItems}`, { cache: 'no-store' });
-        const data = await response.json().catch(() => null);
-        if (!cancelled && data) {
-          setPayload({
-            notifications: Array.isArray(data.notifications) ? data.notifications : [],
-            unreadCount: Number(data.unreadCount || 0),
-            errorMessage: data.errorMessage || null
-          });
-        }
-      } catch {
-        if (!cancelled) setPayload({ notifications: [], unreadCount: 0, errorMessage: 'Notifications unavailable.' });
+  const load = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/notifications?limit=${notificationOwnershipContract.maxVisibleItems}`, { cache: 'no-store' });
+      const data = await response.json().catch(() => null);
+      if (data) {
+        setPayload({
+          notifications: Array.isArray(data.notifications) ? data.notifications : [],
+          unreadCount: Number(data.unreadCount || 0),
+          errorMessage: data.errorMessage || null
+        });
       }
+    } catch {
+      setPayload({ notifications: [], unreadCount: 0, errorMessage: 'Notifications unavailable.' });
     }
-
-    void load();
-    const timer = window.setInterval(() => { void load(); }, notificationOwnershipContract.pollIntervalMs);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
   }, []);
 
   useEffect(() => {
-    if (!open || payload.unreadCount < 1) return;
-    void fetch(notificationOwnershipContract.readEndpoint, { method: 'POST' }).catch(() => null);
-    setPayload((current) => ({ ...current, unreadCount: 0 }));
-  }, [open, payload.unreadCount]);
+    void load();
+    const timer = window.setInterval(() => { void load(); }, notificationOwnershipContract.pollIntervalMs);
+    return () => window.clearInterval(timer);
+  }, [load]);
+
+  async function markVisibleRead() {
+    await fetch(notificationOwnershipContract.readEndpoint, { method: 'POST' }).catch(() => null);
+    await load();
+  }
+
+  async function clearReadOnly() {
+    await fetch(notificationOwnershipContract.clearReadEndpoint, { method: 'DELETE' }).catch(() => null);
+    await load();
+  }
 
   return <div className="notification-dock" data-notification-dock="true">
     <style data-notification-dock-owner="true">{OWNED_NOTIFICATION_DOCK_CSS}</style>
@@ -135,10 +150,14 @@ export default function OwnedNotificationDock() {
         <strong>Notifications</strong>
         <button type="button" className="notification-dock-close" onClick={() => setOpen(false)} aria-label="Close notifications">Close</button>
       </header>
+      <div className="notification-dock-actions" aria-label="Notification actions">
+        <button type="button" className="notification-dock-action" onClick={markVisibleRead}>Mark visible read</button>
+        <button type="button" className="notification-dock-action danger" onClick={clearReadOnly}>Clear read only</button>
+      </div>
       {payload.errorMessage && <p className="notification-dock-empty">{payload.errorMessage}</p>}
       {!payload.errorMessage && payload.notifications.length === 0 && <p className="notification-dock-empty">No notifications yet.</p>}
       {!payload.errorMessage && payload.notifications.map((item) => (
-        <a key={item.id} className={`notification-dock-item ${item.severity}`} href={item.href || '#'}>
+        <a key={item.id} className={`notification-dock-item ${item.severity} ${item.read_at ? 'read' : 'unread'}`} href={item.href || '#'}>
           <span style={{ fontWeight: 900 }}>{item.title}</span>
           {item.body && <small>{item.body}</small>}
         </a>
