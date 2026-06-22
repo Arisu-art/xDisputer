@@ -8,6 +8,10 @@ const mustNot = (source, text, label) => { if (source.includes(text)) failures.p
 const mustPass = (condition, label) => { if (!condition) failures.push(label); };
 
 const generation = read('app/api/generation-runs/route.ts');
+const clientWorkspace = read('components/LetterGeneratorWorkspaceV2.tsx');
+const workspacePreferences = read('lib/workspace-preferences.ts');
+const outputPage = read('app/admin/output-activity-v2/page.tsx');
+const outputMigration = read('supabase/migrations/20260622102000_output_activity_per_output_flow.sql');
 const readService = read('lib/notifications/notification-service.ts');
 const writeService = read('lib/notifications/notification-write-service.ts');
 const dock = read('components/notifications/NotificationDock.tsx');
@@ -17,6 +21,7 @@ const shell = read('components/console/ConsoleShell.tsx');
 const decisionRoute = read('app/api/manager-output-decision/route.ts');
 const decisionService = read('src/features/manager-output-activity/manager-output-decision-service.ts');
 const outputContract = read('src/features/manager-output-activity/output-activity-contract.ts');
+const outputService = read('lib/saas/manager-user-settings.ts');
 const notificationUiContract = read('src/features/notifications/notification-ui-contract.ts');
 const canonicalMigration = read('supabase/migrations/20260617133000_create_notifications.sql');
 const roleMigration = read('supabase/migrations/20260620123000_notifications_recipient_role_safe_schema.sql');
@@ -47,29 +52,33 @@ function hasStrictCanonicalNotificationWrite(source) {
 
 function hasCanonicalNotificationSchema(...sources) {
   const joined = sources.join('\n');
-  return [
-    'id uuid primary key',
-    'recipient_user_id uuid',
-    'recipient_role text',
-    'title text not null',
-    'body text',
-    'href text',
-    'severity text not null',
-    'read_at timestamptz',
-    'created_at timestamptz not null',
-    'created_by uuid',
-    'notifications_recipient_role_created_idx'
-  ].every((marker) => joined.includes(marker));
+  return ['id uuid primary key', 'recipient_user_id uuid', 'recipient_role text', 'title text not null', 'body text', 'href text', 'severity text not null', 'read_at timestamptz', 'created_at timestamptz not null', 'created_by uuid', 'notifications_recipient_role_created_idx'].every((marker) => joined.includes(marker));
 }
 
-must(generation, 'notifyManagerForGeneratedOutput', 'generation route must create output activity notification');
-must(generation, 'manager_disputer_output_approvals', 'generation route must create pending output activity');
-must(generation, 'outputActivityContract.defaultRateAmount', 'generation route must use default output activity rate contract');
+must(generation, 'notifyManagerForGeneratedOutput', 'generation route must create output activity records');
+must(generation, 'perOutputPay', 'generation route must accept client per-output intent');
+must(generation, 'outputActivityContract.sourceGeneratedPayable', 'generation route must mark payable generated outputs');
+must(generation, 'outputActivityContract.sourceGeneratedRecorded', 'generation route must mark generated-only outputs');
+must(generation, 'status: isPerOutput ? outputActivityContract.status.pending : outputActivityContract.status.recorded', 'generation route must only require manager confirmation for per-output items');
+must(clientWorkspace, 'data-output-activity-client-intent="true"', 'client workspace must expose per-output intent before generation');
+must(clientWorkspace, 'perOutputPay: preferences.perOutputGenerationDefault', 'client generation payload must include per-output intent');
+must(workspacePreferences, 'perOutputGenerationDefault', 'workspace preferences must persist per-output generation default');
+must(outputPage, 'FilterTabs', 'manager output activity page must expose all/per-output/generated-only filters');
+must(outputPage, 'normalizeOutputActivityFilter', 'manager output activity page must normalize output filter');
+must(outputPage, 'Generated only — no salary confirmation needed.', 'generated-only output must have no confirmation action');
+must(outputPage, 'Confirm per-output', 'per-output output must have a confirmation action');
+must(outputMigration, 'add column if not exists is_per_output boolean', 'output activity migration must add is_per_output');
+must(outputMigration, "status in ('recorded', 'pending', 'approved', 'rejected', 'paid')", 'output activity migration must allow recorded status');
+must(outputService, 'OutputActivityFilter', 'output activity service must support filter mode');
+must(outputService, 'recordedCount', 'output activity service must summarize generated-only rows');
+must(outputService, 'approval.is_per_output &&', 'payroll summary must count only per-output approvals');
+must(decisionService, 'existing.data.is_per_output !== true', 'manager decisions must reject generated-only records');
+must(decisionService, 'Only pending per-output items can be confirmed or returned.', 'manager decisions must confirm only pending per-output records');
+
 mustPass(hasStrictCanonicalNotificationRead(readService), 'notification reads must use strict canonical columns');
 mustPass(hasStrictCanonicalNotificationWrite(writeService), 'notification writes must use strict canonical columns');
 must(notificationUiContract, 'strict-canonical-columns', 'notification UI contract must declare strict canonical schema mode');
 mustPass(hasCanonicalNotificationSchema(canonicalMigration, roleMigration), 'notification migrations must provide canonical schema columns and role index');
-
 mustNot(readService, 'missingOptionalColumn', 'notification reads must not keep optional column drift fallback');
 mustNot(writeService, 'isMissingOptionalColumn', 'notification writes must not keep optional column drift fallback');
 
@@ -91,6 +100,8 @@ const usesCentralizedDecisionStatus = decisionRoute.includes('applyManagerOutput
 if (!usesCentralizedDecisionStatus) failures.push('manager decision route must use centralized decision status mapping');
 
 must(outputContract, 'defaultRateAmount: 0', 'output activity contract must default extra rate to zero');
+must(outputContract, 'sourceGeneratedPayable', 'output activity contract must define payable source');
+must(outputContract, 'sourceGeneratedRecorded', 'output activity contract must define generated-only source');
 must(canvas, 'Precision Change Control Canvas', 'precision change canvas missing');
 
 if (failures.length) {
