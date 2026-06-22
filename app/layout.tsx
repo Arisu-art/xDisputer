@@ -21,6 +21,7 @@ import './console-navigation-polish.css';
 import './account-record-density.css';
 import './manager-payroll-modal.css';
 import './output-activity-flow.css';
+import './client-payroll-profile-flow.css';
 import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebuggerMount from '../components/console/RenderDebuggerMount';
