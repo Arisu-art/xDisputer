@@ -25,9 +25,11 @@ export function formatDate(value: string | null | undefined) {
 }
 
 export function money(value: number) {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-PH', {
     style: 'currency',
-    currency: 'USD'
+    currency: 'PHP',
+    currencyDisplay: 'symbol',
+    maximumFractionDigits: 2
   }).format(value);
 }
 
