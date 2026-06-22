@@ -3,8 +3,8 @@
 
 :root {
   --output-activity-unread-badge-contract: notification-href-unread-count;
-  --output-activity-facts-contract: client-boss-note-round-selected;
-  --output-activity-salary-add-visibility: hidden-from-manager-card;
+  --output-activity-facts-contract: client-boss-note-round-output;
+  --output-activity-salary-add-visibility: removed-from-manager-card;
 }
 
 [data-output-activity-unread-count] {
@@ -30,26 +30,16 @@
   box-shadow: 0 8px 20px rgba(220, 38, 38, .32) !important;
 }
 
-.output-activity-summary article:nth-child(3),
-.output-activity-facts-compact span:nth-child(4) {
+.output-activity-summary {
   display: none !important;
 }
 
 .output-activity-facts-compact {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, .9fr) !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) minmax(0, .85fr) minmax(0, 1fr) !important;
 }
 
 .output-activity-facts-compact span {
   min-height: 64px !important;
-}
-
-.output-activity-facts-compact span:nth-child(2) strong {
-  font-size: 0 !important;
-}
-
-.output-activity-facts-compact span:nth-child(2) strong::after {
-  content: "Boss" !important;
-  font-size: .92rem !important;
 }
 
 .output-activity-facts-compact small {
