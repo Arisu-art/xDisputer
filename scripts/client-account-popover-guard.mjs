@@ -31,9 +31,12 @@ must(css, 'main.app-shell[data-client-console-shell="true"]', 'client shell scop
 must(css, 'data-console-role="client"', 'client role selector missing');
 must(css, 'grid-template-columns: minmax(0, 3fr) var(--account-dock-width)', 'client account dock must use shared grid');
 must(bellAvatarCss, '--account-bell-avatar-row-contract: bell-before-avatar-horizontal', 'bell/avatar row contract missing');
+must(bellAvatarCss, '.admin-monitor-main[data-console-header-grid="true"] > .manager-header-account-dock[data-console-account-menu="true"][data-manager-account-anchor="header-ratio-grid"]', 'bell/avatar CSS must override high-specificity account grid selector');
+must(bellAvatarCss, 'display: flex !important', 'account dock must be flex to prevent vertical stacking');
+must(bellAvatarCss, 'flex-direction: row !important', 'account action dock must be horizontal');
 must(bellAvatarCss, 'order: 1', 'notification bell must be ordered before avatar');
 must(bellAvatarCss, 'order: 2', 'avatar must be ordered after notification bell');
-must(bellAvatarCss, 'flex-direction: row', 'account action dock must be horizontal');
+must(bellAvatarCss, 'grid-column: auto !important', 'bell/avatar children must opt out of grid placement');
 must(bellAvatarCss, '--account-dock-width: clamp(112px, 30vw, 136px)', 'mobile account rail must be wide enough for bell and avatar row');
 mustNot(css, chipClass, 'client account CSS still references retired chip class');
 mustNot(css, chipMain, 'client account CSS still references retired chip internals');
