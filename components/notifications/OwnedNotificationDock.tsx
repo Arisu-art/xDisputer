@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { NotificationRecord } from '../../lib/notifications/notification-types';
+import { createSupabaseBrowserClient } from '../../lib/supabase/browser';
 import { notificationOwnershipContract } from '../../src/features/notifications/notification-ownership-contract';
 
 type Payload = {
@@ -124,9 +125,40 @@ export default function OwnedNotificationDock() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const supabase = createSupabaseBrowserClient();
+
+    function scheduleLoad() {
+      if (cancelled || refreshTimer) return;
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        void load();
+      }, 250);
+    }
+
     void load();
     const timer = window.setInterval(() => { void load(); }, notificationOwnershipContract.pollIntervalMs);
-    return () => window.clearInterval(timer);
+
+    void supabase.auth.getUser().then(({ data }) => {
+      const userId = data.user?.id;
+      if (!userId || cancelled) return;
+      supabase
+        .channel(`owned-notifications-${userId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'notifications', filter: `recipient_user_id=eq.${userId}` },
+          scheduleLoad
+        )
+        .subscribe();
+    }).catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      if (refreshTimer) window.clearTimeout(refreshTimer);
+      void supabase.removeAllChannels();
+    };
   }, [load]);
 
   async function markAllRead() {
@@ -139,7 +171,7 @@ export default function OwnedNotificationDock() {
     await load();
   }
 
-  return <div className="notification-dock" data-notification-dock="true">
+  return <div className="notification-dock" data-notification-dock="true" data-notification-realtime="postgres-changes-with-poll-fallback">
     <style data-notification-dock-owner="true">{OWNED_NOTIFICATION_DOCK_CSS}</style>
     <button type="button" className="notification-dock-button" aria-haspopup="dialog" aria-expanded={open} aria-label="Open notifications" onClick={() => setOpen((value) => !value)}>
       <span aria-hidden="true">🔔</span>
