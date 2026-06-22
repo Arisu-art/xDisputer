@@ -3,6 +3,7 @@
 
 :root {
   --output-activity-flow-contract: client-intent-manager-confirmation;
+  --output-activity-count-card-contract: all-per-output-fulltime-counts;
 }
 
 .output-activity-filter-tabs,
@@ -25,10 +26,13 @@
 
 .output-activity-filter-tab {
   display: grid;
-  gap: .25rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .75rem;
   padding: .9rem 1rem;
   color: #1e293b;
   text-decoration: none;
+  min-height: 92px;
 }
 
 .output-activity-filter-tab.active {
@@ -37,9 +41,32 @@
   border-color: rgba(37, 99, 235, .8);
 }
 
+.output-activity-filter-copy {
+  display: grid;
+  gap: .2rem;
+  min-width: 0;
+}
+
 .output-activity-filter-tab small {
   color: inherit;
   opacity: .78;
+}
+
+.output-activity-filter-tab b {
+  min-width: 46px;
+  min-height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: rgba(255,255,255,.78);
+  color: #0f172a;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  line-height: 1;
+}
+
+.output-activity-filter-tab.active b {
+  background: rgba(255,255,255,.18);
+  color: #fff;
 }
 
 .output-activity-stack {
@@ -74,7 +101,7 @@
 
 .output-activity-facts {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.25fr) minmax(0, .9fr) minmax(0, 1.1fr);
   gap: .55rem;
 }
 
@@ -93,12 +120,20 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.output-activity-facts strong {
   white-space: nowrap;
+}
+
+.output-activity-facts small {
+  white-space: normal;
+  line-height: 1.25;
 }
 
 .output-decision-form {
   display: grid !important;
-  grid-template-columns: minmax(160px, 1fr) auto auto !important;
+  grid-template-columns: minmax(150px, .45fr) auto auto !important;
   align-items: end !important;
   gap: .65rem !important;
 }
