@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { NotificationRecord } from '../../lib/notifications/notification-types';
 import { createSupabaseBrowserClient } from '../../lib/supabase/browser';
 import { notificationOwnershipContract } from '../../src/features/notifications/notification-ownership-contract';
@@ -42,14 +43,22 @@ export default function OwnedNotificationDock() {
         headers: { accept: 'application/json', 'cache-control': 'no-store' }
       });
       const data = await response.json().catch(() => null);
+      if (response.status === 401) {
+        setPayload({ notifications: [], unreadCount: 0, errorMessage: 'Sign in again to load notifications.' });
+        return;
+      }
       if (data) {
-        setPayload({
+        const nextPayload = {
           notifications: Array.isArray(data.notifications) ? data.notifications : [],
           unreadCount: Number(data.unreadCount || 0),
           errorMessage: data.errorMessage || null,
           syncErrorMessage: data.syncErrorMessage || null,
           serverTime: data.serverTime || null
-        });
+        };
+        setPayload(nextPayload);
+        if (nextPayload.unreadCount > 0 || nextPayload.notifications.length > 0) {
+          window.dispatchEvent(new CustomEvent('xdisputer:route-refresh'));
+        }
       }
     } catch {
       setPayload({ notifications: [], unreadCount: 0, errorMessage: 'Notifications unavailable.' });
@@ -61,6 +70,7 @@ export default function OwnedNotificationDock() {
   useEffect(() => {
     let cancelled = false;
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    let channel: RealtimeChannel | null = null;
     const supabase = createSupabaseBrowserClient();
 
     function scheduleLoad() {
@@ -85,7 +95,7 @@ export default function OwnedNotificationDock() {
     void supabase.auth.getUser().then(({ data }) => {
       const userId = data.user?.id;
       if (!userId || cancelled) return;
-      supabase
+      channel = supabase
         .channel(`owned-notifications-${userId}`)
         .on(
           'postgres_changes',
@@ -104,7 +114,7 @@ export default function OwnedNotificationDock() {
       window.removeEventListener('focus', focusHandler);
       window.removeEventListener('online', focusHandler);
       document.removeEventListener('visibilitychange', visibilityHandler);
-      void supabase.removeAllChannels();
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [load]);
 
