@@ -1,7 +1,15 @@
 import ConsoleNavLink from '../../components/ConsoleNavLink';
 import ManagerConsoleShell from '../../components/ManagerConsoleShell';
 import ManagerKpiGrid from '../../src/features/manager-console/components/ManagerKpiGrid';
-import { emptyDirectoryResult, formatDate, money, outputUsage, statusText, stringParam, uniqueAccounts } from '../../src/features/manager-console/admin-page-presenters';
+import {
+  emptyDirectoryResult,
+  formatDate,
+  money,
+  outputUsage,
+  statusText,
+  stringParam,
+  uniqueAccounts
+} from '../../src/features/manager-console/admin-page-presenters';
 import { headers } from 'next/headers';
 import { ensureManagerInviteCode } from '../../lib/saas/account-management';
 import {
@@ -11,16 +19,17 @@ import {
   type AccountDirectoryRow
 } from '../../lib/saas/account-directory';
 import { listEntitlementLimits, type EntitlementLimitMap } from '../../lib/saas/entitlement-limits';
-import { defaultManagerUserSetting, listManagerUserSettings, payrollAmount, type ManagerUserSettingMap } from '../../lib/saas/manager-user-settings';
+import {
+  defaultManagerUserSetting,
+  listManagerUserSettings,
+  payrollAmount,
+  type ManagerUserSettingMap
+} from '../../lib/saas/manager-user-settings';
 import { requireRole } from '../../lib/saas/session';
 import { managerOperationsNavItems, normalizeManagerOperationsPanel } from '../../lib/manager-console/manager-operations-panels';
 
 type PageProps = {
-  searchParams?: Promise<{
-    panel?: string | string[];
-    control?: string | string[];
-    message?: string | string[];
-  }>;
+  searchParams?: Promise<{ panel?: string | string[]; control?: string | string[]; message?: string | string[] }>;
 };
 
 type ManagerOperationsPanel = ReturnType<typeof normalizeManagerOperationsPanel>;
@@ -36,7 +45,13 @@ function accountIds(accounts: AccountDirectoryRow[]) {
   return Array.from(new Set(accounts.map((account) => account.id).filter(Boolean)));
 }
 
-function accountsForPanel(activePanel: ManagerOperationsPanel, pending: AccountDirectoryListResult, active: AccountDirectoryListResult, blocked: AccountDirectoryListResult, all: AccountDirectoryListResult) {
+function accountsForPanel(
+  activePanel: ManagerOperationsPanel,
+  pending: AccountDirectoryListResult,
+  active: AccountDirectoryListResult,
+  blocked: AccountDirectoryListResult,
+  all: AccountDirectoryListResult
+) {
   if (activePanel === 'access' || activePanel === 'reports') return all.accounts;
   if (activePanel === 'output_activity') return active.accounts;
   if (activePanel === 'requests') return uniqueAccounts(pending.accounts, blocked.accounts);
@@ -44,23 +59,86 @@ function accountsForPanel(activePanel: ManagerOperationsPanel, pending: AccountD
 }
 
 function managerPanelHeader(activePanel: ManagerOperationsPanel, fallbackLabel?: string) {
-  if (activePanel === 'access') return { title: 'Access Control', description: 'Manage client account status, approval, and compact metadata from one focused view.' };
+  if (activePanel === 'access') {
+    return {
+      title: 'Access Control',
+      description: 'Manage client account status, approval, and compact metadata from one focused view.'
+    };
+  }
   if (activePanel === 'output_activity') return { title: 'Output Activity', description: 'Confirm generated output before it affects payday pay.' };
   if (activePanel === 'requests') return { title: 'Request', description: 'Review pending confirmations and invite requests.' };
   if (activePanel === 'reports') return { title: 'Report', description: 'Generate a clean operational report.' };
   return { title: fallbackLabel || 'Monitoring', description: 'Monitor outputs and user status from one clean panel.' };
 }
 
-function ControlForm({ profileId, intent, label, primary = false }: { profileId: string; intent: string; label: string; primary?: boolean }) { return <form action="/api/control/profile" method="post"><input type="hidden" name="profileId" value={profileId} /><input type="hidden" name="intent" value={intent} /><button type="submit" className={`admin-action-button ${primary ? 'primary' : ''}`}>{label}</button></form>; }
-function PayrollSettingsForm({ managerId, account, settings }: { managerId: string; account: AccountDirectoryRow; settings: ManagerUserSettingMap[string] | undefined }) { const current = settings || defaultManagerUserSetting(managerId, account.id); const bossLabel = account.primary_manager_email || 'Current manager'; return <form action="/api/manager-console/payroll" method="post" className="manager-user-settings-form"><input type="hidden" name="profileId" value={account.id} /><label><span>Regular</span><select name="isRegular" defaultValue={current.is_regular ? 'true' : 'false'}><option value="true">Regular</option><option value="false">Non-regular</option></select></label><label><span>Rate/output</span><input name="rate" inputMode="decimal" defaultValue={String(current.rate || 0)} /></label><label><span>Salary</span><input name="salary" inputMode="decimal" defaultValue={String(current.salary || 0)} /></label><label className="boss-assignment-display"><span>Boss / manager</span><select name="bossManagerId" defaultValue={account.manager_id || managerId} disabled><option value={account.manager_id || managerId}>{bossLabel}</option></select><small>Master assigns the boss from Master → All accounts.</small></label><button type="submit" className="admin-action-button primary">Save metadata</button></form>; }
-function ManagerAccountCard({ account, managerId, entitlements, settings }: { account: AccountDirectoryRow; managerId: string; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) { const outputActivityPay = payrollAmount(settings[account.id], entitlements[account.id]?.output_used_today || 0); return <article className="manager-console-user-card" data-compact-account-record="true"><header><div><strong>{account.full_name || account.email || 'Unnamed user'}</strong><span>{account.email || 'No email'} • Updated {formatDate(account.updated_at)}</span></div><span className={`admin-status-badge ${account.account_status || 'pending'}`}>{statusText(account.account_status)}</span></header><div className="manager-console-user-metrics"><span>{outputUsage(entitlements, account.id)}</span><span>{settings[account.id]?.is_regular === false ? 'Non-regular' : 'Regular'}</span><span>Output estimate {money(outputActivityPay)}</span></div><div className="manager-console-actions-row">{account.account_status === 'pending_manager_approval' && <><ControlForm profileId={account.id} intent="approve" label="Accept" primary /><ControlForm profileId={account.id} intent="reject" label="Reject" /></>}{account.account_status === 'active' && <><ControlForm profileId={account.id} intent="suspend" label="Pause" /><ControlForm profileId={account.id} intent="clear_manager" label="Unlink" /></>}{(account.account_status === 'disabled' || account.account_status === 'suspended') && <ControlForm profileId={account.id} intent="activate" label="Reactivate" primary />}</div><details className="manager-user-settings-details"><summary>Edit metadata</summary><PayrollSettingsForm managerId={managerId} account={account} settings={settings[account.id]} /></details></article>; }
-function EmptyState({ children }: { children: string }) { return <div className="admin-monitor-empty manager-console-empty">{children}</div>; }
+function ControlForm({ profileId, intent, label, primary = false }: { profileId: string; intent: string; label: string; primary?: boolean }) {
+  return <form action="/api/control/profile" method="post">
+    <input type="hidden" name="profileId" value={profileId} />
+    <input type="hidden" name="intent" value={intent} />
+    <button type="submit" className={`admin-action-button ${primary ? 'primary' : ''}`}>{label}</button>
+  </form>;
+}
 
-function MonitoringPanel({ summary, pending, active, entitlements }: { summary: Awaited<ReturnType<typeof getManagerClientSummary>>['summary']; pending: AccountDirectoryListResult; active: AccountDirectoryListResult; entitlements: EntitlementLimitMap }) { const outputToday = active.accounts.reduce((sum, account) => sum + (entitlements[account.id]?.output_used_today || 0), 0); return <><ManagerKpiGrid summary={summary} outputToday={outputToday} /><section className="manager-console-two-column"><article className="admin-monitor-card native-operation-card"><header className="manager-console-card-header"><div><p>Monitoring</p><h2>Active output status</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin/output-queue">Open queue</ConsoleNavLink></header>{active.accounts.length ? <div className="manager-console-compact-list">{active.accounts.map((account) => <div key={account.id}><strong>{account.full_name || account.email || 'Client'}</strong><span>{outputUsage(entitlements, account.id)}</span></div>)}</div> : <EmptyState>No active users to monitor yet.</EmptyState>}</article><article className="admin-monitor-card native-operation-card"><header className="manager-console-card-header"><div><p>Request</p><h2>Pending confirmation</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin?panel=requests">Review</ConsoleNavLink></header>{pending.accounts.length ? <div className="manager-console-compact-list">{pending.accounts.map((account) => <div key={account.id}><strong>{account.full_name || account.email || 'Client'}</strong><span>{statusText(account.account_status)}</span></div>)}</div> : <EmptyState>No pending confirmations.</EmptyState>}</article></section></>; }
-function AccessPanel({ accounts, managerId, entitlements, settings }: { accounts: AccountDirectoryRow[]; managerId: string; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) { return <section className="manager-console-stack account-record-compact-stack">{accounts.length ? accounts.map((account) => <ManagerAccountCard key={account.id} account={account} managerId={managerId} entitlements={entitlements} settings={settings} />) : <EmptyState>No users are assigned to this manager workspace yet.</EmptyState>}</section>; }
-function ReportPanel({ summary, accounts, entitlements }: { summary: Awaited<ReturnType<typeof getManagerClientSummary>>['summary']; accounts: AccountDirectoryRow[]; entitlements: EntitlementLimitMap }) { const outputs = accounts.reduce((sum, account) => sum + (entitlements[account.id]?.output_used_today || 0), 0); return <section className="admin-monitor-card native-operation-card manager-console-report"><header className="manager-console-card-header"><div><p>Report</p><h2>Manager operations summary</h2></div><strong>{money(outputs)}</strong></header><div className="manager-console-report-grid"><span>Total clients <strong>{summary.clients}</strong></span><span>Active <strong>{summary.active}</strong></span><span>Pending <strong>{summary.pending}</strong></span><span>Blocked <strong>{summary.blocked}</strong></span><span>Outputs today <strong>{outputs}</strong></span><span>Unassigned <strong>{summary.unassigned}</strong></span></div><div className="manager-console-compact-list">{accounts.slice(0, 8).map((account) => <div key={account.id}><strong>{account.full_name || account.email || 'Client'}</strong><span>{statusText(account.account_status)} • {outputUsage(entitlements, account.id)}</span></div>)}</div></section>; }
-function OutputActivityPanel({ accounts, managerId, entitlements, settings }: { accounts: AccountDirectoryRow[]; managerId: string; entitlements: EntitlementMap; settings: ManagerUserSettingMap }) { const total = accounts.reduce((sum, account) => sum + payrollAmount(settings[account.id], entitlements[account.id]?.output_used_today || 0), 0); return <section className="admin-monitor-card native-operation-card manager-console-report"><header className="manager-console-card-header"><div><p>Output Activity</p><h2>Confirmed disputer output pay</h2></div><strong>{money(total)}</strong></header><div className="manager-console-stack account-record-compact-stack">{accounts.length ? accounts.map((account) => <ManagerAccountCard key={account.id} account={account} managerId={managerId} entitlements={entitlements} settings={settings} />) : <EmptyState>No active users for output activity computation.</EmptyState>}</div></section>; }
-function RequestsPanel({ pending, blocked, managerId, entitlements, settings }: { pending: AccountDirectoryListResult; blocked: AccountDirectoryListResult; managerId: string; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) { const requests = uniqueAccounts(pending.accounts, blocked.accounts); return <section className="manager-console-stack account-record-compact-stack">{requests.length ? requests.map((account) => <ManagerAccountCard key={account.id} account={account} managerId={managerId} entitlements={entitlements} settings={settings} />) : <EmptyState>No pending confirmations or blocked users.</EmptyState>}</section>; }
+function PayrollSettingsForm({ managerId, account, settings }: { managerId: string; account: AccountDirectoryRow; settings: ManagerUserSettingMap[string] | undefined }) {
+  const current = settings || defaultManagerUserSetting(managerId, account.id);
+  const managerLabel = account.primary_manager_email || 'Current manager';
+  return <form action="/api/manager-console/payroll" method="post" className="manager-user-settings-form">
+    <input type="hidden" name="profileId" value={account.id} />
+    <label><span>Regular</span><select name="isRegular" defaultValue={current.is_regular ? 'true' : 'false'}><option value="true">Regular</option><option value="false">Non-regular</option></select></label>
+    <label><span>Rate/output</span><input name="rate" inputMode="decimal" defaultValue={String(current.rate || 0)} /></label>
+    <label><span>Salary</span><input name="salary" inputMode="decimal" defaultValue={String(current.salary || 0)} /></label>
+    <label className="boss-assignment-display"><span>Manager owner</span><select name="bossManagerId" defaultValue={account.manager_id || managerId} disabled><option value={account.manager_id || managerId}>{managerLabel}</option></select><small>Master assigns this from Master accounts.</small></label>
+    <button type="submit" className="admin-action-button primary">Save metadata</button>
+  </form>;
+}
+
+function ManagerAccountCard({ account, managerId, entitlements, settings }: { account: AccountDirectoryRow; managerId: string; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) {
+  const outputActivityPay = payrollAmount(settings[account.id], entitlements[account.id]?.output_used_today || 0);
+  return <article className="manager-console-user-card" data-compact-account-record="true">
+    <header><div><strong>{account.full_name || account.email || 'Unnamed user'}</strong><span>{account.email || 'No email'} • Updated {formatDate(account.updated_at)}</span></div><span className={`admin-status-badge ${account.account_status || 'pending'}`}>{statusText(account.account_status)}</span></header>
+    <div className="manager-console-user-metrics"><span>{outputUsage(entitlements, account.id)}</span><span>{settings[account.id]?.is_regular === false ? 'Non-regular' : 'Regular'}</span><span>Output estimate {money(outputActivityPay)}</span></div>
+    <div className="manager-console-actions-row">
+      {account.account_status === 'pending_manager_approval' && <><ControlForm profileId={account.id} intent="approve" label="Accept" primary /><ControlForm profileId={account.id} intent="reject" label="Reject" /></>}
+      {account.account_status === 'active' && <><ControlForm profileId={account.id} intent="suspend" label="Pause" /><ControlForm profileId={account.id} intent="clear_manager" label="Unlink" /></>}
+      {(account.account_status === 'disabled' || account.account_status === 'suspended') && <ControlForm profileId={account.id} intent="activate" label="Reactivate" primary />}
+    </div>
+    <details className="manager-user-settings-details"><summary>Edit metadata</summary><PayrollSettingsForm managerId={managerId} account={account} settings={settings[account.id]} /></details>
+  </article>;
+}
+
+function EmptyState({ children }: { children: string }) {
+  return <div className="admin-monitor-empty manager-console-empty">{children}</div>;
+}
+
+function MonitoringPanel({ summary, pending, active, entitlements }: { summary: Awaited<ReturnType<typeof getManagerClientSummary>>['summary']; pending: AccountDirectoryListResult; active: AccountDirectoryListResult; entitlements: EntitlementLimitMap }) {
+  const outputToday = active.accounts.reduce((sum, account) => sum + (entitlements[account.id]?.output_used_today || 0), 0);
+  return <>
+    <ManagerKpiGrid summary={summary} outputToday={outputToday} />
+    <section className="manager-console-two-column">
+      <article className="admin-monitor-card native-operation-card"><header className="manager-console-card-header"><div><p>Monitoring</p><h2>Active output status</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin/output-queue">Open queue</ConsoleNavLink></header>{active.accounts.length ? <div className="manager-console-compact-list">{active.accounts.map((account) => <div key={account.id}><strong>{account.full_name || account.email || 'Client'}</strong><span>{outputUsage(entitlements, account.id)}</span></div>)}</div> : <EmptyState>No active users to monitor yet.</EmptyState>}</article>
+      <article className="admin-monitor-card native-operation-card"><header className="manager-console-card-header"><div><p>Request</p><h2>Pending confirmation</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin?panel=requests">Review</ConsoleNavLink></header>{pending.accounts.length ? <div className="manager-console-compact-list">{pending.accounts.map((account) => <div key={account.id}><strong>{account.full_name || account.email || 'Client'}</strong><span>{statusText(account.account_status)}</span></div>)}</div> : <EmptyState>No pending confirmations.</EmptyState>}</article>
+    </section>
+  </>;
+}
+
+function AccessPanel({ accounts, managerId, entitlements, settings }: { accounts: AccountDirectoryRow[]; managerId: string; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) {
+  return <section className="manager-console-stack account-record-compact-stack">{accounts.length ? accounts.map((account) => <ManagerAccountCard key={account.id} account={account} managerId={managerId} entitlements={entitlements} settings={settings} />) : <EmptyState>No users are assigned to this manager workspace yet.</EmptyState>}</section>;
+}
+
+function ReportPanel({ summary, accounts, entitlements }: { summary: Awaited<ReturnType<typeof getManagerClientSummary>>['summary']; accounts: AccountDirectoryRow[]; entitlements: EntitlementLimitMap }) {
+  const outputs = accounts.reduce((sum, account) => sum + (entitlements[account.id]?.output_used_today || 0), 0);
+  return <section className="admin-monitor-card native-operation-card manager-console-report"><header className="manager-console-card-header"><div><p>Report</p><h2>Manager operations summary</h2></div><strong>{money(outputs)}</strong></header><div className="manager-console-report-grid"><span>Total clients <strong>{summary.clients}</strong></span><span>Active <strong>{summary.active}</strong></span><span>Pending <strong>{summary.pending}</strong></span><span>Blocked <strong>{summary.blocked}</strong></span><span>Outputs today <strong>{outputs}</strong></span><span>Unassigned <strong>{summary.unassigned}</strong></span></div><div className="manager-console-compact-list">{accounts.slice(0, 8).map((account) => <div key={account.id}><strong>{account.full_name || account.email || 'Client'}</strong><span>{statusText(account.account_status)} • {outputUsage(entitlements, account.id)}</span></div>)}</div></section>;
+}
+
+function OutputActivityPanel({ accounts, managerId, entitlements, settings }: { accounts: AccountDirectoryRow[]; managerId: string; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) {
+  const total = accounts.reduce((sum, account) => sum + payrollAmount(settings[account.id], entitlements[account.id]?.output_used_today || 0), 0);
+  return <section className="admin-monitor-card native-operation-card manager-console-report"><header className="manager-console-card-header"><div><p>Output Activity</p><h2>Confirmed disputer output pay</h2></div><strong>{money(total)}</strong></header><div className="manager-console-stack account-record-compact-stack">{accounts.length ? accounts.map((account) => <ManagerAccountCard key={account.id} account={account} managerId={managerId} entitlements={entitlements} settings={settings} />) : <EmptyState>No active users for output activity computation.</EmptyState>}</div></section>;
+}
+
+function RequestsPanel({ pending, blocked, managerId, entitlements, settings }: { pending: AccountDirectoryListResult; blocked: AccountDirectoryListResult; managerId: string; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) {
+  const requests = uniqueAccounts(pending.accounts, blocked.accounts);
+  return <section className="manager-console-stack account-record-compact-stack">{requests.length ? requests.map((account) => <ManagerAccountCard key={account.id} account={account} managerId={managerId} entitlements={entitlements} settings={settings} />) : <EmptyState>No pending confirmations or blocked users.</EmptyState>}</section>;
+}
 
 export default async function AdminPage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : {};
@@ -88,15 +166,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
     invitePromise = ensureManagerInviteCode(supabase, user.id);
   }
 
-  const [summaryResult, pendingResult, activeResult, blockedResult, allResult, inviteCode] = await Promise.all([
-    getManagerClientSummary(supabase),
-    pendingPromise,
-    activePromise,
-    blockedPromise,
-    allPromise,
-    invitePromise
-  ]);
-
+  const [summaryResult, pendingResult, activeResult, blockedResult, allResult, inviteCode] = await Promise.all([getManagerClientSummary(supabase), pendingPromise, activePromise, blockedPromise, allPromise, invitePromise]);
   const panelAccounts = accountsForPanel(activePanel, pendingResult, activeResult, blockedResult, allResult);
   const entitlementIds = accountIds(panelAccounts);
   const needsUserSettings = activePanel === 'access' || activePanel === 'output_activity' || activePanel === 'requests';
@@ -118,14 +188,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
     inviteLink = `${protocol}://${host}/signup?invite=${encodeURIComponent(inviteCode)}`;
   }
 
-  return <ManagerConsoleShell
-    mode="operations"
-    email={profile?.email || user.email}
-    accountName={profile?.full_name || user.user_metadata?.full_name as string | null | undefined}
-    accountLabel="Manager account"
-    navItems={managerOperationsNavItems(activePanel)}
-    header={{ eyebrow: 'Manager console', title: panelHeader.title, description: panelHeader.description }}
-  >
+  return <ManagerConsoleShell mode="operations" email={profile?.email || user.email} accountName={profile?.full_name || user.user_metadata?.full_name as string | null | undefined} accountLabel="Manager account" navItems={managerOperationsNavItems(activePanel)} header={{ eyebrow: 'Manager console', title: panelHeader.title, description: panelHeader.description }}>
     {controlStatus && <section className={`admin-monitor-card admin-feedback-card ${controlStatus === 'ok' ? 'success' : 'error'}`}><strong>{controlStatus === 'ok' ? 'Action completed' : 'Action failed'}</strong><span>{controlStatus === 'ok' ? controlMessage || 'The manager console refreshed with the latest state.' : controlMessage || 'Unknown error.'}</span></section>}
     {queryError && <section className="admin-monitor-card"><div className="admin-monitor-empty">Could not load a manager console dataset: {queryError}</div></section>}
     {activePanel === 'monitoring' && <MonitoringPanel summary={summary} pending={pendingResult} active={activeResult} entitlements={entitlementResult.entitlements} />}
