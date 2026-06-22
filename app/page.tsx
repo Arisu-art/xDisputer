@@ -9,7 +9,7 @@ export default function Page() {
           <strong>xDisputer</strong>
         </Link>
 
-        <div className="saas-public-actions">
+        <div className="saas-public-actions" aria-label="Account actions">
           <Link href="/login">Sign in</Link>
           <Link href="/signup" className="primary">Create account</Link>
         </div>
@@ -20,12 +20,13 @@ export default function Page() {
           <p className="saas-public-eyebrow">Document operations SaaS</p>
           <h1>Secure packet workflow.</h1>
           <p>
-            Sign in to manage templates, source data, outputs, and filing records from one protected xDisputer workspace.
+            Sign in from the top navigation to manage templates, source data, outputs, and filing records from one protected xDisputer workspace.
           </p>
 
-          <div className="saas-public-cta">
-            <Link href="/login">Sign in</Link>
-            <Link href="/signup">Create account</Link>
+          <div className="saas-public-flow-summary" aria-label="Platform workflow summary">
+            <span>Protected auth</span>
+            <span>Native workspace</span>
+            <span>Review-ready packets</span>
           </div>
         </div>
 
@@ -33,12 +34,12 @@ export default function Page() {
           <article>
             <span>01</span>
             <h2>Authenticate</h2>
-            <p>Access starts with a protected Supabase account.</p>
+            <p>Access starts with a protected Supabase account and role-backed session.</p>
           </article>
           <article>
             <span>02</span>
             <h2>Workspace</h2>
-            <p>Continue directly into the native packet workflow.</p>
+            <p>Continue directly into the native packet workflow after approval.</p>
           </article>
           <article>
             <span>03</span>
