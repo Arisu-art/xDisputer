@@ -1,0 +1,219 @@
+/* Account record density contract.
+   Applies to manager, master, and client account/data records.
+   Goal: compact rows by default, full metadata only on user intent, no overflow-heavy cards. */
+
+:root {
+  --account-record-density-contract: compact-records-click-for-details;
+  --xdisputer-currency-contract: php-peso;
+  --account-record-radius: clamp(18px, 1.8vw, 26px);
+  --account-record-gap: clamp(.55rem, 1vw, .85rem);
+  --account-record-chip-bg: #eff6ff;
+}
+
+.account-record-compact-stack,
+.manager-console-stack,
+.account-control-list,
+.master-access-stack,
+.single-header-dataset {
+  display: grid !important;
+  gap: var(--account-record-gap) !important;
+  min-width: 0 !important;
+}
+
+.manager-console-user-card,
+.master-monitor-item,
+.account-control-row-trigger,
+.progressive-dataset-card,
+.access-workflow-card,
+.dashboard-snapshot-card {
+  min-width: 0 !important;
+  overflow: visible !important;
+  border-radius: var(--account-record-radius) !important;
+}
+
+.manager-console-user-card[data-compact-account-record="true"],
+.manager-console-user-card {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: .7rem !important;
+  padding: clamp(.9rem, 1.3vw, 1.1rem) !important;
+}
+
+.manager-console-user-card > header {
+  grid-column: 1 / -1 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: start !important;
+  gap: .8rem !important;
+  min-width: 0 !important;
+}
+
+.manager-console-user-card > header div,
+.manager-console-user-card > header strong,
+.manager-console-user-card > header span,
+.master-monitor-item div,
+.master-monitor-item strong,
+.master-monitor-item span,
+.account-control-identity,
+.account-control-identity strong,
+.account-control-identity small {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.manager-console-user-metrics {
+  grid-column: 1 / -1 !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: .45rem !important;
+  min-width: 0 !important;
+}
+
+.manager-console-user-metrics span,
+.manager-console-report-grid span,
+.minimal-report-summary article,
+.account-control-agreement,
+.account-control-meta {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  border-radius: 999px !important;
+  background: var(--account-record-chip-bg) !important;
+  border: 1px solid rgba(191, 219, 254, .88) !important;
+  color: #0f1f3d !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.manager-console-actions-row {
+  grid-column: 1 !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: .5rem !important;
+}
+
+.manager-user-settings-details {
+  grid-column: 2 !important;
+  justify-self: end !important;
+  align-self: center !important;
+  width: min(220px, 100%) !important;
+  border: 1px solid rgba(203, 213, 225, .82) !important;
+  border-radius: 999px !important;
+  background: rgba(248, 250, 252, .92) !important;
+  overflow: visible !important;
+}
+
+.manager-user-settings-details > summary {
+  min-height: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: .75rem !important;
+  padding: .55rem .65rem .55rem .9rem !important;
+  cursor: pointer !important;
+  color: #1e293b !important;
+  font-size: .88rem !important;
+  font-weight: 950 !important;
+  list-style: none !important;
+}
+
+.manager-user-settings-details > summary::-webkit-details-marker {
+  display: none !important;
+}
+
+.manager-user-settings-details > summary::after {
+  content: "+";
+  width: 28px !important;
+  height: 28px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 999px !important;
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+}
+
+.manager-user-settings-details[open]::before {
+  content: "";
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147482500 !important;
+  background: rgba(15, 23, 42, .24) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.manager-user-settings-details[open] > summary {
+  position: relative !important;
+  z-index: 2147482601 !important;
+}
+
+.manager-user-settings-details[open] > summary::after {
+  content: "-";
+}
+
+.manager-user-settings-details[open] .manager-user-settings-form {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 2147482600 !important;
+  width: min(760px, calc(100vw - 2rem)) !important;
+  max-height: min(720px, calc(100vh - 2rem)) !important;
+  overflow: auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: .85rem !important;
+  padding: clamp(1rem, 2vw, 1.4rem) !important;
+  border: 1px solid rgba(203, 213, 225, .95) !important;
+  border-radius: 28px !important;
+  background: #ffffff !important;
+  box-shadow: 0 32px 90px rgba(15, 23, 42, .24) !important;
+}
+
+.manager-user-settings-details[open] .manager-user-settings-notes,
+.manager-user-settings-details[open] .manager-user-settings-form button {
+  grid-column: 1 / -1 !important;
+}
+
+.account-control-trigger-grid,
+.manager-client-trigger-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.25fr) auto minmax(120px, .7fr) !important;
+  gap: .65rem !important;
+  align-items: center !important;
+  padding: .75rem !important;
+}
+
+.account-control-meta {
+  display: none !important;
+}
+
+.single-header-dataset-action {
+  display: flex !important;
+  justify-content: flex-end !important;
+  margin-top: -.25rem !important;
+}
+
+@media (max-width: 860px) {
+  .manager-console-user-card[data-compact-account-record="true"],
+  .manager-console-user-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .manager-console-actions-row,
+  .manager-user-settings-details {
+    grid-column: 1 !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+  }
+
+  .manager-user-settings-details[open] .manager-user-settings-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .account-control-trigger-grid,
+  .manager-client-trigger-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
