@@ -19,7 +19,7 @@ type Props = {
 
 const steps: Array<{ id: SettingsStep; label: string; detail: string }> = [
   { id: 'account', label: 'Account', detail: 'Identity and access context' },
-  { id: 'workflow', label: 'Workflow', detail: 'Round, guidance, and validation' },
+  { id: 'workflow', label: 'Workflow', detail: 'Round, pay intent, and validation' },
   { id: 'records', label: 'Records', detail: 'Local history controls' }
 ];
 
@@ -84,7 +84,7 @@ export default function WorkspaceSettingsPanel({ preferences, caseCount, filingC
         <div>
           <p className="eyebrow">Workflow</p>
           <h2>Package preparation preferences</h2>
-          <p>Pick the default round and how much guidance the client workspace should show.</p>
+          <p>Pick the default round, pay intent, and how much guidance the client workspace should show.</p>
         </div>
       </header>
 
@@ -109,6 +109,7 @@ export default function WorkspaceSettingsPanel({ preferences, caseCount, filingC
       </div>
 
       <div className="settings-grid compact-settings-grid">
+        <Toggle checked={preferences.perOutputGenerationDefault} onChange={(checked) => update({ perOutputGenerationDefault: checked })} title="Mark generated letters as per-output by default" description="When enabled, the next generated packet asks the manager to confirm the output before it can add to salary. Leave off for generated-only records." />
         <Toggle checked={preferences.strictValidation} onChange={(checked) => update({ strictValidation: checked })} title="Require complete checklist before generation" description="Blocks package generation until the client profile, templates, evidence, and required fields are ready." />
         <Toggle checked={preferences.openTrackerAfterFinalization} onChange={(checked) => update({ openTrackerAfterFinalization: checked })} title="Open Client Center after package completion" description="Move to the client handoff center after the final package is prepared." />
       </div>
