@@ -23,10 +23,14 @@ function viewTitle(view: string) {
 
 function viewDescription(view: string) {
   if (view === 'managers') return 'Set manager client-seat limits and default daily output limits from one minimal control surface.';
-  if (view === 'clients') return 'Set per-client daily output caps and review client usage without duplicated account headers.';
+  if (view === 'clients') return 'Set per-client daily output caps, assign a boss manager, and review client usage without duplicated account headers.';
   if (view === 'pending') return 'Find users who need manager assignment or approval and keep access control focused.';
   if (view === 'blocked') return 'Review accounts that cannot use the platform and take only the needed account action.';
-  return 'Edit manager client-seat limits and daily client output limits from the master account. Enforcement happens in Supabase and the generation API.';
+  return 'Edit manager client-seat limits, boss assignments, and daily client output limits from the master account.';
+}
+
+function bossOptionsFromManagers(accounts: Array<{ id: string; full_name?: string | null; email?: string | null }>) {
+  return accounts.map((account) => ({ id: account.id, label: account.full_name || account.email || 'Manager account', email: account.email || null }));
 }
 
 function DirectoryFilter({ view, query }: { view: string; query: string }) {
@@ -53,16 +57,19 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
   const directoryParams = normalizeDirectoryParams(params);
   const selectedView = ['managers', 'clients', 'pending', 'blocked', 'all'].includes(directoryParams.view) ? directoryParams.view as DirectoryView : 'overview';
   const { user, profile, supabase } = await requireRole('master');
+  const needsBossOptions = selectedView === 'clients' || selectedView === 'pending' || selectedView === 'all';
 
-  const [{ summary, errorMessage: summaryError }, directory] = await Promise.all([
+  const [{ summary, errorMessage: summaryError }, directory, managerDirectory] = await Promise.all([
     getMasterAccountSummary(supabase),
-    selectedView === 'overview' ? Promise.resolve({ accounts: [], total: 0, page: 1, pageSize: directoryParams.pageSize, errorMessage: null }) : listMasterAccountDirectory(supabase, { view: selectedView, query: directoryParams.query, page: directoryParams.page, pageSize: directoryParams.pageSize })
+    selectedView === 'overview' ? Promise.resolve({ accounts: [], total: 0, page: 1, pageSize: directoryParams.pageSize, errorMessage: null }) : listMasterAccountDirectory(supabase, { view: selectedView, query: directoryParams.query, page: directoryParams.page, pageSize: directoryParams.pageSize }),
+    needsBossOptions ? listMasterAccountDirectory(supabase, { view: 'managers', page: 1, pageSize: 25 }) : Promise.resolve({ accounts: [], total: 0, page: 1, pageSize: 25, errorMessage: null })
   ]);
 
   const entitlementResult = selectedView === 'overview' ? { entitlements: {}, errorMessage: null } : await listEntitlementLimits(supabase, directory.accounts.map((account) => account.id));
   const headerTitle = selectedView === 'overview' ? 'Account workflow.' : `${viewTitle(selectedView)}.`;
   const headerDescription = viewDescription(selectedView);
   const email = profile?.email || user.email || 'Master account';
+  const bossOptions = bossOptionsFromManagers(managerDirectory.accounts);
 
   return <ConsoleShell
     role="master"
@@ -79,7 +86,7 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
     header={{ eyebrow: 'Master account directory', title: headerTitle, description: headerDescription }}
   >
     {selectedView !== 'overview' && <div className="single-header-dataset-action"><ConsoleNavLink className="directory-header-action" href="/master/accounts">Account directory</ConsoleNavLink></div>}
-    {(summaryError || directory.errorMessage || entitlementResult.errorMessage) && <section className="admin-monitor-card"><div className="admin-monitor-empty">{summaryError || directory.errorMessage || entitlementResult.errorMessage}</div></section>}
-    {selectedView === 'overview' ? <section className="progressive-dataset-grid access-workflow-grid"><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=managers"><p>Manager limits</p><h2>Managers</h2><span>{summary.managers} manager(s)</span><strong>Set client-seat limits and default daily output limits.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=clients"><p>Client limits</p><h2>Clients</h2><span>{summary.clients} client(s)</span><strong>Set per-client daily output caps and review usage.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=pending"><p>Pending</p><h2>Pending / unassigned</h2><span>{summary.pending} pending</span><strong>Find users who need manager assignment or approval.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=blocked"><p>Blocked</p><h2>Disabled / suspended</h2><span>{summary.blocked} blocked</span><strong>Review accounts that cannot use the platform.</strong></ConsoleNavLink></section> : <section className="master-access-stack single-header-dataset"><article className="admin-monitor-card native-operation-card" data-layout-contract="dataset-card"><DirectoryFilter view={selectedView} query={directoryParams.query} /><MasterAccountTable accounts={directory.accounts} currentUserId={user.id} emptyText="No accounts match this account dataset." entitlements={entitlementResult.entitlements} /><Pager view={selectedView} query={directoryParams.query} page={directory.page} pageSize={directory.pageSize} total={directory.total} /></article></section>}
+    {(summaryError || directory.errorMessage || managerDirectory.errorMessage || entitlementResult.errorMessage) && <section className="admin-monitor-card"><div className="admin-monitor-empty">{summaryError || directory.errorMessage || managerDirectory.errorMessage || entitlementResult.errorMessage}</div></section>}
+    {selectedView === 'overview' ? <section className="progressive-dataset-grid access-workflow-grid"><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=managers"><p>Manager limits</p><h2>Managers</h2><span>{summary.managers} manager(s)</span><strong>Set client-seat limits and default daily output limits.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=clients"><p>Client limits</p><h2>Clients</h2><span>{summary.clients} client(s)</span><strong>Assign boss managers and set client output caps.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=pending"><p>Pending</p><h2>Pending / unassigned</h2><span>{summary.pending} pending</span><strong>Find users who need manager assignment or approval.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=blocked"><p>Blocked</p><h2>Disabled / suspended</h2><span>{summary.blocked} blocked</span><strong>Review accounts that cannot use the platform.</strong></ConsoleNavLink></section> : <section className="master-access-stack single-header-dataset"><article className="admin-monitor-card native-operation-card" data-layout-contract="dataset-card"><DirectoryFilter view={selectedView} query={directoryParams.query} /><MasterAccountTable accounts={directory.accounts} currentUserId={user.id} emptyText="No accounts match this account dataset." entitlements={entitlementResult.entitlements} bossOptions={bossOptions} /><Pager view={selectedView} query={directoryParams.query} page={directory.page} pageSize={directory.pageSize} total={directory.total} /></article></section>}
   </ConsoleShell>;
 }
