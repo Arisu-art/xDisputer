@@ -27,6 +27,14 @@ must(panels, "'output_activity'", 'manager operations must use output_activity i
 mustNot(admin, 'function PayrollPanel', 'manager admin page must not expose PayrollPanel');
 must(admin, 'OutputActivityPanel', 'manager admin page must expose OutputActivityPanel');
 must(admin, 'ManagerKpiGrid', 'manager admin page must use feature-owned KPI grid');
+must(admin, 'accountsForPanel', 'manager admin page must route data by active panel');
+must(admin, 'let pendingPromise', 'manager admin page must use lazy panel-specific data promises');
+must(admin, "if (activePanel === 'monitoring')", 'manager monitoring panel must load only monitoring datasets');
+must(admin, "activePanel === 'access' || activePanel === 'reports'", 'manager access/report panels must share one all-clients dataset');
+must(admin, "activePanel === 'output_activity'", 'manager output activity must load only active accounts');
+must(admin, 'needsUserSettings', 'manager user settings must only load for panels that render payroll metadata');
+mustNot(admin, 'ensureManagerInviteCode(supabase, user.id) : Promise.resolve', 'manager invite code must not be fetched for every panel');
+mustNot(admin, 'const allAccounts = uniqueAccounts(pendingResult.accounts, activeResult.accounts, blockedResult.accounts)', 'manager admin page must not build all accounts from every status on every panel');
 must(managerKpis, 'manager-console-kpi-grid', 'manager KPI grid component must preserve premium card layout');
 must(masterHome, 'MasterKpiGrid', 'master home must use feature-owned KPI grid');
 must(masterKpis, 'master-monitoring-stats', 'master KPI grid component must preserve master stats layout');
