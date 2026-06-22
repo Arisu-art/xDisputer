@@ -5,5 +5,6 @@ export const notificationOwnershipContract = {
   ownerWriteService: 'lib/notifications/notification-write-service.ts',
   pollIntervalMs: 120_000,
   maxVisibleItems: 8,
-  readEndpoint: '/api/notifications/read'
+  readEndpoint: '/api/notifications/read',
+  clearReadEndpoint: '/api/notifications/clear-read'
 } as const;
