@@ -54,7 +54,7 @@ function syncClientIntentCard(profile: PayrollProfile) {
       input.disabled = true;
       input.setAttribute('aria-disabled', 'true');
     }
-    if (labelText) labelText.textContent = 'Per-output automatic';
+    if (labelText) labelText.textContent = 'Per-output required';
     return;
   }
 
