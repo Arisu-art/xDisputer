@@ -15,12 +15,14 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient
 async function syncRecentManagerGeneratedOutput(supabase: SupabaseServerClient, managerId: string, role: string) {
   if (role !== 'manager') return;
 
-  await supabase
-    .rpc('sync_manager_recent_generation_output_activity_v1', {
+  try {
+    await supabase.rpc('sync_manager_recent_generation_output_activity_v1', {
       manager_id_input: managerId,
       max_rows: 50
-    })
-    .catch(() => null);
+    });
+  } catch {
+    // Notification loading must remain available even if the self-healing sync RPC is not installed yet.
+  }
 }
 
 export async function loadNotificationsForCurrentUser(supabase: SupabaseServerClient, limit = 8): Promise<NotificationApiPayload> {
