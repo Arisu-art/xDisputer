@@ -2,6 +2,8 @@ import TableFlyout from '../../components/TableFlyout';
 import type { ManagedAccount } from '../../lib/saas/account-management';
 import type { EntitlementLimitMap, EntitlementLimitRow } from '../../lib/saas/entitlement-limits';
 
+export type BossOption = { id: string; label: string; email: string | null };
+
 function dateText(value?: string | null) {
   if (!value) return '—';
   const date = new Date(value);
@@ -53,6 +55,11 @@ function LimitForm({ account, limit, formId }: { account: ManagedAccount; limit?
   return <p className="flyout-muted">Master account limits are protected.</p>;
 }
 
+function BossAssignmentForm({ account, bossOptions }: { account: ManagedAccount; bossOptions: BossOption[] }) {
+  if (account.role !== 'client') return null;
+  return <form action="/api/master/assign-manager" method="post" className="boss-assignment-form flyout-form"><input type="hidden" name="clientId" value={account.id} /><label><span>Boss / manager</span><select name="managerId" defaultValue={account.manager_id || ''}><option value="" disabled>Choose manager boss</option>{bossOptions.map((boss) => <option key={boss.id} value={boss.id}>{boss.label}{boss.email ? ` · ${boss.email}` : ''}</option>)}</select></label><button type="submit" className="admin-action-button primary">Save boss</button></form>;
+}
+
 function ActionForms({ account, currentUserId }: { account: ManagedAccount; currentUserId: string }) {
   if (account.role === 'master') return <p className="flyout-muted">Master account is protected.</p>;
   if (account.id === currentUserId) return <p className="flyout-muted">Current signed-in account.</p>;
@@ -64,14 +71,14 @@ function AccountTrigger({ account, limit }: { account: ManagedAccount; limit?: E
   return <span className="account-control-trigger-grid"><span className="account-control-identity"><strong>{account.full_name || account.email || 'Unnamed user'}</strong><small>{account.email || 'Protected account'}</small></span><span className={`admin-role-badge ${account.role}`}>{roleLabel(account)}</span><span className={`admin-status-badge ${account.account_status || 'pending'}`}>{statusText(account.account_status)}</span><span className="account-control-link"><LinkBadge account={account} /></span><span className="account-control-agreement"><strong>{agreementSummary(account, limit)}</strong><small>Open controls</small></span><span className="account-control-meta"><small>Invite</small><strong>{isManager(account) ? account.manager_invite_code || 'Not created' : '—'}</strong></span><span className="account-control-meta"><small>Updated</small><strong>{dateText(account.updated_at)}</strong></span></span>;
 }
 
-function AccountControlCard({ account, currentUserId, limit }: { account: ManagedAccount; currentUserId: string; limit?: EntitlementLimitRow }) {
+function AccountControlCard({ account, currentUserId, limit, bossOptions }: { account: ManagedAccount; currentUserId: string; limit?: EntitlementLimitRow; bossOptions: BossOption[] }) {
   const formId = `limit-form-${account.id}`;
   const saveAction = canEditLimits(account) ? <button type="submit" form={formId} className="admin-action-button primary flyout-save-button">Save limits</button> : null;
 
-  return <TableFlyout eyebrow="Account controls" title={account.full_name || account.email || 'Account'} summary={agreementSummary(account, limit)} actionLabel="Open" triggerClassName="account-control-row-trigger" trigger={<AccountTrigger account={account} limit={limit} />} headerAction={saveAction}><section className="table-flyout-section"><strong>Daily agreement limits</strong><LimitForm account={account} limit={limit} formId={formId} /></section><section className="table-flyout-section"><strong>Actions</strong><ActionForms account={account} currentUserId={currentUserId} /></section></TableFlyout>;
+  return <TableFlyout eyebrow="Account controls" title={account.full_name || account.email || 'Account'} summary={agreementSummary(account, limit)} actionLabel="Open" triggerClassName="account-control-row-trigger" trigger={<AccountTrigger account={account} limit={limit} />} headerAction={saveAction}><section className="table-flyout-section"><strong>Daily agreement limits</strong><LimitForm account={account} limit={limit} formId={formId} /></section>{account.role === 'client' && <section className="table-flyout-section"><strong>Boss assignment</strong><BossAssignmentForm account={account} bossOptions={bossOptions} /></section>}<section className="table-flyout-section"><strong>Actions</strong><ActionForms account={account} currentUserId={currentUserId} /></section></TableFlyout>;
 }
 
-export default function MasterAccountTableV2({ accounts, currentUserId, emptyText, entitlements = {} }: { accounts: ManagedAccount[]; currentUserId: string; emptyText: string; entitlements?: EntitlementLimitMap }) {
+export default function MasterAccountTableV2({ accounts, currentUserId, emptyText, entitlements = {}, bossOptions = [] }: { accounts: ManagedAccount[]; currentUserId: string; emptyText: string; entitlements?: EntitlementLimitMap; bossOptions?: BossOption[] }) {
   if (!accounts.length) return <div className="admin-monitor-empty">{emptyText}</div>;
-  return <div className="account-control-list">{accounts.map((item) => <AccountControlCard key={item.id} account={item} currentUserId={currentUserId} limit={entitlements[item.id]} />)}</div>;
+  return <div className="account-control-list">{accounts.map((item) => <AccountControlCard key={item.id} account={item} currentUserId={currentUserId} limit={entitlements[item.id]} bossOptions={bossOptions} />)}</div>;
 }
