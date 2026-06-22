@@ -48,7 +48,8 @@ mustNot(boundary, 'window.setInterval', 'output limit boundary must not run inte
 must(workspace, "import('jszip')", 'workspace archive builder must lazy-load JSZip');
 mustNot(workspace, "import JSZip from 'jszip'", 'workspace must not statically import JSZip');
 mustNot(workspace, retiredDynamicChip, 'workspace header must not import retired entitlement chip');
-must(outputRoute, 'outputActivityContract.defaultRateAmount', 'generation route must use output activity contract');
+must(outputRoute, 'syncGeneratedOutputEverywhere', 'generation route must use one canonical output sync helper');
+must(outputRoute, "rpc('sync_generation_output_activity_v1'", 'generation route must delegate output activity to canonical DB sync RPC');
 must(perfContract, 'heavy-client-bundle-risk', 'performance contract must track heavy client bundle risk');
 must(canvas, 'Performance Boost Canvas', 'performance canvas missing');
 must(repoAudit, 'Supabase query appears to filter before select', 'repo audit must detect Supabase query order risk');
