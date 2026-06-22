@@ -29,8 +29,8 @@ export function money(value: number) {
     style: 'currency',
     currency: 'PHP',
     currencyDisplay: 'symbol',
-    maximumFractionDigits: 2
-  }).format(value);
+    maximumFractionDigits: 0
+  }).format(Math.round(value || 0));
 }
 
 export function statusText(value: string | null | undefined) {
