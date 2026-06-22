@@ -58,21 +58,13 @@ function filterHref(filter: OutputActivityFilter) {
   return filter === 'all' ? '/admin/output-activity-v2' : `/admin/output-activity-v2?filter=${filter}`;
 }
 
-async function syncRecentGeneratedOutputActivity(supabase: Awaited<ReturnType<typeof import('../../../lib/supabase/server').createSupabaseServerClient>>, clientIds: string[]) {
-  if (!clientIds.length) return;
-  const runs = await supabase
-    .from('generation_runs')
-    .select('id')
-    .in('owner_id', clientIds)
-    .eq('output_status', 'generated')
-    .order('created_at', { ascending: false })
-    .limit(30);
-
-  if (runs.error || !runs.data?.length) return;
-  for (const run of runs.data) {
-    if (!run.id) continue;
-    await supabase.rpc('sync_generation_output_activity_v1', { generation_run_id_input: run.id }).catch(() => null);
-  }
+async function syncRecentGeneratedOutputActivity(supabase: any, managerId: string) {
+  await supabase
+    .rpc('sync_manager_recent_generation_output_activity_v1', {
+      manager_id_input: managerId,
+      max_rows: 50
+    })
+    .catch(() => null);
 }
 
 function FilterTabs({ active, counts }: { active: OutputActivityFilter; counts: OutputActivityCounts }) {
@@ -153,7 +145,7 @@ export default async function ManagerOutputActivityV2Page({ searchParams }: Page
 
   const active = await listManagerClientDirectory(supabase, { view: 'active', page: 1, pageSize: 25 });
   const ids = active.accounts.map((account) => account.id);
-  await syncRecentGeneratedOutputActivity(supabase, ids);
+  await syncRecentGeneratedOutputActivity(supabase, user.id);
   const [settingsResult, activityResult] = await Promise.all([
     listManagerUserSettings(supabase, user.id, ids),
     listManagerOutputApprovals(supabase, user.id, ids, filter)
