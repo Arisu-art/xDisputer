@@ -30,6 +30,9 @@ const notificationUiContract = read('src/features/notifications/notification-ui-
 
 must(layout, 'ClientPayrollProfileSyncMount', 'root layout must mount client payroll profile synchronizer');
 must(layout, 'OutputActivityUnreadBadgeMount', 'root layout must mount output activity unread badge synchronizer');
+must(generation, 'createSupabaseAdminClient', 'generation output activity must use admin client so manager notification is not blocked by client RLS');
+must(generation, 'const admin = createSupabaseAdminClient()', 'generation notification flow must instantiate admin client in output activity bridge');
+must(generation, 'notificationId', 'generation output activity response must include notification id for diagnostics');
 must(generation, 'profileForcesPerOutput || input.perOutputPay === true', 'output-based profiles must force every generated output into per-output confirmation');
 must(generation, "title: isPerOutput ?", 'generation route must notify manager for both per-output and fulltime output');
 must(generation, "filter=not_per_output", 'generation notifications must route fulltime output to its filter');
@@ -73,9 +76,12 @@ must(clearReadRoute, 'clearReadNotificationsForCurrentUser', 'clear-read route m
 must(clearReadPolicy, 'for delete', 'clear-read RLS policy must permit deleting read notifications');
 must(clearReadPolicy, 'read_at is not null', 'clear-read RLS policy must protect unread notifications');
 must(notificationService, ".select('id,title,body,href,severity,read_at,created_at')", 'notification reads must use strict canonical columns');
+must(writeService, ".select('id').single()", 'notification writes must return inserted id for diagnostics');
+must(writeService, 'Notifications table or schema cache is missing.', 'notification writes must not hide policy errors as missing table');
 must(writeService, "input.supabase.from('notifications').insert(record)", 'notification writes must use strict canonical insert');
 must(notificationUiContract, 'strict-canonical-columns', 'notification UI contract must declare strict canonical schema mode');
 mustNot(notificationService, 'missingOptionalColumn', 'notification reads must not keep optional column drift fallback');
+mustNot(writeService, 'message.includes(\'notifications\')', 'notification write service must not treat every notification-table error as a missing table');
 mustNot(writeService, 'isMissingOptionalColumn', 'notification writes must not keep optional column drift fallback');
 
 if (failures.length) {
