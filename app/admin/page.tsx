@@ -76,12 +76,14 @@ function ControlForm({ profileId, intent, label, primary = false }: { profileId:
 function PayrollSettingsForm({ managerId, account, settings }: { managerId: string; account: AccountDirectoryRow; settings: ManagerUserSetting | undefined }) {
   const current = settings || defaultManagerUserSetting(managerId, account.id);
   const employmentType = employmentTypeFor(current);
+  const salaryLocked = employmentType === 'output_based';
   return <form action="/api/manager-console/payroll" method="post" className="manager-user-settings-form">
     <input type="hidden" name="profileId" value={account.id} />
     <label className="client-status-job-field"><span>Client status / job description</span><select name="employmentType" defaultValue={employmentType}><option value="full_time">Full-time</option><option value="output_based">Per-output</option></select></label>
     <label className="manager-user-settings-notes"><span>Note</span><input name="notes" defaultValue={current.notes || ''} placeholder="Optional manager note" /></label>
     <p className="metadata-rule-hint">Per-output users require manager confirmation for every generated output. Full-time users keep fixed salary and can receive confirmed per-output add-ons.</p>
-    <label className="metadata-salary-field"><span>Salary</span><input name="baseSalary" inputMode="decimal" defaultValue={String(current.base_salary || current.salary || 0)} /></label>
+    {salaryLocked && <input type="hidden" name="baseSalary" value="0" />}
+    <label className={`metadata-salary-field ${salaryLocked ? 'is-locked' : ''}`}><span>Salary</span><input name="baseSalary" inputMode="decimal" defaultValue={salaryLocked ? '0' : String(current.base_salary || current.salary || 0)} disabled={salaryLocked} aria-disabled={salaryLocked} placeholder={salaryLocked ? 'Blocked for per-output profile' : undefined} /><small>{salaryLocked ? 'Blocked because this client is per-output only.' : 'Fixed salary for full-time profile.'}</small></label>
     <label className="metadata-output-rate-field"><span>Output per rate</span><input name="perOutputRate" inputMode="decimal" defaultValue={String(current.per_output_rate || current.rate || 0)} /></label>
     <button type="submit" className="admin-action-button primary">Save metadata</button>
   </form>;
@@ -94,7 +96,7 @@ function ManagerAccountCard({ account, managerId, entitlements, settings }: { ac
     <header><div><strong>{account.full_name || account.email || 'Unnamed user'}</strong><span>{account.email || 'No email'} • Updated {formatDate(account.updated_at)}</span></div><span className={`admin-status-badge ${account.account_status || 'pending'}`}>{statusText(account.account_status)}</span></header>
     <div className="manager-console-user-metrics"><span>{outputUsage(entitlements, account.id)}</span><span>{employmentTypeLabel(setting)}</span><span>{employmentTypeFor(setting) === 'full_time' ? `Fixed salary ${money(outputActivityPay)}` : `Output estimate ${money(outputActivityPay)}`}</span></div>
     <div className="manager-console-actions-row">{account.account_status === 'pending_manager_approval' && <><ControlForm profileId={account.id} intent="approve" label="Accept" primary /><ControlForm profileId={account.id} intent="reject" label="Reject" /></>}{account.account_status === 'active' && <><ControlForm profileId={account.id} intent="suspend" label="Pause" /><ControlForm profileId={account.id} intent="clear_manager" label="Unlink" /></>}{(account.account_status === 'disabled' || account.account_status === 'suspended') && <ControlForm profileId={account.id} intent="activate" label="Reactivate" primary />}</div>
-    <details className="manager-user-settings-details"><summary>Edit metadata</summary><PayrollSettingsForm managerId={managerId} account={account} settings={setting} /></details>
+    <details className="manager-user-settings-details" suppressHydrationWarning><summary>Edit metadata</summary><PayrollSettingsForm managerId={managerId} account={account} settings={setting} /></details>
   </article>;
 }
 
