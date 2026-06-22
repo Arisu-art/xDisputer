@@ -61,6 +61,10 @@ function managerSettingRate(row: any) {
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
+function managerSettingNote(row: any) {
+  return String(row?.notes || '').trim().replace(/\s+/g, ' ').slice(0, 300);
+}
+
 async function notifyManagerForGeneratedOutput(input: {
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
   generationRunId: string;
@@ -76,7 +80,7 @@ async function notifyManagerForGeneratedOutput(input: {
 
   const managerSetting = await input.supabase
     .from('manager_user_settings')
-    .select('employment_type,is_regular,per_output_rate,rate')
+    .select('employment_type,is_regular,per_output_rate,rate,notes')
     .eq('manager_id', managerId)
     .eq('user_id', input.disputerId)
     .maybeSingle();
@@ -86,11 +90,7 @@ async function notifyManagerForGeneratedOutput(input: {
   const outputCount = outputCountFromManifest(input.manifest);
   const rateAmount = isPerOutput ? managerSettingRate(managerSetting.data) : outputActivityContract.defaultRateAmount;
   const label = `${input.clientName} · ${input.round} generated output`;
-  const note = profileForcesPerOutput
-    ? 'Client profile is per-output, so every generated letter requires manager confirmation before salary.'
-    : isPerOutput
-      ? 'Full-time client marked this generated letter as a per-output salary add-on. Manager confirmation is required.'
-      : 'Full-time client generated this letter as fixed-salary work. No payday confirmation required.';
+  const note = managerSettingNote(managerSetting.data) || 'No manager note set';
 
   const activity = await input.supabase
     .from('manager_disputer_output_approvals')
