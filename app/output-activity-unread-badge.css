@@ -3,7 +3,8 @@
 
 :root {
   --output-activity-unread-badge-contract: notification-href-unread-count;
-  --output-activity-facts-contract: client-boss-note-round-output;
+  --output-activity-facts-contract: client-boss-note-round-selected;
+  --output-activity-facts-v2-contract: client-boss-note-round-output;
   --output-activity-salary-add-visibility: removed-from-manager-card;
 }
 
