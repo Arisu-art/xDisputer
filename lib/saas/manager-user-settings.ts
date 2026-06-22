@@ -45,9 +45,13 @@ export type ManagerOutputApproval = {
 };
 
 export type ManagerOutputSummary = {
+  totalCount: number;
+  perOutputCount: number;
+  fulltimeOutputCount: number;
   pendingCount: number;
   recordedCount: number;
   approvedCount: number;
+  rejectedCount: number;
   paidCount: number;
   payableOutputCount: number;
   approvedOutputCount: number;
@@ -55,6 +59,7 @@ export type ManagerOutputSummary = {
   pendingExtraPay: number;
 };
 
+export type ManagerOutputTotals = Pick<ManagerOutputSummary, 'totalCount' | 'perOutputCount' | 'fulltimeOutputCount' | 'pendingCount' | 'recordedCount' | 'approvedCount' | 'rejectedCount'>;
 export type ManagerUserSettingMap = Record<string, ManagerUserSetting>;
 export type ManagerOutputSummaryMap = Record<string, ManagerOutputSummary>;
 
@@ -127,7 +132,24 @@ function normalizeApproval(row: Record<string, unknown>): ManagerOutputApproval 
 }
 
 function emptyOutputSummary(): ManagerOutputSummary {
-  return { pendingCount: 0, recordedCount: 0, approvedCount: 0, paidCount: 0, payableOutputCount: 0, approvedOutputCount: 0, approvedExtraPay: 0, pendingExtraPay: 0 };
+  return {
+    totalCount: 0,
+    perOutputCount: 0,
+    fulltimeOutputCount: 0,
+    pendingCount: 0,
+    recordedCount: 0,
+    approvedCount: 0,
+    rejectedCount: 0,
+    paidCount: 0,
+    payableOutputCount: 0,
+    approvedOutputCount: 0,
+    approvedExtraPay: 0,
+    pendingExtraPay: 0
+  };
+}
+
+function emptyOutputTotals(): ManagerOutputTotals {
+  return { totalCount: 0, perOutputCount: 0, fulltimeOutputCount: 0, pendingCount: 0, recordedCount: 0, approvedCount: 0, rejectedCount: 0 };
 }
 
 function matchesOutputFilter(row: ManagerOutputApproval, filter: OutputActivityFilter) {
@@ -164,7 +186,7 @@ export async function listManagerUserSettings(supabase: SupabaseServerClient, ma
 
 export async function listManagerOutputApprovals(supabase: SupabaseServerClient, managerId: string, userIds: string[], filter: OutputActivityFilter = 'all') {
   const ids = Array.from(new Set(userIds.filter(Boolean)));
-  if (!managerId || !ids.length) return { approvals: [] as ManagerOutputApproval[], summary: {} as ManagerOutputSummaryMap, errorMessage: null as string | null };
+  if (!managerId || !ids.length) return { approvals: [] as ManagerOutputApproval[], summary: {} as ManagerOutputSummaryMap, totals: emptyOutputTotals(), errorMessage: null as string | null };
 
   const { data, error } = await supabase
     .from('manager_disputer_output_approvals')
@@ -173,24 +195,47 @@ export async function listManagerOutputApprovals(supabase: SupabaseServerClient,
     .in('disputer_id', ids)
     .order('created_at', { ascending: false });
 
-  if (error) return { approvals: [] as ManagerOutputApproval[], summary: {} as ManagerOutputSummaryMap, errorMessage: isMissingTable(error.message) ? null : error.message };
+  if (error) return { approvals: [] as ManagerOutputApproval[], summary: {} as ManagerOutputSummaryMap, totals: emptyOutputTotals(), errorMessage: isMissingTable(error.message) ? null : error.message };
 
   const allApprovals = Array.isArray(data) ? data.map((row) => normalizeApproval(row as Record<string, unknown>)).filter((row) => row.id) : [];
   const approvals = allApprovals.filter((row) => matchesOutputFilter(row, filter));
   const summary: ManagerOutputSummaryMap = {};
+  const totals = emptyOutputTotals();
+
   for (const approval of allApprovals) {
     const current = summary[approval.disputer_id] || emptyOutputSummary();
-    if (approval.status === 'recorded') current.recordedCount += 1;
-    if (approval.is_per_output && approval.status === 'pending') current.pendingCount += 1;
-    if (approval.is_per_output && approval.status === 'approved') current.approvedCount += 1;
-    if (approval.is_per_output && approval.status === 'paid') current.paidCount += 1;
-    if (approval.is_per_output) current.payableOutputCount += approval.output_count;
+    current.totalCount += 1;
+    totals.totalCount += 1;
+
+    if (approval.is_per_output) {
+      current.perOutputCount += 1;
+      current.payableOutputCount += approval.output_count;
+      totals.perOutputCount += 1;
+    } else {
+      current.fulltimeOutputCount += 1;
+      current.recordedCount += 1;
+      totals.fulltimeOutputCount += 1;
+      totals.recordedCount += 1;
+    }
+
+    if (approval.status === 'recorded') current.recordedCount += approval.is_per_output ? 0 : 0;
+    if (approval.is_per_output && approval.status === 'pending') {
+      current.pendingCount += 1;
+      current.pendingExtraPay += approval.output_count * approval.rate_amount;
+      totals.pendingCount += 1;
+    }
     if (approval.is_per_output && (approval.status === 'approved' || approval.status === 'paid')) {
+      current.approvedCount += 1;
       current.approvedOutputCount += approval.output_count;
       current.approvedExtraPay += approval.output_count * approval.rate_amount;
+      totals.approvedCount += 1;
     }
-    if (approval.is_per_output && approval.status === 'pending') current.pendingExtraPay += approval.output_count * approval.rate_amount;
+    if (approval.is_per_output && approval.status === 'rejected') {
+      current.rejectedCount += 1;
+      totals.rejectedCount += 1;
+    }
     summary[approval.disputer_id] = current;
   }
-  return { approvals, summary, errorMessage: null };
+
+  return { approvals, summary, totals, errorMessage: null };
 }
