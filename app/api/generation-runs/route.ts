@@ -114,17 +114,17 @@ async function notifyManagerForGeneratedOutput(input: {
     .select('id')
     .single();
 
-  if (isPerOutput) {
-    await createNotification({
-      supabase: input.supabase,
-      createdBy: input.disputerId,
-      recipientUserId: managerId,
-      title: profileForcesPerOutput ? 'Per-output client generated a letter' : 'Per-output add-on needs confirmation',
-      body: `${profile.data?.full_name || profile.data?.email || 'A disputer'} generated ${outputCount} output item(s) for ${input.clientName}. Confirm it before it affects salary.`,
-      href: '/admin/output-activity-v2?filter=per_output',
-      severity: 'warning'
-    });
-  }
+  await createNotification({
+    supabase: input.supabase,
+    createdBy: input.disputerId,
+    recipientUserId: managerId,
+    title: isPerOutput ? (profileForcesPerOutput ? 'Per-output client generated a letter' : 'Per-output add-on needs confirmation') : 'Fulltime Output generated',
+    body: isPerOutput
+      ? `${profile.data?.full_name || profile.data?.email || 'A disputer'} generated ${outputCount} output item(s) for ${input.clientName}. Confirm it before it affects salary.`
+      : `${profile.data?.full_name || profile.data?.email || 'A disputer'} generated ${outputCount} fulltime output item(s) for ${input.clientName}. No confirmation is required.`,
+    href: isPerOutput ? '/admin/output-activity-v2?filter=per_output' : '/admin/output-activity-v2?filter=not_per_output',
+    severity: isPerOutput ? 'warning' : 'info'
+  });
 
   return { activityId: activity.data?.id || null, notification: activity.error ? 'activity-warning' as const : (isPerOutput ? 'created' as const : 'recorded' as const), forcedByProfile: profileForcesPerOutput };
 }
