@@ -38,7 +38,9 @@ export function resolveUxVisibility(input: UxVisibilityInput): UxVisibilityRules
   const reviewNeededNow = inSourceData && input.hasPreflightWarnings && (input.generateAttempted || input.statusTone === 'error');
 
   return {
-    showHeaderNextAction: true,
+    // Permanently retire the header progress/next-action tracker (for example "1/8 Start case").
+    // Client errors now surface at the exact workflow stage where the user action failed.
+    showHeaderNextAction: false,
     showStatusText: input.statusTone === 'success' || input.statusTone === 'error' || input.busy,
     showPreflightPanel: blockedNow || reviewNeededNow,
     showOutputWarnings: input.panel === outputsPanel && input.hasGeneratedOutput,
