@@ -1,7 +1,7 @@
 import ConsoleNavLink from '../../../components/ConsoleNavLink';
 import ConsoleShell from '../../../components/console/ConsoleShell';
 import { listManagerClientDirectory, type AccountDirectoryRow } from '../../../lib/saas/account-directory';
-import { listManagerOutputApprovals, listManagerUserSettings, payrollAmount, type ManagerOutputApproval, type OutputActivityFilter } from '../../../lib/saas/manager-user-settings';
+import { listManagerOutputApprovals, listManagerUserSettings, type ManagerOutputApproval, type OutputActivityFilter } from '../../../lib/saas/manager-user-settings';
 import { managerOperationsNavItems } from '../../../lib/manager-console/manager-operations-panels';
 import { requireRole } from '../../../lib/saas/session';
 import { normalizeOutputActivityFilter, outputActivityStatusLabel } from '../../../src/features/manager-output-activity/output-activity-contract';
