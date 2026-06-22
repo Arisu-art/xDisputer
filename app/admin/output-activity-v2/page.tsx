@@ -80,7 +80,7 @@ function FilterTabs({ active, counts }: { active: OutputActivityFilter; counts: 
 
 function DecisionForm({ row, rateAmount }: { row: ManagerOutputApproval; rateAmount: number }) {
   if (!row.is_per_output) {
-    return <span className="output-activity-readonly-note">Fulltime Output — no confirmation needed.</span>;
+    return <span className="output-activity-readonly-note">Fulltime Output — no salary confirmation needed.</span>;
   }
 
   if (row.status === 'pending') {
@@ -91,7 +91,7 @@ function DecisionForm({ row, rateAmount }: { row: ManagerOutputApproval; rateAmo
           <span>Rate</span>
           <input name="rateAmount" inputMode="decimal" defaultValue={String(Math.round(row.rate_amount || rateAmount || 0))} />
         </label>
-        <button type="submit" name="action" value="confirm" className="admin-action-button primary">Confirm</button>
+        <button type="submit" name="action" value="confirm" aria-label="Confirm per-output" className="admin-action-button primary">Confirm</button>
         <button type="submit" name="action" value="reject" className="admin-action-button">Return</button>
       </form>
     );
