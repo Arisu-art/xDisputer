@@ -50,6 +50,9 @@ export type ManagerOutputSummary = {
 export type ManagerUserSettingMap = Record<string, ManagerUserSetting>;
 export type ManagerOutputSummaryMap = Record<string, ManagerOutputSummary>;
 
+const MANAGER_USER_SETTING_COLUMNS = 'manager_id,user_id,is_regular,employment_type,rate,salary,base_salary,per_output_rate,payday_frequency,notes,updated_at';
+const MANAGER_OUTPUT_APPROVAL_COLUMNS = 'id,manager_id,disputer_id,output_label,output_count,rate_amount,status,source,payday_label,notes,approved_at,rejected_at,paid_at,created_at,updated_at';
+
 function isMissingTable(message: string | undefined) {
   return Boolean(message && (
     message.includes('manager_user_settings') ||
@@ -105,13 +108,23 @@ function normalizeApproval(row: Record<string, unknown>): ManagerOutputApproval 
   };
 }
 
+export function defaultManagerUserSetting(managerId: string, userId: string): ManagerUserSetting {
+  return { manager_id: managerId, user_id: userId, is_regular: true, employment_type: 'full_time', rate: 0, salary: 0, base_salary: 0, per_output_rate: 0, payday_frequency: 'manual', notes: null, updated_at: null };
+}
+
+export function payrollAmount(settings: ManagerUserSetting | undefined, outputCount: number) {
+  if (!settings) return 0;
+  if (settings.employment_type === 'output_based' || settings.is_regular === false) return Math.max(0, outputCount) * Math.max(0, settings.per_output_rate || settings.rate || 0);
+  return Math.max(0, settings.base_salary || settings.salary || 0);
+}
+
 export async function listManagerUserSettings(supabase: SupabaseServerClient, managerId: string, userIds: string[]) {
   const ids = Array.from(new Set(userIds.filter(Boolean)));
   if (!managerId || !ids.length) return { settings: {} as ManagerUserSettingMap, errorMessage: null as string | null };
 
   const { data, error } = await supabase
     .from('manager_user_settings')
-    .select('*')
+    .select(MANAGER_USER_SETTING_COLUMNS)
     .eq('manager_id', managerId)
     .in('user_id', ids);
 
@@ -127,7 +140,7 @@ export async function listManagerOutputApprovals(supabase: SupabaseServerClient,
 
   const { data, error } = await supabase
     .from('manager_disputer_output_approvals')
-    .select('*')
+    .select(MANAGER_OUTPUT_APPROVAL_COLUMNS)
     .eq('manager_id', managerId)
     .in('disputer_id', ids)
     .order('created_at', { ascending: false });
@@ -138,37 +151,15 @@ export async function listManagerOutputApprovals(supabase: SupabaseServerClient,
   const summary: ManagerOutputSummaryMap = {};
   for (const approval of approvals) {
     const current = summary[approval.disputer_id] || { pendingCount: 0, approvedCount: 0, paidCount: 0, approvedOutputCount: 0, approvedExtraPay: 0, pendingExtraPay: 0 };
-    const value = approval.output_count * approval.rate_amount;
-    if (approval.status === 'pending') {
-      current.pendingCount += 1;
-      current.pendingExtraPay += value;
-    }
-    if (approval.status === 'approved') {
-      current.approvedCount += 1;
-      current.approvedOutputCount += approval.output_count;
-      current.approvedExtraPay += value;
-    }
+    if (approval.status === 'pending') current.pendingCount += 1;
+    if (approval.status === 'approved') current.approvedCount += 1;
     if (approval.status === 'paid') current.paidCount += 1;
+    if (approval.status === 'approved' || approval.status === 'paid') {
+      current.approvedOutputCount += approval.output_count;
+      current.approvedExtraPay += approval.output_count * approval.rate_amount;
+    }
+    if (approval.status === 'pending') current.pendingExtraPay += approval.output_count * approval.rate_amount;
     summary[approval.disputer_id] = current;
   }
-
   return { approvals, summary, errorMessage: null };
-}
-
-export function defaultManagerUserSetting(managerId: string, userId: string): ManagerUserSetting {
-  return { manager_id: managerId, user_id: userId, is_regular: false, employment_type: 'output_based', rate: 0, salary: 0, base_salary: 0, per_output_rate: 0, payday_frequency: 'manual', notes: null, updated_at: null };
-}
-
-export function employmentTypeLabel(value: ManagerEmploymentType) {
-  return value === 'full_time' ? 'Full-time' : 'Output-based';
-}
-
-export function payrollAmount(setting: ManagerUserSetting | undefined, outputSummary?: ManagerOutputSummary | number) {
-  const baseSalary = Math.max(0, Number(setting?.base_salary ?? setting?.salary ?? 0));
-  if (typeof outputSummary === 'number') {
-    const legacyExtra = Math.max(0, Number(setting?.per_output_rate ?? setting?.rate ?? 0)) * Math.max(0, outputSummary);
-    return baseSalary + legacyExtra;
-  }
-  const approvedExtra = Math.max(0, Number(outputSummary?.approvedExtraPay || 0));
-  return baseSalary + approvedExtra;
 }
