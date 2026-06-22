@@ -1,3 +1,4 @@
+import AutoRouteRefresh from '../../../components/console/AutoRouteRefresh';
 import ConsoleNavLink from '../../../components/ConsoleNavLink';
 import ConsoleShell from '../../../components/console/ConsoleShell';
 import { listManagerClientDirectory, type AccountDirectoryRow } from '../../../lib/saas/account-directory';
@@ -151,12 +152,13 @@ export default async function ManagerOutputActivityV2Page({ searchParams }: Page
   const { user, profile, supabase } = await requireRole('manager');
 
   const active = await listManagerClientDirectory(supabase, { view: 'active', page: 1, pageSize: 25 });
-  const ids = active.accounts.map((account) => account.id);
   const syncErrorMessage = await syncRecentGeneratedOutputActivity(supabase, user.id);
-  const [settingsResult, activityResult] = await Promise.all([
-    listManagerUserSettings(supabase, user.id, ids),
-    listManagerOutputApprovals(supabase, user.id, ids, filter)
-  ]);
+  const activityResult = await listManagerOutputApprovals(supabase, user.id, [], filter);
+  const ids = Array.from(new Set([
+    ...active.accounts.map((account) => account.id),
+    ...activityResult.approvals.map((row) => row.disputer_id)
+  ].filter(Boolean)));
+  const settingsResult = await listManagerUserSettings(supabase, user.id, ids);
 
   const accountMap = new Map(active.accounts.map((account) => [account.id, account]));
   const counts: OutputActivityCounts = {
@@ -187,6 +189,7 @@ export default async function ManagerOutputActivityV2Page({ searchParams }: Page
         description: 'Use the filter cards to review all output, per-output confirmations, or fulltime output records.'
       }}
     >
+      <AutoRouteRefresh />
       {controlStatus && (
         <section className={`admin-monitor-card admin-feedback-card ${controlStatus === 'ok' ? 'success' : 'error'}`}>
           <strong>{controlStatus === 'ok' ? 'Output activity updated' : 'Output activity error'}</strong>
