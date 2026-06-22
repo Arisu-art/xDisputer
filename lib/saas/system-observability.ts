@@ -22,9 +22,21 @@ export function requestIdFrom(request?: NextRequest) {
     || `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function readObjectMessage(value: Record<string, unknown>) {
+  const fields = ['message', 'error_description', 'error', 'details', 'hint', 'code'];
+  const parts = fields
+    .map((field) => value[field])
+    .filter((item) => typeof item === 'string' && item.trim().length > 0) as string[];
+  return parts.length ? parts.join(' · ').slice(0, 300) : null;
+}
+
 export function safeErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message.slice(0, 300);
   if (typeof error === 'string') return error.slice(0, 300);
+  if (error && typeof error === 'object') {
+    const message = readObjectMessage(error as Record<string, unknown>);
+    if (message) return message;
+  }
   return 'Unknown error';
 }
 
