@@ -52,10 +52,15 @@ export default function ManagerPayrollSettingsEditor({ profileId, initialEmploym
     if (!card) return undefined;
 
     const previousTabIndex = card.getAttribute('tabindex');
+    const previousRole = card.getAttribute('role');
+    const previousAriaLabel = card.getAttribute('aria-label');
     const hadTabIndex = card.hasAttribute('tabindex');
+    const hadRole = card.hasAttribute('role');
+    const hadAriaLabel = card.hasAttribute('aria-label');
 
     card.classList.add('manager-metadata-card-trigger');
     card.setAttribute('data-metadata-card-trigger', 'true');
+    card.setAttribute('role', 'button');
     card.setAttribute('aria-label', 'Open user metadata settings');
     if (!hadTabIndex) card.setAttribute('tabindex', '0');
 
@@ -79,7 +84,8 @@ export default function ManagerPayrollSettingsEditor({ profileId, initialEmploym
       card.removeEventListener('keydown', handleCardKeyDown);
       card.classList.remove('manager-metadata-card-trigger');
       card.removeAttribute('data-metadata-card-trigger');
-      card.removeAttribute('aria-label');
+      if (hadRole && previousRole !== null) card.setAttribute('role', previousRole); else card.removeAttribute('role');
+      if (hadAriaLabel && previousAriaLabel !== null) card.setAttribute('aria-label', previousAriaLabel); else card.removeAttribute('aria-label');
       if (hadTabIndex && previousTabIndex !== null) card.setAttribute('tabindex', previousTabIndex);
       if (!hadTabIndex) card.removeAttribute('tabindex');
     };
@@ -149,11 +155,7 @@ export default function ManagerPayrollSettingsEditor({ profileId, initialEmploym
     </form>
   </div>;
 
-  return <div ref={rootRef} className="manager-user-settings-details manager-user-settings-client-modal" data-ignore-card-metadata-open="true">
-    <button type="button" className="manager-user-settings-open metadata-tile-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
-      <span className="metadata-tile-copy"><strong>Metadata</strong><small>Click user card</small></span>
-      <span className="metadata-tile-plus" aria-hidden="true">+</span>
-    </button>
+  return <div ref={rootRef} className="manager-user-settings-details manager-user-settings-client-modal manager-user-settings-card-trigger-only" data-ignore-card-metadata-open="true" aria-hidden="true">
     {open && typeof document !== 'undefined' ? createPortal(modal, document.body) : null}
   </div>;
 }
