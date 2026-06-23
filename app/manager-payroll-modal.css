@@ -2,17 +2,16 @@
    Owns instant client-side salary lock, red no-circle close button, card-click open, and compact metadata tile. */
 
 :root {
-  --manager-payroll-modal-contract: card-click-metadata-tile;
+  --manager-payroll-modal-contract: portal-card-click-metadata-tile;
 }
 
 .manager-metadata-card-trigger {
   position: relative !important;
   cursor: pointer !important;
-  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease !important;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease !important;
 }
 
 .manager-metadata-card-trigger:hover {
-  transform: translateY(-2px) !important;
   border-color: rgba(96, 165, 250, .72) !important;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
   box-shadow: 0 20px 54px rgba(15, 23, 42, .12) !important;
