@@ -1,18 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { NotificationRecord } from '../../lib/notifications/notification-types';
-import { createSupabaseBrowserClient } from '../../lib/supabase/browser';
-import { notificationOwnershipContract } from '../../src/features/notifications/notification-ownership-contract';
-
-type Payload = {
-  notifications: NotificationRecord[];
-  unreadCount: number;
-  errorMessage?: string | null;
-  syncErrorMessage?: string | null;
-  serverTime?: string | null;
-};
+import { useEffect, useState } from 'react';
+import { useOwnedNotifications } from '../../src/features/notifications/useOwnedNotifications';
 
 const OWNED_NOTIFICATION_DOCK_CSS = `
   .notification-dock[data-notification-dock="true"] { position: relative; z-index: 3; }
@@ -31,120 +20,33 @@ const OWNED_NOTIFICATION_DOCK_CSS = `
 
 export default function OwnedNotificationDock() {
   const [open, setOpen] = useState(false);
-  const [payload, setPayload] = useState<Payload>({ notifications: [], unreadCount: 0 });
-  const loadingRef = useRef(false);
-
-  const load = useCallback(async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    try {
-      const response = await fetch(`/api/notifications?limit=${notificationOwnershipContract.maxVisibleItems}&t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: { accept: 'application/json', 'cache-control': 'no-store' }
-      });
-      const data = await response.json().catch(() => null);
-      if (response.status === 401) {
-        setPayload({ notifications: [], unreadCount: 0, errorMessage: 'Sign in again to load notifications.' });
-        return;
-      }
-      if (data) {
-        const nextPayload = {
-          notifications: Array.isArray(data.notifications) ? data.notifications : [],
-          unreadCount: Number(data.unreadCount || 0),
-          errorMessage: data.errorMessage || null,
-          syncErrorMessage: data.syncErrorMessage || null,
-          serverTime: data.serverTime || null
-        };
-        setPayload(nextPayload);
-        if (nextPayload.unreadCount > 0 || nextPayload.notifications.length > 0) {
-          window.dispatchEvent(new CustomEvent('xdisputer:route-refresh'));
-        }
-      }
-    } catch {
-      setPayload({ notifications: [], unreadCount: 0, errorMessage: 'Notifications unavailable.' });
-    } finally {
-      loadingRef.current = false;
-    }
-  }, []);
+  const {
+    notifications,
+    unreadCount,
+    errorMessage,
+    syncErrorMessage,
+    refresh,
+    markAllRead,
+    clearReadOnly
+  } = useOwnedNotifications();
 
   useEffect(() => {
-    let cancelled = false;
-    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-    let channel: RealtimeChannel | null = null;
-    const supabase = createSupabaseBrowserClient();
+    if (open) void refresh();
+  }, [open, refresh]);
 
-    function scheduleLoad() {
-      if (cancelled || refreshTimer) return;
-      refreshTimer = window.setTimeout(() => {
-        refreshTimer = null;
-        void load();
-      }, 250);
-    }
-
-    void load();
-    const steadyTimer = window.setInterval(() => { void load(); }, notificationOwnershipContract.pollIntervalMs);
-    const warmupTimer = window.setInterval(scheduleLoad, 5000);
-    const stopWarmup = window.setTimeout(() => window.clearInterval(warmupTimer), 60_000);
-
-    const focusHandler = () => scheduleLoad();
-    const visibilityHandler = () => { if (!document.hidden) scheduleLoad(); };
-    window.addEventListener('focus', focusHandler);
-    window.addEventListener('online', focusHandler);
-    document.addEventListener('visibilitychange', visibilityHandler);
-
-    void supabase.auth.getUser().then(({ data }) => {
-      const userId = data.user?.id;
-      if (!userId || cancelled) return;
-      channel = supabase
-        .channel(`owned-notifications-${userId}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'notifications', filter: `recipient_user_id=eq.${userId}` },
-          scheduleLoad
-        )
-        .subscribe((status) => { if (status === 'SUBSCRIBED') scheduleLoad(); });
-    }).catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(steadyTimer);
-      window.clearInterval(warmupTimer);
-      window.clearTimeout(stopWarmup);
-      if (refreshTimer) window.clearTimeout(refreshTimer);
-      window.removeEventListener('focus', focusHandler);
-      window.removeEventListener('online', focusHandler);
-      document.removeEventListener('visibilitychange', visibilityHandler);
-      if (channel) void supabase.removeChannel(channel);
-    };
-  }, [load]);
-
-  useEffect(() => {
-    if (open) void load();
-  }, [open, load]);
-
-  async function markAllRead() {
-    await fetch(notificationOwnershipContract.readEndpoint, { method: 'POST' }).catch(() => null);
-    await load();
-  }
-
-  async function clearReadOnly() {
-    await fetch(notificationOwnershipContract.clearReadEndpoint, { method: 'DELETE' }).catch(() => null);
-    await load();
-  }
-
-  return <div className="notification-dock" data-notification-dock="true" data-notification-realtime="postgres-changes-with-fast-poll-fallback">
+  return <div className="notification-dock" data-notification-dock="true" data-notification-realtime="owned-hook-fetch-first-realtime-accelerated">
     <style data-notification-dock-owner="true">{OWNED_NOTIFICATION_DOCK_CSS}</style>
     <button type="button" className="notification-dock-button" aria-haspopup="dialog" aria-expanded={open} aria-label="Open notifications" onClick={() => setOpen((value) => !value)}>
       <span aria-hidden="true">🔔</span>
-      {payload.unreadCount > 0 && <strong className="notification-dock-badge">{payload.unreadCount > 9 ? '9+' : payload.unreadCount}</strong>}
+      {unreadCount > 0 && <strong className="notification-dock-badge">{unreadCount > 9 ? '9+' : unreadCount}</strong>}
     </button>
     {open && <section className="notification-dock-popover" role="dialog" aria-label="Notifications">
       <header className="notification-dock-header"><strong>Notifications</strong><button type="button" className="notification-dock-close" onClick={() => setOpen(false)} aria-label="Close notifications">Close</button></header>
-      <div className="notification-dock-actions" aria-label="Notification actions"><button type="button" className="notification-dock-action" onClick={markAllRead}>Mark all read</button><button type="button" className="notification-dock-action danger" onClick={clearReadOnly}>Clear read only</button></div>
-      {payload.syncErrorMessage && <p className="notification-dock-sync-warning">Sync warning: {payload.syncErrorMessage}</p>}
-      {payload.errorMessage && <p className="notification-dock-empty">{payload.errorMessage}</p>}
-      {!payload.errorMessage && payload.notifications.length === 0 && <p className="notification-dock-empty">No notifications yet.</p>}
-      {!payload.errorMessage && payload.notifications.map((item) => (<a key={item.id} className={`notification-dock-item ${item.severity} ${item.read_at ? 'read' : 'unread'}`} href={item.href || '#'}><span style={{ fontWeight: 900 }}>{item.title}</span>{item.body && <small>{item.body}</small>}</a>))}
+      <div className="notification-dock-actions" aria-label="Notification actions"><button type="button" className="notification-dock-action" onClick={() => void markAllRead()}>Mark all read</button><button type="button" className="notification-dock-action danger" onClick={() => void clearReadOnly()}>Clear read only</button></div>
+      {syncErrorMessage && <p className="notification-dock-sync-warning">Sync warning: {syncErrorMessage}</p>}
+      {errorMessage && <p className="notification-dock-empty">{errorMessage}</p>}
+      {!errorMessage && notifications.length === 0 && <p className="notification-dock-empty">No notifications yet.</p>}
+      {!errorMessage && notifications.map((item) => (<a key={item.id} className={`notification-dock-item ${item.severity} ${item.read_at ? 'read' : 'unread'}`} href={item.href || '#'}><span style={{ fontWeight: 900 }}>{item.title}</span>{item.body && <small>{item.body}</small>}</a>))}
     </section>}
   </div>;
 }
