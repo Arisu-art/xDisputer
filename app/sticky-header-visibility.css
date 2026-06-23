@@ -1,14 +1,14 @@
 /* Global sticky header visibility layer.
    Applies to master, manager, and client console headers.
-   Purpose: make sticky headers visibly separate from scrolled content with a light shadow, accent edge, and reduced-motion-safe entrance. */
+   Performance fix: no blur, no animation, no radial gradients, no transform promotion.
+   Purpose: visible sticky/header separation using only cheap paint properties. */
 
 :root {
-  --sticky-header-visibility-contract: all-console-users-visible-sticky-header;
-  --sticky-header-bg: rgba(255, 255, 255, .965);
-  --sticky-header-border: rgba(147, 197, 253, .9);
-  --sticky-header-shadow: 0 18px 44px rgba(15, 23, 42, .13), 0 1px 0 rgba(255, 255, 255, .86) inset;
-  --sticky-header-shadow-strong: 0 24px 62px rgba(37, 99, 235, .18), 0 1px 0 rgba(255, 255, 255, .9) inset;
-  --sticky-header-separator: linear-gradient(90deg, rgba(37, 99, 235, 0), rgba(37, 99, 235, .72), rgba(79, 70, 229, .72), rgba(37, 99, 235, 0));
+  --sticky-header-visibility-contract: all-console-users-visible-sticky-header-lightweight;
+  --sticky-header-bg: #ffffff;
+  --sticky-header-border: #bfdbfe;
+  --sticky-header-shadow: 0 6px 18px rgba(15, 23, 42, .08);
+  --sticky-header-separator: #2563eb;
 }
 
 .admin-monitor-main[data-console-header-grid='true'] > [data-console-header-primary='true'],
@@ -18,18 +18,19 @@
 .admin-monitor-page[data-console-shell='true'] [data-console-main='true'][data-console-header-grid='true'] > .admin-monitor-header:first-of-type,
 .admin-monitor-page[data-console-shell='true'] [data-console-main='true'][data-console-header-grid='true'] > .native-command-hero:first-of-type,
 main.app-shell[data-client-console-shell='true'] section.main-area.admin-monitor-main[data-console-header-grid='true'] > [data-console-header-primary='true'] {
-  isolation: isolate !important;
   position: sticky !important;
   top: var(--console-sticky-header-top, .7rem) !important;
   z-index: 160 !important;
   border: 1px solid var(--sticky-header-border) !important;
-  border-left: 6px solid #2563eb !important;
-  background:
-    radial-gradient(circle at 16% 0%, rgba(219, 234, 254, .72), transparent 32%),
-    linear-gradient(180deg, var(--sticky-header-bg), rgba(248, 250, 252, .94)) !important;
-  backdrop-filter: blur(18px) saturate(1.14) !important;
+  border-left: 5px solid var(--sticky-header-separator) !important;
+  border-bottom: 2px solid rgba(37, 99, 235, .48) !important;
+  background: var(--sticky-header-bg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   box-shadow: var(--sticky-header-shadow) !important;
-  transform: translateZ(0) !important;
+  transform: none !important;
+  will-change: auto !important;
+  contain: layout paint !important;
 }
 
 .admin-monitor-main[data-console-header-grid='true'] > [data-console-header-primary='true']::after,
@@ -44,21 +45,11 @@ main.app-shell[data-client-console-shell='true'] section.main-area.admin-monitor
   right: clamp(1rem, 2vw, 1.75rem);
   bottom: 0;
   left: clamp(1rem, 2vw, 1.75rem);
-  height: 3px;
+  height: 2px;
   border-radius: 999px 999px 0 0;
   background: var(--sticky-header-separator);
-  opacity: .9;
+  opacity: .45;
   pointer-events: none;
-}
-
-.admin-monitor-main[data-console-header-grid='true'] > [data-console-header-primary='true']:hover,
-.admin-monitor-main[data-console-header-grid='true'] > .admin-monitor-header:first-of-type:hover,
-.admin-monitor-main[data-console-header-grid='true'] > .native-command-hero:first-of-type:hover,
-.admin-monitor-page[data-console-shell='true'] [data-console-main='true'][data-console-header-grid='true'] > [data-console-header-primary='true']:hover,
-.admin-monitor-page[data-console-shell='true'] [data-console-main='true'][data-console-header-grid='true'] > .admin-monitor-header:first-of-type:hover,
-.admin-monitor-page[data-console-shell='true'] [data-console-main='true'][data-console-header-grid='true'] > .native-command-hero:first-of-type:hover,
-main.app-shell[data-client-console-shell='true'] section.main-area.admin-monitor-main[data-console-header-grid='true'] > [data-console-header-primary='true']:hover {
-  box-shadow: var(--sticky-header-shadow-strong) !important;
 }
 
 .admin-monitor-main[data-console-header-grid='true'] > .manager-header-account-dock[data-manager-account-anchor='header-ratio-grid'],
@@ -70,56 +61,35 @@ main.app-shell[data-client-console-shell='true'] section.main-area.admin-monitor
   position: sticky !important;
   top: var(--console-sticky-header-top, .7rem) !important;
   z-index: 170 !important;
-  border: 1px solid rgba(191, 219, 254, .92) !important;
+  border: 1px solid var(--sticky-header-border) !important;
+  border-bottom: 2px solid rgba(37, 99, 235, .36) !important;
   border-radius: 22px !important;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(219, 234, 254, .76), transparent 42%),
-    rgba(255, 255, 255, .965) !important;
-  backdrop-filter: blur(18px) saturate(1.12) !important;
+  background: var(--sticky-header-bg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   box-shadow: var(--sticky-header-shadow) !important;
-  transform: translateZ(0) !important;
+  transform: none !important;
+  will-change: auto !important;
+  contain: layout paint !important;
 }
 
 .manager-header-account-dock .notification-dock-button,
 .manager-header-account-dock .manager-header-account-avatar {
-  box-shadow: 0 12px 30px rgba(37, 99, 235, .12) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, .08) !important;
 }
 
 .console-header-copy p {
   color: #1d4ed8 !important;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .78) !important;
+  text-shadow: none !important;
 }
 
 .console-header-copy h1 {
   color: #0f172a !important;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .78) !important;
+  text-shadow: none !important;
 }
 
 .console-header-copy span {
   color: #475569 !important;
-}
-
-@keyframes stickyHeaderSettle {
-  0% {
-    opacity: .86;
-    transform: translate3d(0, -5px, 0);
-    box-shadow: 0 8px 22px rgba(15, 23, 42, .08);
-  }
-  100% {
-    opacity: 1;
-    transform: translateZ(0);
-    box-shadow: var(--sticky-header-shadow);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .admin-monitor-main[data-console-header-grid='true'] > [data-console-header-primary='true'],
-  .admin-monitor-main[data-console-header-grid='true'] > .admin-monitor-header:first-of-type,
-  .admin-monitor-main[data-console-header-grid='true'] > .native-command-hero:first-of-type,
-  .admin-monitor-main[data-console-header-grid='true'] > .manager-header-account-dock[data-console-account-menu='true'],
-  .admin-monitor-main[data-console-header-grid='true'] > .manager-header-account-dock[data-manager-account-anchor='header-ratio-grid'] {
-    animation: stickyHeaderSettle .42s ease-out both;
-  }
 }
 
 @media (max-width: 760px) {
