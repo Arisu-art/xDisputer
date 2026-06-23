@@ -20,6 +20,7 @@ import './console-sticky-compact-header.css';
 import './sticky-header-visibility.css';
 import './console-navigation-polish.css';
 import './account-record-density.css';
+import './manager-account-header-actions.css';
 import './master-account-directory-polish.css';
 import './manager-payroll-modal.css';
 import './output-activity-flow.css';
