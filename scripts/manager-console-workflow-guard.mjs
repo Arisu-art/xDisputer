@@ -5,6 +5,7 @@ const failures = [];
 const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : (failures.push(`missing ${path}`), '');
 const must = (source, text, label) => { if (!source.includes(text)) failures.push(label); };
 const mustNot = (source, text, label) => { if (source.includes(text)) failures.push(label); };
+const mustNotMatch = (source, pattern, label) => { if (pattern.test(source)) failures.push(label); };
 
 const admin = read('app/admin/page.tsx');
 const panels = read('lib/manager-console/manager-operations-panels.ts');
@@ -16,6 +17,8 @@ const settings = read('lib/saas/manager-user-settings.ts');
 const accountRoute = read('app/api/account/profile/route.ts');
 const accountRevalidation = read('src/features/account-profile/account-profile-revalidation.ts');
 const accountMenu = read('components/console/AccountMenu.tsx');
+const metadataEditor = read('components/manager/ManagerPayrollSettingsEditor.tsx');
+const payrollModalCss = read('app/manager-payroll-modal.css');
 
 for (const label of ['Monitoring', 'Access control of user', 'Report', 'Output Activity', 'Request']) {
   must(panels, label, `manager panel missing: ${label}`);
@@ -56,6 +59,15 @@ if (!revalidatesManagerConsole) failures.push('account profile route must revali
 
 must(accountMenu, 'displayNameFromUrl', 'account menu must read saved display name from redirect state');
 must(accountMenu, 'setLocalDisplayName(savedName)', 'account menu must update display name immediately');
+
+must(metadataEditor, "import { createPortal } from 'react-dom';", 'manager metadata modal must use a viewport portal');
+must(metadataEditor, 'createPortal(modal, document.body)', 'manager metadata modal must mount to document.body');
+must(metadataEditor, 'role="dialog"', 'manager metadata modal must expose dialog semantics');
+must(metadataEditor, 'aria-modal="true"', 'manager metadata modal must be modal for assistive technology');
+must(payrollModalCss, '--manager-payroll-modal-contract: portal-card-click-metadata-tile;', 'manager metadata CSS contract must document viewport portal behavior');
+must(payrollModalCss, '.manager-user-settings-modal-backdrop', 'manager metadata CSS must own the backdrop');
+must(payrollModalCss, 'position: fixed !important;', 'manager metadata backdrop must stay viewport-fixed');
+mustNotMatch(payrollModalCss, /\.manager-metadata-card-trigger:hover\s*{[^}]*transform\s*:/s, 'manager metadata card hover must not transform the fixed-modal ancestor');
 
 if (failures.length) {
   console.error(`manager-console-workflow-guard failed: ${failures.length} check(s).`);
