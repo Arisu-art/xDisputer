@@ -1,0 +1,293 @@
+/* Supporting Documents wide-stage UX layer.
+   Expands the center document canvas, reduces side-panel waste, and makes the sticky disclosure header visible without heavy animation. */
+
+:root {
+  --support-wide-left: clamp(220px, 17vw, 265px);
+  --support-wide-right: clamp(235px, 17vw, 270px);
+  --support-wide-canvas: minmax(620px, 1fr);
+  --support-wide-stage-max: 1500px;
+}
+
+/* Stronger sticky header: visible context while scrolling through layout tools. */
+.supporting-single-header > .progressive-trigger,
+.evidence-single-header > .progressive-trigger {
+  position: sticky !important;
+  top: .55rem !important;
+  z-index: 12 !important;
+  min-height: 66px !important;
+  padding: .78rem 1rem !important;
+  border: 1px solid rgba(147, 197, 253, .95) !important;
+  border-left: 6px solid #2563eb !important;
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, .94) !important;
+  backdrop-filter: blur(14px) saturate(1.15) !important;
+  box-shadow: 0 16px 38px rgba(15, 23, 42, .12), 0 0 0 1px rgba(255, 255, 255, .72) inset !important;
+  transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease !important;
+}
+
+.supporting-single-header.is-open > .progressive-trigger,
+.evidence-single-header.is-open > .progressive-trigger {
+  border-color: rgba(37, 99, 235, .55) !important;
+  box-shadow: 0 20px 48px rgba(37, 99, 235, .16), 0 0 0 1px rgba(255, 255, 255, .78) inset !important;
+}
+
+.supporting-single-header > .progressive-trigger:hover,
+.evidence-single-header > .progressive-trigger:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 22px 54px rgba(37, 99, 235, .18), 0 0 0 1px rgba(255, 255, 255, .78) inset !important;
+}
+
+.supporting-single-header .progressive-copy,
+.evidence-single-header .progressive-copy {
+  min-width: 0 !important;
+  display: grid !important;
+  gap: .16rem !important;
+}
+
+.supporting-single-header .progressive-copy strong,
+.evidence-single-header .progressive-copy strong {
+  color: #0f172a !important;
+  font-size: clamp(.98rem, 1.3vw, 1.18rem) !important;
+  line-height: 1.12 !important;
+  letter-spacing: -.02em !important;
+}
+
+.supporting-single-header .progressive-copy small,
+.evidence-single-header .progressive-copy small {
+  max-width: 76ch !important;
+  overflow: hidden !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 1 !important;
+  -webkit-box-orient: vertical !important;
+  color: #334155 !important;
+  font-size: .84rem !important;
+  line-height: 1.25 !important;
+}
+
+.supporting-single-header .progressive-badge-slot,
+.evidence-single-header .progressive-badge-slot {
+  justify-self: end !important;
+}
+
+.supporting-ready-badge,
+.evidence-ready-badge,
+.supporting-single-header .packet-status,
+.evidence-single-header .packet-status {
+  min-height: 36px !important;
+  padding-inline: .9rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 999px !important;
+  box-shadow: 0 10px 26px rgba(22, 163, 74, .12) !important;
+}
+
+.supporting-single-header .progressive-chevron,
+.evidence-single-header .progressive-chevron {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+  background: #dbeafe !important;
+  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, .65) !important;
+}
+
+/* Wide center canvas layout. The side panels become compact utility rails; the page gets the space. */
+.support-layout-grid.word-crop-grid {
+  grid-template-columns: var(--support-wide-left) var(--support-wide-canvas) var(--support-wide-right) !important;
+  width: min(100%, var(--support-wide-stage-max)) !important;
+  max-width: var(--support-wide-stage-max) !important;
+  gap: clamp(.7rem, 1vw, 1rem) !important;
+  padding-inline: clamp(.25rem, .7vw, .8rem) !important;
+}
+
+.word-left-evidence-manager {
+  width: 100% !important;
+  max-width: var(--support-wide-left) !important;
+  padding: .72rem !important;
+}
+
+.support-layout-controls.word-crop-controls,
+.word-crop-controls {
+  width: 100% !important;
+  max-width: var(--support-wide-right) !important;
+  padding: .8rem !important;
+}
+
+.support-page-frame {
+  width: min(100%, 900px) !important;
+  justify-self: stretch !important;
+  align-self: start !important;
+}
+
+.support-page-canvas {
+  width: min(100%, 760px) !important;
+  max-width: 760px !important;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, .11) !important;
+}
+
+.support-canvas-caption.evidence-preview-toolbar-header,
+.evidence-preview-toolbar-header {
+  width: min(100%, 760px) !important;
+  margin-inline: auto !important;
+}
+
+.evidence-header-tools {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+}
+
+.support-image-strip button {
+  min-width: 104px !important;
+  max-width: 132px !important;
+}
+
+.evidence-auto-align {
+  min-width: 118px !important;
+}
+
+/* Make right-side tools use less vertical space so the user sees more controls. */
+.word-crop-controls header {
+  padding-bottom: .55rem !important;
+  margin-bottom: .6rem !important;
+}
+
+.word-control-section {
+  padding-block: .62rem !important;
+}
+
+.word-control-section > p:first-child::after,
+.word-control-section > p:first-child {
+  line-height: 1.1 !important;
+}
+
+.word-resize-actions,
+.word-rotate-actions,
+.word-position-actions {
+  gap: .38rem !important;
+}
+
+.word-crop-actions .action-button,
+.word-resize-actions button,
+.word-rotate-actions button,
+.word-position-actions button {
+  min-height: 35px !important;
+  padding: .42rem .5rem !important;
+  font-size: .82rem !important;
+}
+
+.word-fit-actions select {
+  min-height: 34px !important;
+  font-size: .78rem !important;
+}
+
+/* Slim left list to reclaim width for the center page. */
+.word-left-evidence-manager .word-side-evidence-heading {
+  margin-bottom: .55rem !important;
+}
+
+.word-left-evidence-manager .supporting-upload-card-v2,
+.word-left-evidence-manager .evidence-upload-card-v2 {
+  min-height: 94px !important;
+  padding: .75rem !important;
+}
+
+.word-left-evidence-manager .supporting-document-card-v2,
+.word-left-evidence-manager .evidence-card-v2 {
+  padding: .5rem !important;
+}
+
+.word-left-evidence-manager .supporting-document-actions-v2 button,
+.word-left-evidence-manager .evidence-actions-v2 button {
+  min-height: 29px !important;
+  font-size: .64rem !important;
+}
+
+@keyframes supportHeaderReadyGlow {
+  0%, 100% { box-shadow: 0 20px 48px rgba(37, 99, 235, .14), 0 0 0 1px rgba(255, 255, 255, .78) inset; }
+  50% { box-shadow: 0 24px 58px rgba(37, 99, 235, .2), 0 0 0 1px rgba(255, 255, 255, .82) inset; }
+}
+
+.supporting-single-header.is-open > .progressive-trigger:focus-visible,
+.evidence-single-header.is-open > .progressive-trigger:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, .3) !important;
+  outline-offset: 3px !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .supporting-single-header.is-open > .progressive-trigger,
+  .evidence-single-header.is-open > .progressive-trigger {
+    animation: supportHeaderReadyGlow 2.8s ease-in-out infinite !important;
+  }
+}
+
+@media (max-width: 1280px) {
+  :root {
+    --support-wide-left: 245px;
+    --support-wide-right: 255px;
+  }
+
+  .support-layout-grid.word-crop-grid {
+    grid-template-columns: var(--support-wide-left) minmax(520px, 1fr) var(--support-wide-right) !important;
+  }
+
+  .support-page-canvas,
+  .support-canvas-caption.evidence-preview-toolbar-header,
+  .evidence-preview-toolbar-header {
+    width: min(100%, 680px) !important;
+    max-width: 680px !important;
+  }
+}
+
+@media (max-width: 1080px) {
+  .support-layout-grid.word-crop-grid {
+    grid-template-columns: 230px minmax(460px, 1fr) 240px !important;
+  }
+
+  .support-page-canvas,
+  .support-canvas-caption.evidence-preview-toolbar-header,
+  .evidence-preview-toolbar-header {
+    width: min(100%, 620px) !important;
+    max-width: 620px !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .support-layout-grid.word-crop-grid {
+    grid-template-columns: 1fr !important;
+    padding-inline: 0 !important;
+  }
+
+  .word-left-evidence-manager,
+  .support-layout-controls.word-crop-controls,
+  .word-crop-controls,
+  .support-page-frame {
+    width: min(100%, 720px) !important;
+    max-width: 720px !important;
+  }
+
+  .support-page-canvas,
+  .support-canvas-caption.evidence-preview-toolbar-header,
+  .evidence-preview-toolbar-header {
+    width: min(100%, 680px) !important;
+    max-width: 680px !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .supporting-single-header > .progressive-trigger,
+  .evidence-single-header > .progressive-trigger {
+    top: .35rem !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    min-height: 58px !important;
+  }
+
+  .supporting-single-header .progressive-badge-slot,
+  .evidence-single-header .progressive-badge-slot {
+    grid-column: 1 / -1 !important;
+    justify-self: start !important;
+  }
+
+  .supporting-single-header .progressive-copy small,
+  .evidence-single-header .progressive-copy small {
+    -webkit-line-clamp: 2 !important;
+  }
+}
