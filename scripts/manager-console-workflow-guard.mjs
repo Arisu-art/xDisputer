@@ -41,6 +41,9 @@ must(settings, 'manager_user_settings', 'manager user settings helper missing ta
 must(payrollRoute, 'manager_user_settings', 'payroll route must save manager metadata');
 must(css, 'manager-console-kpi-grid', 'manager console CSS missing KPI layout');
 
+must(admin, '<ManagerConsoleRealtimeRefreshMount />', 'manager page must use the single manager realtime refresh owner');
+mustNot(admin, 'AutoRouteRefresh', 'manager page must not mount AutoRouteRefresh with ManagerConsoleRealtimeRefreshMount');
+
 if (!layout.includes("import './manager-console-workflow.css';") && !consoleShellBundle.includes("@import './manager-console-workflow.css';")) {
   failures.push('root layout must load manager console workflow CSS');
 }
