@@ -38,6 +38,7 @@ import OutputActivityUnreadBadgeMount from '../components/notifications/OutputAc
 import GlobalTopbarActionsMount from '../components/shell/GlobalTopbarActionsMount';
 import ClientPayrollProfileSyncMount from '../components/client/ClientPayrollProfileSyncMount';
 import QueryProvider from '../src/features/app-providers/QueryProvider';
+import { XDISPUTER_RUNTIME_SYNC } from '../lib/runtime-source-sync';
 
 export const metadata = {
   title: 'xDisputer',
@@ -45,5 +46,5 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body data-theme-contract="xdisputer-unified" data-ui-scope="global" data-ui-quality="production" data-motion-contract="safe"><QueryProvider><ControlNavGlobalTelemetry /><GlobalTopbarActionsMount /><ClientPayrollProfileSyncMount /><OutputActivityRealtimeRefreshMount /><OutputActivityUnreadBadgeMount />{children}<Suspense fallback={null}><RenderDebuggerMount /></Suspense></QueryProvider></body></html>;
+  return <html lang="en" data-xdisputer-runtime-marker={XDISPUTER_RUNTIME_SYNC.marker}><body data-theme-contract="xdisputer-unified" data-ui-scope="global" data-ui-quality="production" data-motion-contract="safe" data-xdisputer-runtime-marker={XDISPUTER_RUNTIME_SYNC.marker} data-terminology-contract={XDISPUTER_RUNTIME_SYNC.terminologyContract}><QueryProvider><ControlNavGlobalTelemetry /><GlobalTopbarActionsMount /><ClientPayrollProfileSyncMount /><OutputActivityRealtimeRefreshMount /><OutputActivityUnreadBadgeMount />{children}<Suspense fallback={null}><RenderDebuggerMount /></Suspense></QueryProvider></body></html>;
 }
