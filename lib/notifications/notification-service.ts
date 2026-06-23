@@ -20,6 +20,8 @@ type OutputActivityNotificationRow = {
   disputer_id: string | null;
   client_name: string | null;
   round_label: string | null;
+  output_label: string | null;
+  letter_route: string | null;
   output_count: number | null;
   status: string | null;
   is_per_output: boolean | null;
@@ -72,10 +74,6 @@ function phDateTime(value: string | null | undefined) {
   }
 }
 
-function countText(value: number | null | undefined) {
-  return Math.max(1, Number(value || 1));
-}
-
 function roundText(row: OutputActivityNotificationRow) {
   return row.round_label || 'Selected round';
 }
@@ -84,11 +82,25 @@ function clientText(row: OutputActivityNotificationRow) {
   return row.client_name || 'Client user';
 }
 
+function letterText(row: OutputActivityNotificationRow) {
+  const raw = row.output_label || row.letter_route || 'Generated letter';
+  return raw.replace(/^generated output task$/i, 'Generated letter').replace(/^generated letter$/i, 'Generated letter');
+}
+
+function managerBody(row: OutputActivityNotificationRow) {
+  return `${clientText(row)} · ${roundText(row)} · ${letterText(row)} · ${phDateTime(row.created_at)} PH`;
+}
+
+function clientBody(row: OutputActivityNotificationRow) {
+  const approved = row.status === 'approved';
+  return `${roundText(row)} · ${letterText(row)} · ${approved ? 'confirmed' : 'returned'} · ${phDateTime(row.updated_at || row.created_at)} PH`;
+}
+
 function virtualManagerNotification(row: OutputActivityNotificationRow): NotificationRecord {
   return {
     id: `output-activity-manager-${row.id}`,
     title: 'Per-output generated letter',
-    body: `${clientText(row)} · ${roundText(row)} · ${countText(row.output_count)} item(s) · ${phDateTime(row.created_at)} PH`,
+    body: managerBody(row),
     href: `/admin/output-activity-v2?filter=per_output&activity=${row.id}`,
     severity: 'warning',
     read_at: null,
@@ -101,7 +113,7 @@ function virtualClientNotification(row: OutputActivityNotificationRow): Notifica
   return {
     id: `output-activity-client-${row.id}`,
     title: approved ? 'Per-output letter confirmed' : 'Per-output letter returned',
-    body: `${roundText(row)} · ${countText(row.output_count)} item(s) · ${approved ? 'confirmed' : 'returned'} · ${phDateTime(row.updated_at || row.created_at)} PH`,
+    body: clientBody(row),
     href: `/workspace?outputActivity=${row.id}`,
     severity: approved ? 'success' : 'warning',
     read_at: null,
@@ -160,10 +172,12 @@ async function outputActivityFallbackNotifications(input: {
   role: NotificationAudienceRole;
   limit: number;
 }) {
+  const selectColumns = 'id,manager_id,disputer_id,client_name,round_label,output_label,letter_route,output_count,status,is_per_output,created_at,updated_at';
+
   if (input.role === 'manager') {
     const result = await input.supabase
       .from('manager_disputer_output_approvals')
-      .select('id,manager_id,disputer_id,client_name,round_label,output_count,status,is_per_output,created_at,updated_at')
+      .select(selectColumns)
       .eq('manager_id', input.userId)
       .eq('is_per_output', true)
       .eq('status', 'pending')
@@ -177,7 +191,7 @@ async function outputActivityFallbackNotifications(input: {
   if (input.role === 'client') {
     const result = await input.supabase
       .from('manager_disputer_output_approvals')
-      .select('id,manager_id,disputer_id,client_name,round_label,output_count,status,is_per_output,created_at,updated_at')
+      .select(selectColumns)
       .eq('disputer_id', input.userId)
       .eq('is_per_output', true)
       .in('status', ['approved', 'rejected'])
