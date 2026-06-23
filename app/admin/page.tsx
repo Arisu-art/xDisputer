@@ -1,5 +1,4 @@
 import ConsoleNavLink from '../../components/ConsoleNavLink';
-import AutoRouteRefresh from '../../components/console/AutoRouteRefresh';
 import ManagerConsoleShell from '../../components/ManagerConsoleShell';
 import ManagerPayrollSettingsEditor from '../../components/manager/ManagerPayrollSettingsEditor';
 import ManagerConsoleRealtimeRefreshMount from '../../components/manager/ManagerConsoleRealtimeRefreshMount';
@@ -129,7 +128,6 @@ export default async function AdminPage({ searchParams }: PageProps) {
   if (activePanel === 'requests') { const requestHeaders = await headers(); const host = requestHeaders.get('x-forwarded-host') || requestHeaders.get('host') || 'x-disputer.vercel.app'; const protocol = requestHeaders.get('x-forwarded-proto') || 'https'; inviteLink = `${protocol}://${host}/signup?invite=${encodeURIComponent(inviteCode)}`; }
 
   return <ManagerConsoleShell mode="operations" email={profile?.email || user.email} accountName={profile?.full_name || user.user_metadata?.full_name as string | null | undefined} accountLabel="Manager account" navItems={managerOperationsNavItems(activePanel)} header={{ eyebrow: 'Manager console', title: panelHeader.title, description: panelHeader.description }}>
-    <AutoRouteRefresh />
     <ManagerConsoleRealtimeRefreshMount />
     {controlStatus && <section className={`admin-monitor-card admin-feedback-card ${controlStatus === 'ok' ? 'success' : 'error'}`}><strong>{controlStatus === 'ok' ? 'Action completed' : 'Action failed'}</strong><span>{controlStatus === 'ok' ? controlMessage || 'The manager console refreshed with the latest state.' : controlMessage || 'Unknown error.'}</span></section>}
     {queryError && <section className="admin-monitor-card"><div className="admin-monitor-empty">Could not load a manager console dataset: {queryError}</div></section>}
@@ -137,6 +135,6 @@ export default async function AdminPage({ searchParams }: PageProps) {
     {activePanel === 'access' && <AccessPanel accounts={panelAccounts} entitlements={entitlementResult.entitlements} settings={settingsResult.settings} />}
     {activePanel === 'reports' && <ReportPanel summary={summary} accounts={panelAccounts} entitlements={entitlementResult.entitlements} />}
     {activePanel === 'output_activity' && <OutputActivityPanel accounts={panelAccounts} entitlements={entitlementResult.entitlements} settings={settingsResult.settings} />}
-    {activePanel === 'requests' && <><section className="admin-monitor-card native-operation-card manager-console-report"><header className="manager-console-card-header"><div><p>Request</p><h2>Manager invite link</h2></div><span>{inviteCode || 'Ready'}</span></header><p>Share this link with Disputers who should request access. They stay pending until accepted.</p><code>{inviteLink}</code></section><RequestsPanel pending={pendingResult} blocked={blockedResult} entitlements={entitlementResult.entitlements} settings={settingsResult.settings} /></>}
+    {activePanel === 'requests' && <><section className="admin-monitor-card native-operation-card"><div className="manager-invite-panel"><div><p>Invite link</p><strong>{inviteLink || 'Create or rotate invite from the master account.'}</strong></div>{inviteLink && <ConsoleNavLink className="admin-action-button primary" href={inviteLink}>Open invite</ConsoleNavLink>}</div></section><RequestsPanel pending={pendingResult} blocked={blockedResult} entitlements={entitlementResult.entitlements} settings={settingsResult.settings} /></>}
   </ManagerConsoleShell>;
 }
