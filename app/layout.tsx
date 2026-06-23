@@ -25,6 +25,7 @@ import './client-payroll-profile-flow.css';
 import './output-activity-unread-badge.css';
 import './access-state-lightweight.css';
 import './workflow-header-slim.css';
+import './supporting-documents-layout-polish.css';
 import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebuggerMount from '../components/console/RenderDebuggerMount';
