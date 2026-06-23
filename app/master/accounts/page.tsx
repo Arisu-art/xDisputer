@@ -15,18 +15,18 @@ type PageProps = { searchParams?: Promise<Record<string, string | string[] | und
 
 function viewTitle(view: string) {
   if (view === 'managers') return 'Manager accounts';
-  if (view === 'clients') return 'Client accounts';
-  if (view === 'pending') return 'Pending / unassigned clients';
+  if (view === 'clients') return 'Disputer accounts';
+  if (view === 'pending') return 'Pending / unassigned disputers';
   if (view === 'blocked') return 'Disabled / suspended accounts';
   return 'Account directory';
 }
 
 function viewDescription(view: string) {
-  if (view === 'managers') return 'Set manager client-seat limits and default daily output limits from one minimal control surface.';
-  if (view === 'clients') return 'Set per-client daily output caps, assign a boss manager, and review client usage without duplicated account headers.';
-  if (view === 'pending') return 'Find users who need manager assignment or approval and keep access control focused.';
+  if (view === 'managers') return 'Set manager disputer-seat limits and default daily output limits from one minimal control surface.';
+  if (view === 'clients') return 'Set per-disputer daily output caps, assign a boss manager, and review disputer usage without duplicated account headers.';
+  if (view === 'pending') return 'Find disputers who need manager assignment or approval and keep access control focused.';
   if (view === 'blocked') return 'Review accounts that cannot use the platform and take only the needed account action.';
-  return 'Edit manager client-seat limits, boss assignments, and daily client output limits from the master account.';
+  return 'Edit manager disputer-seat limits, boss assignments, and daily disputer output limits from the master account.';
 }
 
 function bossOptionsFromManagers(accounts: Array<{ id: string; full_name?: string | null; email?: string | null }>) {
@@ -87,6 +87,6 @@ export default async function MasterAccountsPage({ searchParams }: PageProps) {
   >
     {selectedView !== 'overview' && <div className="single-header-dataset-action"><ConsoleNavLink className="directory-header-action" href="/master/accounts">Account directory</ConsoleNavLink></div>}
     {(summaryError || directory.errorMessage || managerDirectory.errorMessage || entitlementResult.errorMessage) && <section className="admin-monitor-card"><div className="admin-monitor-empty">{summaryError || directory.errorMessage || managerDirectory.errorMessage || entitlementResult.errorMessage}</div></section>}
-    {selectedView === 'overview' ? <section className="progressive-dataset-grid access-workflow-grid"><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=managers"><p>Manager limits</p><h2>Managers</h2><span>{summary.managers} manager(s)</span><strong>Set client-seat limits and default daily output limits.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=clients"><p>Client limits</p><h2>Clients</h2><span>{summary.clients} client(s)</span><strong>Assign boss managers and set client output caps.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=pending"><p>Pending</p><h2>Pending / unassigned</h2><span>{summary.pending} pending</span><strong>Find users who need manager assignment or approval.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=blocked"><p>Blocked</p><h2>Disabled / suspended</h2><span>{summary.blocked} blocked</span><strong>Review accounts that cannot use the platform.</strong></ConsoleNavLink></section> : <section className="master-access-stack single-header-dataset"><article className="admin-monitor-card native-operation-card" data-layout-contract="dataset-card"><DirectoryFilter view={selectedView} query={directoryParams.query} /><MasterAccountTable accounts={directory.accounts} currentUserId={user.id} emptyText="No accounts match this account dataset." entitlements={entitlementResult.entitlements} bossOptions={bossOptions} /><Pager view={selectedView} query={directoryParams.query} page={directory.page} pageSize={directory.pageSize} total={directory.total} /></article></section>}
+    {selectedView === 'overview' ? <section className="progressive-dataset-grid access-workflow-grid"><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=managers"><p>Manager limits</p><h2>Managers</h2><span>{summary.managers} manager(s)</span><strong>Set disputer-seat limits and default daily output limits.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=clients"><p>Disputer limits</p><h2>Disputers</h2><span>{summary.clients} disputer(s)</span><strong>Assign boss managers and set disputer output caps.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=pending"><p>Pending</p><h2>Pending / unassigned</h2><span>{summary.pending} pending</span><strong>Find disputers who need manager assignment or approval.</strong></ConsoleNavLink><ConsoleNavLink className="progressive-dataset-card access-workflow-card" href="/master/accounts?view=blocked"><p>Blocked</p><h2>Disabled / suspended</h2><span>{summary.blocked} blocked</span><strong>Review accounts that cannot use the platform.</strong></ConsoleNavLink></section> : <section className="master-access-stack single-header-dataset"><article className="admin-monitor-card native-operation-card" data-layout-contract="dataset-card"><DirectoryFilter view={selectedView} query={directoryParams.query} /><MasterAccountTable accounts={directory.accounts} currentUserId={user.id} emptyText="No accounts match this account dataset." entitlements={entitlementResult.entitlements} bossOptions={bossOptions} /><Pager view={selectedView} query={directoryParams.query} page={directory.page} pageSize={directory.pageSize} total={directory.total} /></article></section>}
   </ConsoleShell>;
 }
