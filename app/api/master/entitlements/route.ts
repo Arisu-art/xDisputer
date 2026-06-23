@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache';
 import { NextResponse, type NextRequest } from 'next/server';
 import { createSupabaseServerClient } from '../../../../lib/supabase/server';
 import { ensureUserProfile, normalizeRole } from '../../../../lib/supabase/roles';
@@ -9,8 +10,15 @@ function cleanValue(formData: FormData, key: string) {
 function cleanLimit(value: string) {
   if (!value) return null;
   const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return null;
-  return Math.max(0, Math.floor(parsed));
+  if (!Number.isInteger(parsed) || parsed < 0) throw new Error('Limit must be a whole number of 0 or greater.');
+  return parsed;
+}
+
+function revalidateEntitlementViews() {
+  revalidatePath('/master/accounts');
+  revalidatePath('/admin');
+  revalidatePath('/admin/access');
+  revalidatePath('/app');
 }
 
 function redirectBack(request: NextRequest, status: 'ok' | 'error', message?: string) {
@@ -61,6 +69,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (error) return redirectBack(request, 'error', error.message);
+      revalidateEntitlementViews();
       return redirectBack(request, 'ok', 'Manager limits updated.');
     }
 
@@ -72,6 +81,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) return redirectBack(request, 'error', error.message);
+    revalidateEntitlementViews();
     return redirectBack(request, 'ok', 'Client daily output limit updated.');
   } catch (error) {
     return redirectBack(request, 'error', error instanceof Error ? error.message : 'Entitlement update failed.');
