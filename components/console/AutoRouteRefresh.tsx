@@ -8,34 +8,35 @@ export default function AutoRouteRefresh() {
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let lastRefreshAt = 0;
 
     const refresh = () => {
       if (timer) return;
+      const elapsed = Date.now() - lastRefreshAt;
+      const delay = elapsed > 1500 ? 300 : 1500 - elapsed;
       timer = window.setTimeout(() => {
         timer = null;
+        lastRefreshAt = Date.now();
         router.refresh();
-      }, 300);
+      }, delay);
     };
 
-    const focusHandler = () => refresh();
     const visibilityHandler = () => {
       if (!document.hidden) refresh();
     };
 
-    const interval = window.setInterval(refresh, 12000);
-    const stopInterval = window.setTimeout(() => window.clearInterval(interval), 90000);
-
-    window.addEventListener('focus', focusHandler);
-    window.addEventListener('online', focusHandler);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('online', refresh);
+    window.addEventListener('xdisputer:route-refresh', refresh);
+    window.addEventListener('xdisputer:notifications-refreshed', refresh);
     document.addEventListener('visibilitychange', visibilityHandler);
-    refresh();
 
     return () => {
       if (timer) window.clearTimeout(timer);
-      window.clearInterval(interval);
-      window.clearTimeout(stopInterval);
-      window.removeEventListener('focus', focusHandler);
-      window.removeEventListener('online', focusHandler);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('online', refresh);
+      window.removeEventListener('xdisputer:route-refresh', refresh);
+      window.removeEventListener('xdisputer:notifications-refreshed', refresh);
       document.removeEventListener('visibilitychange', visibilityHandler);
     };
   }, [router]);
