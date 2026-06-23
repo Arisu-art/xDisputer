@@ -1,27 +1,26 @@
-/* Final Evidence Layout Contract
-   Do not hide Evidence Files.
-   Layout must remain:
-   LEFT evidence files | CENTER page preview | RIGHT selected image controls
-*/
+/* Supporting Documents layout compatibility layer.
+   Keeps the old Evidence class names alive, but no longer caps the center preview. */
 
 .support-layout-editor.professional-evidence-editor,
 .support-layout-editor.word-crop-editor {
   width: 100% !important;
+  max-width: none !important;
 }
 
 .support-layout-grid.word-crop-grid {
   display: grid !important;
-  grid-template-columns: 260px minmax(520px, 650px) 292px !important;
-  grid-template-areas: "evidence preview controls" !important;
-  justify-content: center !important;
+  grid-template-columns: minmax(180px, clamp(188px, 13vw, 250px)) minmax(0, 1fr) minmax(186px, clamp(194px, 13vw, 258px)) !important;
+  grid-template-areas: "documents page controls" !important;
+  justify-content: stretch !important;
   align-items: start !important;
-  gap: 1rem !important;
-  width: min(100%, 1220px) !important;
+  gap: clamp(6px, .55vw, 10px) !important;
+  width: 100% !important;
+  max-width: 1920px !important;
   margin-inline: auto !important;
 }
 
 .word-left-evidence-manager {
-  grid-area: evidence !important;
+  grid-area: documents !important;
   display: grid !important;
   align-self: start !important;
   position: sticky !important;
@@ -30,32 +29,39 @@
   overflow: hidden !important;
   border: 1px solid #cbd5e1 !important;
   border-radius: 18px !important;
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%) !important;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08) !important;
-  padding: 0.8rem !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  padding: 0.65rem !important;
+  width: 100% !important;
+  max-width: none !important;
 }
 
 .support-page-frame {
-  grid-area: preview !important;
-  justify-self: center !important;
-  width: min(100%, 650px) !important;
+  grid-area: page !important;
+  justify-self: stretch !important;
+  justify-items: center !important;
+  width: 100% !important;
+  max-width: none !important;
   min-width: 0 !important;
+  display: grid !important;
 }
 
 .word-crop-controls,
 .support-layout-controls.word-crop-controls {
   grid-area: controls !important;
-  justify-self: start !important;
-  width: 292px !important;
-  max-width: 292px !important;
+  justify-self: stretch !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
 }
 
 .support-page-canvas {
-  width: min(100%, 520px) !important;
+  width: min(100%, clamp(720px, 58vw, 1180px)) !important;
+  max-width: 1180px !important;
+  min-width: min(100%, 640px) !important;
   margin-inline: auto !important;
 }
 
-/* Evidence file panel content */
 .word-left-evidence-manager .evidence-panel-v2 {
   display: grid !important;
   gap: 0.7rem !important;
@@ -84,7 +90,6 @@
 .word-left-evidence-manager .evidence-card-v2.selected {
   border-color: #475569 !important;
   background: #f1f5f9 !important;
-  box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.14) !important;
 }
 
 .word-left-evidence-manager .evidence-card-select-v2 {
@@ -194,7 +199,6 @@
   font-size: 0.68rem !important;
 }
 
-/* Keep image content contained inside the slot. */
 .support-canvas-item {
   overflow: hidden !important;
 }
@@ -208,36 +212,12 @@
 
 @media (max-width: 1180px) {
   .support-layout-grid.word-crop-grid {
-    grid-template-columns: 240px minmax(460px, 1fr) 280px !important;
+    grid-template-columns: minmax(170px, 220px) minmax(0, 1fr) minmax(180px, 228px) !important;
     width: 100% !important;
   }
 
-  .word-crop-controls,
-  .support-layout-controls.word-crop-controls {
-    width: 280px !important;
-    max-width: 280px !important;
-  }
-}
-
-@media (max-width: 980px) {
-  .support-layout-grid.word-crop-grid {
-    grid-template-columns: 1fr !important;
-    grid-template-areas:
-      "evidence"
-      "preview"
-      "controls" !important;
-  }
-
-  .word-left-evidence-manager,
-  .word-crop-controls,
-  .support-layout-controls.word-crop-controls {
-    position: static !important;
-    justify-self: center !important;
-    width: min(100%, 560px) !important;
-    max-width: 560px !important;
-  }
-
-  .support-page-frame {
-    width: min(100%, 650px) !important;
+  .support-page-canvas {
+    width: min(100%, clamp(620px, 56vw, 920px)) !important;
+    max-width: 920px !important;
   }
 }
