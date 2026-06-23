@@ -1,14 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import type { NotificationRecord } from '../../lib/notifications/notification-types';
-import { notificationOwnershipContract } from '../../src/features/notifications/notification-ownership-contract';
+import { useOwnedNotifications } from '../../src/features/notifications/useOwnedNotifications';
 
 const OUTPUT_ACTIVITY_HREF = '/admin/output-activity-v2';
-
-function outputActivityUnreadCount(notifications: NotificationRecord[]) {
-  return notifications.filter((item) => !item.read_at && (item.href || '').includes(OUTPUT_ACTIVITY_HREF)).length;
-}
 
 function outputActivityTargets() {
   return Array.from(document.querySelectorAll<HTMLAnchorElement>(`a[href^="${OUTPUT_ACTIVITY_HREF}"],a[href*="${OUTPUT_ACTIVITY_HREF}"]`))
@@ -41,38 +36,39 @@ function applyBadge(count: number) {
   }
 }
 
+function mutationAddsOutputActivityTarget(mutation: MutationRecord) {
+  return Array.from(mutation.addedNodes).some((node) => {
+    if (!(node instanceof HTMLElement)) return false;
+    if (node.matches?.(`a[href^="${OUTPUT_ACTIVITY_HREF}"],a[href*="${OUTPUT_ACTIVITY_HREF}"]`)) return true;
+    return Boolean(node.querySelector?.(`a[href^="${OUTPUT_ACTIVITY_HREF}"],a[href*="${OUTPUT_ACTIVITY_HREF}"]`));
+  });
+}
+
 export default function OutputActivityUnreadBadgeMount() {
+  const { outputActivityUnreadCount } = useOwnedNotifications();
+
   useEffect(() => {
-    let cancelled = false;
-    let observer: MutationObserver | null = null;
-    let lastCount = -1;
+    let frame = 0;
+    const schedule = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        applyBadge(outputActivityUnreadCount);
+      });
+    };
 
-    async function sync(force = false) {
-      const response = await fetch(`/api/notifications?limit=${notificationOwnershipContract.maxVisibleItems}`, { cache: 'no-store', headers: { accept: 'application/json', 'cache-control': 'no-store' } });
-      if (!response.ok) return;
-      const payload = await response.json().catch(() => null);
-      if (cancelled) return;
-      const notifications = Array.isArray(payload?.notifications) ? payload.notifications as NotificationRecord[] : [];
-      const count = outputActivityUnreadCount(notifications);
-      if (force || count !== lastCount || !badgesAlreadyApplied(outputActivityTargets(), count)) {
-        lastCount = count;
-        applyBadge(count);
-      }
-    }
-
-    const initial = window.setTimeout(() => { void sync(true).catch(() => undefined); }, 250);
-    const timer = window.setInterval(() => { void sync().catch(() => undefined); }, notificationOwnershipContract.pollIntervalMs);
-    observer = new MutationObserver(() => { void sync(false).catch(() => undefined); });
+    schedule();
+    const observer = new MutationObserver((mutations) => {
+      if (mutations.some(mutationAddsOutputActivityTarget)) schedule();
+    });
     observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
-      cancelled = true;
-      window.clearTimeout(initial);
-      window.clearInterval(timer);
-      observer?.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
+      observer.disconnect();
       clearBadges();
     };
-  }, []);
+  }, [outputActivityUnreadCount]);
 
   return null;
 }
