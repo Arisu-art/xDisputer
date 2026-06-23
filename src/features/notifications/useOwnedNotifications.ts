@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useSyncExternalStore } from 'react';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import type { NotificationRecord } from '../../../lib/notifications/notification-types';
 import { createSupabaseBrowserClient } from '../../../lib/supabase/browser';
 import { notificationOwnershipContract } from './notification-ownership-contract';
@@ -16,7 +16,7 @@ type Snapshot = {
   loading: boolean;
 };
 
-type RefreshReason = 'mount' | 'manual' | 'focus' | 'visibility' | 'realtime' | 'warmup' | 'steady' | 'read-action';
+type RefreshReason = 'mount' | 'manual' | 'focus' | 'visibility' | 'realtime' | 'warmup' | 'steady' | 'read-action' | 'auth-change';
 
 const EMPTY_SNAPSHOT: Snapshot = {
   notifications: [],
@@ -40,6 +40,7 @@ let warmupStopTimer: ReturnType<typeof setTimeout> | null = null;
 let steadyTimer: ReturnType<typeof setInterval> | null = null;
 let teardownTimer: ReturnType<typeof setTimeout> | null = null;
 let currentUserId: string | null = null;
+let authUnsubscribe: (() => void) | null = null;
 
 function countOutputActivityUnread(notifications: NotificationRecord[]) {
   return notifications.filter((item) => !item.read_at && (item.href || '').includes(OUTPUT_ACTIVITY_HREF)).length;
@@ -76,9 +77,35 @@ function emit(next: Snapshot, reason: RefreshReason) {
   subscribers.forEach((listener) => listener());
   if (changed && typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('xdisputer:notifications-refreshed', {
-      detail: { reason, unreadCount: next.unreadCount, outputActivityUnreadCount: next.outputActivityUnreadCount, serverTime: next.serverTime }
+      detail: { reason, unreadCount: next.unreadCount, outputActivityUnreadCount: next.outputActivityUnreadCount, serverTime: next.serverTime, userId: currentUserId }
     }));
   }
+}
+
+async function removeOwnedChannel(supabase: SupabaseClient) {
+  if (!channel) return;
+  const owned = channel;
+  channel = null;
+  await supabase.removeChannel(owned).catch(() => undefined);
+}
+
+function subscribeUserChannel(supabase: SupabaseClient, userId: string | null) {
+  void removeOwnedChannel(supabase).then(() => {
+    if (!userId || !started) return;
+    channel = supabase
+      .channel(`owned-notifications-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_user_id=eq.${userId}` }, () => scheduleRefresh('realtime'))
+      .subscribe((status) => { if (status === 'SUBSCRIBED') scheduleRefresh('realtime'); });
+  });
+}
+
+function setCurrentUser(supabase: SupabaseClient, userId: string | null, reason: RefreshReason) {
+  if (currentUserId === userId) return;
+  currentUserId = userId;
+  inFlight = false;
+  emit(userId ? { ...EMPTY_SNAPSHOT, loading: true } : EMPTY_SNAPSHOT, reason);
+  subscribeUserChannel(supabase, userId);
+  if (userId) scheduleRefresh(reason, 0);
 }
 
 async function fetchNotifications(reason: RefreshReason = 'manual') {
@@ -91,6 +118,7 @@ async function fetchNotifications(reason: RefreshReason = 'manual') {
       headers: { accept: 'application/json', 'cache-control': 'no-store' }
     });
     if (response.status === 401) {
+      currentUserId = null;
       emit({ ...EMPTY_SNAPSHOT, errorMessage: 'Sign in again to load notifications.' }, reason);
       return;
     }
@@ -105,7 +133,7 @@ async function fetchNotifications(reason: RefreshReason = 'manual') {
 
 function scheduleRefresh(reason: RefreshReason, delay = 250) {
   if (typeof window === 'undefined') return;
-  if (refreshTimer) return;
+  if (refreshTimer) window.clearTimeout(refreshTimer);
   refreshTimer = window.setTimeout(() => {
     refreshTimer = null;
     void fetchNotifications(reason);
@@ -137,7 +165,17 @@ function startController() {
   window.addEventListener('online', focusHandler);
   document.addEventListener('visibilitychange', visibilityHandler);
 
-  void fetchNotifications('mount');
+  void supabase.auth.getUser().then(({ data }) => {
+    setCurrentUser(supabase, data.user?.id || null, 'mount');
+  }).catch(() => {
+    setCurrentUser(supabase, null, 'mount');
+  });
+
+  const authSubscription = supabase.auth.onAuthStateChange((_event, session) => {
+    setCurrentUser(supabase, session?.user?.id || null, 'auth-change');
+  });
+  authUnsubscribe = () => authSubscription.data.subscription.unsubscribe();
+
   warmupTimer = window.setInterval(() => scheduleRefresh('warmup'), 5_000);
   warmupStopTimer = window.setTimeout(() => {
     if (warmupTimer) window.clearInterval(warmupTimer);
@@ -145,28 +183,18 @@ function startController() {
   }, 60_000);
   steadyTimer = window.setInterval(() => scheduleRefresh('steady'), notificationOwnershipContract.pollIntervalMs);
 
-  void supabase.auth.getUser().then(({ data }) => {
-    const userId = data.user?.id || null;
-    currentUserId = userId;
-    if (!userId || !started) return;
-    channel = supabase
-      .channel(`owned-notifications-${userId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_user_id=eq.${userId}` }, () => scheduleRefresh('realtime'))
-      .subscribe((status) => { if (status === 'SUBSCRIBED') scheduleRefresh('realtime'); });
-  }).catch(() => undefined);
-
   const teardown = () => {
     window.removeEventListener('focus', focusHandler);
     window.removeEventListener('online', focusHandler);
     document.removeEventListener('visibilitychange', visibilityHandler);
     clearTimers();
-    if (channel) void supabase.removeChannel(channel);
-    channel = null;
+    authUnsubscribe?.();
+    authUnsubscribe = null;
+    void removeOwnedChannel(supabase);
     currentUserId = null;
     started = false;
   };
 
-  teardownTimer = null;
   (startController as unknown as { teardown?: () => void }).teardown = teardown;
 }
 
