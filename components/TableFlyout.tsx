@@ -102,6 +102,9 @@ function TableFlyout({
     WebkitOverflowScrolling: 'touch'
   }), [isShortScreen]);
 
+  const headerActionNode = headerAction ? <span key="table-flyout-header-action" className="table-flyout-header-action-slot">{headerAction}</span> : null;
+  const closeNode = <button key="table-flyout-close" type="button" className="table-flyout-close danger" onClick={() => setOpen(false)} aria-label={closeLabel}>×</button>;
+
   const flyout = open ? <div className="table-flyout-overlay table-flyout-overlay-clear" style={overlayStyle} role="presentation" onMouseDown={() => setOpen(false)}>
     <section className="table-flyout-card table-flyout-card-live table-flyout-card-active" style={cardStyle} role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => event.stopPropagation()}>
       <header className="table-flyout-main-header" style={{ position: 'sticky', top: 0, zIndex: 2, background: '#fff', borderBottom: '1px solid #e3e9f2' }}>
@@ -110,8 +113,8 @@ function TableFlyout({
           <h3 id={titleId}>{title}</h3>
         </div>
         <div className="table-flyout-header-actions">
-          {headerAction}
-          <button type="button" className="table-flyout-close danger" onClick={() => setOpen(false)} aria-label={closeLabel}>×</button>
+          {headerActionNode}
+          {closeNode}
         </div>
       </header>
       <div className="table-flyout-body" style={bodyStyle}>
