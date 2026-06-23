@@ -1,5 +1,5 @@
 export const XDISPUTER_RUNTIME_SYNC = {
-  marker: 'xdisputer-runtime-20260624-disputer-terminology-v1',
+  marker: 'xdisputer-runtime-20260624-disputer-terminology-wide-support-v2',
   terminologyContract: 'platform-client-role-displays-as-disputer-letter-subject-stays-client',
   stickyHeaderProfile: 'zero-lag-border-only',
   expectedPullBranch: 'main',
@@ -8,7 +8,8 @@ export const XDISPUTER_RUNTIME_SYNC = {
     'manager-access-disputer-ui',
     'output-activity-disputer-vs-letter-client-ui',
     'access-audit-disputer-ui',
-    'sticky-header-zero-lag-css'
+    'sticky-header-zero-lag-css',
+    'supporting-documents-runtime-wide-fix'
   ],
   verifyPaths: [
     'app/master/accounts/page.tsx',
@@ -16,6 +17,7 @@ export const XDISPUTER_RUNTIME_SYNC = {
     'app/admin/access/page.tsx',
     'app/admin/output-activity-v2/page.tsx',
     'components/AccessAuditView.tsx',
-    'app/sticky-header-visibility.css'
+    'app/sticky-header-visibility.css',
+    'app/supporting-documents-runtime-wide-fix.css'
   ]
 } as const;
