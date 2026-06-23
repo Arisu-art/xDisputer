@@ -28,5 +28,7 @@ export function normalizeNotificationSeverity(value: unknown): NotificationSever
 }
 
 export function normalizeNotificationRole(value: UserRole | null | undefined): NotificationAudienceRole {
-  return value === 'master' || value === 'manager' ? value : 'client';
+  if (value === 'master') return 'master';
+  if (value === 'manager' || value === 'admin') return 'manager';
+  return 'client';
 }
