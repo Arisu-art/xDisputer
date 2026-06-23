@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { createSupabaseBrowserClient } from '../lib/supabase/browser';
 
 type EntitlementPayload = { outputLimit: number | null; outputUsedToday: number; outputRemainingToday: number | null; resetAt: string | null; resetSeconds: number | null; allowed: boolean; message: string | null; source?: string | null; serverTime?: string | null };
@@ -52,6 +53,7 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
 
   useEffect(() => {
     let cancelled = false;
+    let channel: RealtimeChannel | null = null;
     const supabase = createSupabaseBrowserClient();
     const refresh = () => { if (!cancelled) void load(); };
     const handleUpdate = (event: Event) => {
@@ -73,11 +75,11 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
     void supabase.auth.getUser().then(({ data }) => {
       const userId = data.user?.id;
       if (!userId || cancelled) return;
-      supabase
+      channel = supabase
         .channel(`client-output-entitlement-${userId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'client_entitlement_limits', filter: `client_id=eq.${userId}` }, refresh)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'generation_runs', filter: `owner_id=eq.${userId}` }, refresh)
-        .subscribe(() => refresh());
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'generation_runs', filter: `owner_id=eq.${userId}` }, refresh);
+      void channel.subscribe(() => refresh());
     }).catch(() => undefined);
 
     return () => {
@@ -87,7 +89,7 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
       window.removeEventListener('xdisputer:output-entitlement-updated', handleUpdate);
       window.removeEventListener('xdisputer:output-entitlement-refresh', handleUpdate);
       document.removeEventListener('visibilitychange', handleVisibility);
-      void supabase.removeAllChannels();
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [load]);
 
