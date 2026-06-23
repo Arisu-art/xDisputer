@@ -56,6 +56,7 @@ function hasPermanentRefreshLoop(source) {
 const files = Object.fromEntries([
   'docs/website-stability-cleanup-canvas.md',
   'app/layout.tsx',
+  'app/admin/page.tsx',
   'package.json',
   'scripts/guard-bundle-runner.mjs',
   'components/stability/StableCard.tsx',
@@ -71,6 +72,7 @@ const files = Object.fromEntries([
   'components/notifications/OutputActivityUnreadBadgeMount.tsx',
   'components/notifications/OutputActivityRealtimeRefreshMount.tsx',
   'components/console/AutoRouteRefresh.tsx',
+  'components/manager/ManagerConsoleRealtimeRefreshMount.tsx',
   'lib/notifications/notification-service.ts',
   'src/features/notifications/notification-api-service.ts',
   'src/features/notifications/bell-notification-repair-service.ts',
@@ -106,10 +108,13 @@ must(files['components/ClientOutputLimitBoundary.tsx'], "type EntitlementState =
 must(files['components/ClientOutputLimitBoundary.tsx'], 'PageStateBoundary', 'ClientOutputLimitBoundary must use PageStateBoundary');
 must(files['components/ClientOutputLimitBoundary.tsx'], 'data-output-entitlement-state="checking"', 'ClientOutputLimitBoundary must not render workspace before entitlement check');
 must(files['components/ClientOutputLimitBoundary.tsx'], 'removeChannel(channel)', 'ClientOutputLimitBoundary must clean only its own channel');
+must(files['components/ClientOutputLimitBoundary.tsx'], 'entitlementRef', 'ClientOutputLimitBoundary must preserve the last known entitlement during transient refresh errors');
+must(files['components/ClientOutputLimitBoundary.tsx'], 'markUnavailableIfCold', 'ClientOutputLimitBoundary must only show unavailable before a stable entitlement exists');
+must(files['components/ClientOutputLimitBoundary.tsx'], "status === 'SUBSCRIBED'", 'ClientOutputLimitBoundary must not refresh on every realtime status');
 
 must(files['app/api/debug/notification-state/route.ts'], 'directNotificationCount', 'debug notification state endpoint must report direct notification count');
 must(files['app/api/debug/notification-state/route.ts'], 'outputActivityFallbackCount', 'debug notification state endpoint must report fallback count');
-must(files['app/api/debug/notification-state/route.ts'], 'visibleBellUnreadCount', 'debug notification state endpoint must report visible bell unread count');
+must(files['app/api/debug/notification-state/route.ts'], 'visibleBellUnreadCount', 'debug endpoint must report visible bell unread count');
 must(files['app/api/debug/notification-state/route.ts'], "Cache-Control", 'debug endpoint must be no-store');
 
 must(files['src/features/notifications/useOwnedNotifications.ts'], 'useSyncExternalStore', 'notification hook must own one external store');
@@ -126,6 +131,8 @@ must(files['components/notifications/OutputActivityUnreadBadgeMount.tsx'], 'useO
 must(files['components/notifications/OutputActivityRealtimeRefreshMount.tsx'], 'removeChannel(channel)', 'Output Activity refresh bridge must clean only its own channel');
 must(files['components/console/AutoRouteRefresh.tsx'], 'xdisputer:notifications-refreshed', 'AutoRouteRefresh must be event-driven');
 mustNot(files['components/console/AutoRouteRefresh.tsx'], 'setInterval', 'AutoRouteRefresh must not permanently poll RSC pages');
+must(files['app/admin/page.tsx'], '<ManagerConsoleRealtimeRefreshMount />', 'manager console must use the single manager route refresh owner');
+mustNot(files['app/admin/page.tsx'], 'AutoRouteRefresh', 'manager console must not mount duplicate route refresh owners');
 
 must(files['src/features/notifications/notification-api-service.ts'], 'repairBellNotificationsForUser', 'notification API must repair bell rows before read');
 must(files['lib/notifications/notification-service.ts'], 'outputActivityFallbackNotifications', 'notification service must bridge Output Activity fallback rows');
