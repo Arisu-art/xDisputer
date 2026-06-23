@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 type EmploymentType = 'full_time' | 'output_based';
 
@@ -16,17 +16,92 @@ function moneyInput(value: number) {
   return Number.isFinite(value) ? String(Math.max(0, value)) : '0';
 }
 
+function shouldIgnoreCardOpen(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return true;
+
+  return Boolean(target.closest([
+    'a',
+    'button',
+    'form',
+    'input',
+    'select',
+    'textarea',
+    'label',
+    'summary',
+    'details',
+    '[role="button"]',
+    '[data-ignore-card-metadata-open="true"]',
+    '.manager-console-status-actions',
+    '.manager-user-settings-details',
+    '.manager-user-settings-modal-backdrop'
+  ].join(',')));
+}
+
 export default function ManagerPayrollSettingsEditor({ profileId, initialEmploymentType, initialBaseSalary, initialPerOutputRate, initialNotes }: Props) {
   const id = useId();
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
   const [employmentType, setEmploymentType] = useState<EmploymentType>(initialEmploymentType);
   const [fullTimeSalary, setFullTimeSalary] = useState(moneyInput(initialBaseSalary));
   const salaryLocked = employmentType === 'output_based';
 
-  return <div className="manager-user-settings-details manager-user-settings-client-modal">
-    <button type="button" className="manager-user-settings-open" onClick={() => setOpen(true)}>Edit metadata</button>
+  useEffect(() => {
+    const root = rootRef.current;
+    const card = root?.closest<HTMLElement>('.manager-console-user-card');
+    if (!card) return undefined;
+
+    const previousTabIndex = card.getAttribute('tabindex');
+    const hadTabIndex = card.hasAttribute('tabindex');
+
+    card.classList.add('manager-metadata-card-trigger');
+    card.setAttribute('data-metadata-card-trigger', 'true');
+    card.setAttribute('aria-label', 'Open user metadata settings');
+    if (!hadTabIndex) card.setAttribute('tabindex', '0');
+
+    const handleCardClick = (event: MouseEvent) => {
+      if (shouldIgnoreCardOpen(event.target)) return;
+      setOpen(true);
+    };
+
+    const handleCardKeyDown = (event: KeyboardEvent) => {
+      if (event.target !== card) return;
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      setOpen(true);
+    };
+
+    card.addEventListener('click', handleCardClick);
+    card.addEventListener('keydown', handleCardKeyDown);
+
+    return () => {
+      card.removeEventListener('click', handleCardClick);
+      card.removeEventListener('keydown', handleCardKeyDown);
+      card.classList.remove('manager-metadata-card-trigger');
+      card.removeAttribute('data-metadata-card-trigger');
+      card.removeAttribute('aria-label');
+      if (hadTabIndex && previousTabIndex !== null) card.setAttribute('tabindex', previousTabIndex);
+      if (!hadTabIndex) card.removeAttribute('tabindex');
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [open]);
+
+  return <div ref={rootRef} className="manager-user-settings-details manager-user-settings-client-modal" data-ignore-card-metadata-open="true">
+    <button type="button" className="manager-user-settings-open metadata-tile-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
+      <span className="metadata-tile-copy"><strong>Metadata</strong><small>Click user card</small></span>
+      <span className="metadata-tile-plus" aria-hidden="true">+</span>
+    </button>
     {open && <div className="manager-user-settings-modal-backdrop" role="presentation" onMouseDown={() => setOpen(false)}>
-      <form action="/api/manager-console/payroll" method="post" className="manager-user-settings-form manager-user-settings-modal" onMouseDown={(event) => event.stopPropagation()}>
+      <form action="/api/manager-console/payroll" method="post" className="manager-user-settings-form manager-user-settings-modal" aria-label="User metadata settings" onMouseDown={(event) => event.stopPropagation()}>
         <button type="button" className="metadata-modal-close" aria-label="Close metadata editor" onClick={() => setOpen(false)}>×</button>
         <input type="hidden" name="profileId" value={profileId} />
         <label className="client-status-job-field" htmlFor={`${id}-employment`}>
