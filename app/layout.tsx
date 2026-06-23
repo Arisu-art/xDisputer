@@ -17,6 +17,7 @@ import './account-bell-avatar-row.css';
 import './ui-theme-contracts.css';
 import './ui-layout-contracts.css';
 import './console-sticky-compact-header.css';
+import './sticky-header-visibility.css';
 import './console-navigation-polish.css';
 import './account-record-density.css';
 import './master-account-directory-polish.css';
