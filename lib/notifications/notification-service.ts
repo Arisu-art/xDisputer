@@ -38,6 +38,11 @@ function safeLimit(value: number | undefined) {
   return Math.max(1, Math.min(40, Math.floor(value || 12)));
 }
 
+function uniqueIds(ids: unknown, limit = 40) {
+  if (!Array.isArray(ids)) return [] as string[];
+  return Array.from(new Set(ids.filter((id) => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)) as string[])).slice(0, limit);
+}
+
 function buildNotificationsQuery(input: {
   supabase: SupabaseServerClient;
   column: 'recipient_user_id' | 'recipient_role';
@@ -67,6 +72,20 @@ async function queryNotifications(input: {
     data: (result.data || []) as RawNotificationRow[],
     error: null
   };
+}
+
+async function unreadCount(input: {
+  supabase: SupabaseServerClient;
+  column: 'recipient_user_id' | 'recipient_role';
+  value: string;
+}) {
+  const result = await input.supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq(input.column, input.value)
+    .is('read_at', null);
+
+  return result.error ? { count: 0, error: result.error } : { count: result.count || 0, error: null };
 }
 
 export async function listNotifications({ supabase, userId, role, limit }: ListNotificationsInput) {
@@ -112,24 +131,34 @@ export async function listNotifications({ supabase, userId, role, limit }: ListN
     .slice(0, cappedLimit);
 
   const notifications = unique.map(toNotificationRecord);
-  const unreadCount = notifications.filter((item) => !item.read_at).length;
+  const directUnread = await unreadCount({ supabase, column: 'recipient_user_id', value: userId });
+  const roleUnread = await unreadCount({ supabase, column: 'recipient_role', value: role });
+  const exactUnread = directUnread.error || roleUnread.error
+    ? notifications.filter((item) => !item.read_at).length
+    : Math.max(notifications.filter((item) => !item.read_at).length, directUnread.count + roleUnread.count);
 
-  return { notifications, unreadCount, errorMessage: null };
+  return { notifications, unreadCount: exactUnread, errorMessage: null };
 }
 
 export async function markDirectNotificationsRead({
   supabase,
-  userId
+  userId,
+  ids
 }: {
   supabase: SupabaseServerClient;
   userId: string;
+  ids?: unknown;
 }) {
-  const result = await supabase
+  const scopedIds = uniqueIds(ids);
+  let query = supabase
     .from('notifications')
     .update({ read_at: new Date().toISOString() })
     .eq('recipient_user_id', userId)
-    .is('read_at', null)
-    .select('id');
+    .is('read_at', null);
+
+  if (scopedIds.length) query = query.in('id', scopedIds);
+
+  const result = await query.select('id');
 
   if (result.error) return { updatedCount: 0, errorMessage: result.error.message };
   return { updatedCount: result.data ? result.data.length : 0, errorMessage: null };
