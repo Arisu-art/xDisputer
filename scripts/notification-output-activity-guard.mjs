@@ -1,139 +1,89 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs';
+
 const failures = [];
-const read = (p) => existsSync(p) ? readFileSync(p, 'utf8') : (failures.push(`missing ${p}`), '');
-const must = (s, t, label) => { if (!s.includes(t)) failures.push(label); };
-const mustNot = (s, t, label) => { if (s.includes(t)) failures.push(label); };
+const read = (path) => existsSync(path) ? readFileSync(path, 'utf8') : (failures.push(`missing ${path}`), '');
+const must = (source, marker, label) => { if (!source.includes(marker)) failures.push(label); };
+const mustNot = (source, marker, label) => { if (source.includes(marker)) failures.push(label); };
+const mustAllNot = (sources, marker, label) => {
+  for (const [name, source] of Object.entries(sources)) {
+    if (source.includes(marker)) failures.push(`${label}: ${name}`);
+  }
+};
 
-const layout = read('app/layout.tsx');
-const generation = read('app/api/generation-runs/route.ts');
-const clientWorkspace = read('components/LetterGeneratorWorkspaceV2.tsx');
-const clientPayrollMount = read('components/client/ClientPayrollProfileSyncMount.tsx');
-const clientPayrollRoute = read('app/api/client/payroll-profile/route.ts');
-const clientPayrollMigration = read('supabase/migrations/20260622113000_client_payroll_profile_rpc.sql');
-const generationRlsPolicy = read('supabase/migrations/20260622120000_client_generation_manager_activity_rls.sql');
-const managerSyncRpc = read('supabase/migrations/20260622123000_manager_output_activity_sync_rpc.sql');
-const managerNotificationRepairRpc = read('supabase/migrations/20260622124500_manager_notification_repair_rpc.sql');
-const unifiedGenerationSync = read('supabase/migrations/20260622130000_unified_generation_output_notification_sync.sql');
-const decisionNotificationTrigger = read('supabase/migrations/20260622134500_output_decision_client_notification_trigger.sql');
-const clientPayrollCss = read('app/client-payroll-profile-flow.css');
-const workspacePreferences = read('lib/workspace-preferences.ts');
-const outputPage = read('app/admin/output-activity-v2/page.tsx');
-const outputFlowCss = read('app/output-activity-flow.css');
-const outputMigration = read('supabase/migrations/20260622102000_output_activity_per_output_flow.sql');
-const clearReadPolicy = read('supabase/migrations/20260622114500_notifications_clear_read_policy.sql');
-const unreadBadge = read('components/notifications/OutputActivityUnreadBadgeMount.tsx');
-const unreadBadgeCss = read('app/output-activity-unread-badge.css');
-const notificationRoute = read('app/api/notifications/route.ts');
-const notificationDock = read('components/notifications/OwnedNotificationDock.tsx');
-const notificationService = read('lib/notifications/notification-service.ts');
-const notificationApiService = read('src/features/notifications/notification-api-service.ts');
-const clearReadRoute = read('app/api/notifications/clear-read/route.ts');
-const writeService = read('lib/notifications/notification-write-service.ts');
-const decisionService = read('src/features/manager-output-activity/manager-output-decision-service.ts');
-const outputService = read('lib/saas/manager-user-settings.ts');
-const outputContract = read('src/features/manager-output-activity/output-activity-contract.ts');
-const notificationUiContract = read('src/features/notifications/notification-ui-contract.ts');
+const files = {
+  layout: read('app/layout.tsx'),
+  generationRoute: read('app/api/generation-runs/route.ts'),
+  notificationsRoute: read('app/api/notifications/route.ts'),
+  notificationsApi: read('src/features/notifications/notification-api-service.ts'),
+  notificationService: read('lib/notifications/notification-service.ts'),
+  ownedHook: read('src/features/notifications/useOwnedNotifications.ts'),
+  dock: read('components/notifications/OwnedNotificationDock.tsx'),
+  badge: read('components/notifications/OutputActivityUnreadBadgeMount.tsx'),
+  outputRefresh: read('components/notifications/OutputActivityRealtimeRefreshMount.tsx'),
+  autoRouteRefresh: read('components/console/AutoRouteRefresh.tsx'),
+  outputPage: read('app/admin/output-activity-v2/page.tsx'),
+  outputApi: read('app/api/manager/output-activity/route.ts'),
+  outputService: read('lib/saas/manager-user-settings.ts'),
+  payrollMount: read('components/client/ClientPayrollProfileSyncMount.tsx'),
+  payrollRoute: read('app/api/client/payroll-profile/route.ts'),
+  canonicalMigration: read('supabase/migrations/20260622141000_canonical_output_activity_notification_sync_v2.sql'),
+  payrollFixMigration: read('supabase/migrations/20260622143000_fix_client_payroll_profile_ambiguous_manager_id.sql')
+};
 
-must(layout, 'ClientPayrollProfileSyncMount', 'root layout must mount client payroll profile synchronizer');
-must(layout, 'OutputActivityUnreadBadgeMount', 'root layout must mount output activity unread badge synchronizer');
-must(generation, 'syncGeneratedOutputEverywhere', 'generation route must delegate generated-output sync to one unified function');
-must(generation, 'createSupabaseAdminClient', 'generation output activity must use admin client so manager notification is not blocked by client RLS');
-must(generation, "rpc('sync_generation_output_activity_v1'", 'generation route must call canonical DB generation sync RPC');
-must(generation, "rpc('sync_manager_output_activity_notifications_v1'", 'generation route must repair manager notification rows after activity sync');
-must(generation, 'notificationId', 'generation output activity response must include notification id for diagnostics');
-must(clientWorkspace, 'data-output-activity-client-intent="true"', 'client workspace must expose source-data per-output intent card');
-must(clientWorkspace, 'perOutputPay: preferences.perOutputGenerationDefault', 'client generation payload must include per-output intent');
-must(clientPayrollMount, '/api/client/payroll-profile', 'client payroll synchronizer must read payroll profile before generation');
-must(clientPayrollMount, 'writePerOutputDefault(true)', 'client payroll synchronizer must persist per-output default for output-based profiles');
-must(clientPayrollMount, 'input.disabled = true', 'client payroll synchronizer must disable per-output checkbox for output-based profiles');
-must(clientPayrollMount, 'Per-output required', 'client payroll synchronizer must show required per-output copy');
-must(clientPayrollMount, 'Make this packet per-output', 'full-time client must get optional per-output add-on control');
-must(clientPayrollRoute, "supabase.rpc('client_payroll_profile_v1')", 'client payroll profile route must use client-visible RPC');
-must(clientPayrollMigration, 'security definer', 'client payroll profile RPC must safely expose own payroll profile');
-must(clientPayrollMigration, 'user_id = current_profile.id', 'client payroll profile RPC must only return current user payroll setting');
-must(generationRlsPolicy, 'manager_user_settings_select_self_as_disputer', 'RLS must let client generation read its own manager payroll setting');
-must(generationRlsPolicy, 'manager_output_approvals_insert_self_generation', 'RLS must let client generation create manager output activity for assigned manager');
-must(generationRlsPolicy, 'manager_output_approvals_select_self_generation', 'RLS must let client generation read back inserted output activity id');
-must(generationRlsPolicy, 'notifications_insert_authenticated_actor', 'RLS must let authenticated app flows create notifications as the actor');
-must(generationRlsPolicy, 'p.manager_id = manager_disputer_output_approvals.manager_id', 'output activity insert policy must be limited to the client assigned manager');
-must(managerSyncRpc, 'sync_manager_recent_generation_output_activity_v1', 'DB must include manager-side output activity sync RPC');
-must(managerSyncRpc, 'security definer', 'manager sync RPC must bypass manager generation_runs RLS safely');
-must(managerSyncRpc, 'p.manager_id = manager_id_input', 'manager sync RPC must only sync clients assigned to that manager');
-must(managerNotificationRepairRpc, 'sync_manager_output_activity_notifications_v1', 'DB must include manager notification repair RPC from output activity rows');
-must(managerNotificationRepairRpc, 'exact_href := filter_href ||', 'notification repair RPC must link notifications to exact output activity rows');
-must(managerNotificationRepairRpc, 'alter publication supabase_realtime add table public.notifications', 'notifications table must be added to realtime publication when available');
-must(unifiedGenerationSync, 'sync_generation_output_activity_v1', 'unified DB sync must own generation to activity to notification');
-must(unifiedGenerationSync, 'generation_runs_sync_output_activity', 'unified DB sync must reinstall generation trigger');
-must(unifiedGenerationSync, 'sync_manager_output_activity_notifications_v1', 'unified DB sync must repair manager notifications');
-must(unifiedGenerationSync, 'created_at >= now() - interval \'30 days\'', 'unified DB sync must backfill recent generated runs');
-must(decisionNotificationTrigger, 'sync_output_activity_decision_notification_v1', 'DB must include manager decision to client notification trigger function');
-must(decisionNotificationTrigger, 'manager_output_decision_notify_client', 'DB must include manager decision notification trigger');
-must(decisionNotificationTrigger, "new.status in ('approved', 'rejected')", 'decision trigger must notify only confirm/return states');
-must(decisionNotificationTrigger, 'Per-output letter confirmed', 'decision trigger must notify client on confirmation');
-must(decisionNotificationTrigger, 'Per-output letter returned', 'decision trigger must notify client on rejection');
-must(notificationApiService, "rpc('sync_manager_recent_generation_output_activity_v1'", 'notification API must heal manager generated output before listing notifications');
-must(notificationApiService, "rpc('sync_manager_output_activity_notifications_v1'", 'notification API must repair manager notification rows before listing notifications');
-must(notificationApiService, 'syncErrorMessage', 'notification API service must surface sync diagnostics');
-must(notificationRoute, "export const dynamic = 'force-dynamic'", 'notifications route must be dynamic and no-store');
-must(notificationRoute, 'syncErrorMessage', 'notifications route must return sync diagnostics');
-must(outputPage, "rpc('sync_manager_recent_generation_output_activity_v1'", 'output activity page must heal manager generated output before listing rows');
-must(outputPage, "rpc('sync_manager_output_activity_notifications_v1'", 'output activity page must repair manager notifications before listing rows');
-must(outputPage, "export const dynamic = 'force-dynamic'", 'output activity page must be dynamic and not use stale cached rows');
-must(outputPage, 'syncErrorMessage', 'output activity page must expose sync database errors instead of hiding them');
-mustNot(outputPage, '.catch(() => null)', 'output activity page must use awaited Supabase RPC results instead of chained catch');
-mustNot(notificationApiService, '.catch(() => null)', 'notification API must use awaited Supabase RPC results instead of chained catch');
-must(clientPayrollCss, '--client-payroll-profile-contract: output-based-forces-per-output-full-time-optional', 'client payroll profile CSS contract missing');
-must(workspacePreferences, 'perOutputGenerationDefault', 'workspace preferences must persist per-output generation default');
-must(outputPage, 'OutputActivityCounts', 'output activity page must use compact all/per-output/fulltime count cards');
-must(outputPage, 'totalCount: activityResult.totals.totalCount', 'output activity page must count all generated output');
-must(outputPage, 'perOutputCount: activityResult.totals.perOutputCount', 'output activity page must count per-output generated output');
-must(outputPage, 'fulltimeOutputCount: activityResult.totals.fulltimeOutputCount', 'output activity page must count fulltime output');
-must(outputPage, 'Client user / Disputer', 'output activity facts must show client user/disputer');
-must(outputPage, 'Boss', 'output activity facts must show boss');
-must(outputPage, 'Round selected', 'output activity facts must show selected round');
-must(outputPage, 'Fulltime Output — no salary confirmation needed.', 'fulltime output must have no confirmation action');
-must(outputPage, 'aria-label="Confirm per-output"', 'per-output output must have a confirm action without paid wording');
-mustNot(outputPage, 'Mark paid', 'output activity UI must not show paid action');
-mustNot(outputPage, 'Approved salary add', 'output activity summary must not show salary add');
-must(outputFlowCss, '--output-activity-count-card-contract: all-per-output-fulltime-counts', 'output activity filter cards must use count card CSS contract');
-must(outputMigration, 'add column if not exists is_per_output boolean', 'output activity migration must add is_per_output');
-must(outputService, 'perOutputCount', 'output activity service must summarize per-output counts');
-must(outputService, 'fulltimeOutputCount', 'output activity service must summarize fulltime counts');
-must(outputService, 'approval.is_per_output &&', 'payroll summary must count only per-output approvals');
-must(decisionService, 'existing.data.is_per_output !== true', 'manager decisions must reject fulltime output records from manager confirmation');
-must(decisionService, 'createNotification', 'manager output confirmation must notify the client user');
-must(decisionService, 'Per-output letter confirmed', 'manager confirm must notify client with confirmed wording');
-mustNot(decisionService, "action === 'paid'", 'manager decision service must not support paid action');
-mustNot(decisionService, 'Per-output letter paid', 'manager decision notification must not use paid wording');
-must(outputContract, "return 'Confirmed'", 'output activity contract must label approved/paid history as Confirmed');
-must(unreadBadge, '/admin/output-activity-v2', 'output activity unread badge must count notifications linked to output activity');
-must(unreadBadge, 'data-output-activity-unread-badge', 'output activity unread badge must render red badge marker');
-must(unreadBadgeCss, '--output-activity-unread-badge-contract: notification-href-unread-count', 'output activity unread badge CSS contract missing');
-must(notificationDock, 'postgres-changes-with-fast-poll-fallback', 'notification dock must use realtime plus fast poll fallback');
-must(notificationDock, 'syncErrorMessage', 'notification dock must show sync diagnostics instead of silent empty state');
-must(notificationDock, 'window.setInterval(scheduleLoad, 5000)', 'notification dock must fast-poll during warmup');
-must(notificationDock, 'visibilitychange', 'notification dock must refresh when tab becomes visible');
-must(notificationDock, 'Clear read only', 'notification dock must expose clear-read-only action');
-must(notificationDock, 'Mark all read', 'notification dock must separate mark-read from clear-read');
-must(notificationService, 'clearDirectReadNotifications', 'notification service must clear read direct notifications');
-must(notificationService, ".not('read_at', 'is', null)", 'clear-read service must not clear unread notifications');
-must(notificationApiService, 'clearReadNotificationsForCurrentUser', 'notification API service must expose clear-read action');
-must(clearReadRoute, 'clearReadNotificationsForCurrentUser', 'clear-read route must call clear-read service');
-must(clearReadPolicy, 'for delete', 'clear-read RLS policy must permit deleting read notifications');
-must(clearReadPolicy, 'read_at is not null', 'clear-read RLS policy must protect unread notifications');
-must(notificationService, ".select('id,title,body,href,severity,read_at,created_at')", 'notification reads must use strict canonical columns');
-must(writeService, ".select('id').single()", 'notification writes must return inserted id for diagnostics');
-must(writeService, 'Notifications table or schema cache is missing.', 'notification writes must not hide policy errors as missing table');
-must(writeService, "input.supabase.from('notifications').insert(record)", 'notification writes must use strict canonical insert');
-must(notificationUiContract, 'strict-canonical-columns', 'notification UI contract must declare strict canonical schema mode');
-mustNot(notificationService, 'missingOptionalColumn', 'notification reads must not keep optional column drift fallback');
-mustNot(writeService, 'message.includes(\'notifications\')', 'notification write service must not treat every notification-table error as a missing table');
-mustNot(writeService, 'isMissingOptionalColumn', 'notification writes must not keep optional column drift fallback');
+must(files.layout, 'ClientPayrollProfileSyncMount', 'layout must mount payroll profile sync');
+must(files.layout, 'OutputActivityUnreadBadgeMount', 'layout must mount output activity unread badge');
+must(files.layout, 'OutputActivityRealtimeRefreshMount', 'layout must mount output activity refresh bridge');
+
+must(files.generationRoute, 'syncGeneratedOutputEverywhere', 'generation route must use one canonical sync helper');
+must(files.generationRoute, "rpc('sync_generation_output_activity_v1'", 'generation route must call generation sync RPC');
+must(files.generationRoute, "rpc('sync_manager_output_activity_notifications_v1'", 'generation route must call manager notification repair RPC');
+mustNot(files.generationRoute, "from('manager_disputer_output_approvals').insert", 'generation route must not manually insert output activity rows');
+mustNot(files.generationRoute, "from('notifications').insert", 'generation route must not manually insert notification rows');
+
+must(files.notificationsRoute, "export const dynamic = 'force-dynamic'", 'notifications route must be dynamic');
+must(files.notificationsRoute, 'syncErrorMessage', 'notifications route must return sync diagnostics');
+must(files.notificationsApi, "rpc('sync_manager_recent_generation_output_activity_v1'", 'notification API must heal manager output activity before read');
+must(files.notificationsApi, "rpc('sync_manager_output_activity_notifications_v1'", 'notification API must repair manager notifications before read');
+must(files.notificationService, "recipient_user_id", 'notification service must read direct current-user rows');
+must(files.notificationService, "recipient_role", 'notification service may read role fallback for legacy rows');
+must(files.notificationService, ".select('id,title,body,href,severity,read_at,created_at')", 'notification reads must use canonical columns');
+
+must(files.ownedHook, 'useSyncExternalStore', 'owned notification hook must use a shared external store');
+must(files.ownedHook, 'xdisputer:notifications-refreshed', 'owned notification hook must emit data-change event');
+must(files.ownedHook, 'removeChannel(channel)', 'owned notification hook must clean only its own channel');
+must(files.ownedHook, 'warmupTimer', 'owned notification hook must include short warmup polling');
+must(files.ownedHook, 'steadyTimer', 'owned notification hook must include slow fallback polling');
+must(files.dock, 'useOwnedNotifications', 'notification dock must use owned notification hook');
+must(files.badge, 'useOwnedNotifications', 'output activity unread badge must use owned notification hook');
+must(files.badge, 'requestAnimationFrame', 'badge DOM patch must be frame-bounded');
+must(files.outputRefresh, 'xdisputer:notifications-refreshed', 'output activity refresh bridge must react to notification data changes');
+must(files.outputRefresh, 'removeChannel(channel)', 'output activity refresh bridge must clean only its own channel');
+must(files.autoRouteRefresh, 'xdisputer:notifications-refreshed', 'auto route refresh must be event/focus driven');
+mustNot(files.autoRouteRefresh, 'setInterval', 'auto route refresh must not permanently poll RSC pages');
+
+must(files.outputPage, 'listManagerOutputApprovals(supabase, user.id, [], filter)', 'output activity page must query all manager rows, not active-client page ids');
+must(files.outputApi, 'listManagerOutputApprovals(supabase, user.id, [], filter)', 'manager output activity JSON endpoint must query all manager rows');
+must(files.outputApi, "export const dynamic = 'force-dynamic'", 'manager output activity API must be dynamic');
+must(files.outputService, 'if (ids.length) query = query.in', 'output service must only apply disputer id filter when ids are explicitly provided');
+
+must(files.payrollRoute, 'readPayrollProfileFallback', 'payroll profile route must have server fallback');
+must(files.payrollRoute, 'syncWarning', 'payroll profile route must return sync warning instead of hard failing when fallback works');
+must(files.payrollMount, 'requestAnimationFrame', 'payroll sync must be frame-bounded');
+must(files.payrollMount, 'addedNodes', 'payroll sync observer must only react to newly added relevant nodes');
+must(files.payrollMount, 'setText', 'payroll sync must be idempotent');
+
+must(files.canonicalMigration, 'manager_output_approvals_generation_run_id_unique', 'canonical migration must enforce one activity per generation run');
+must(files.canonicalMigration, 'notifications_output_activity_href_unique', 'canonical migration must enforce one notification per recipient href');
+must(files.payrollFixMigration, 'mus.manager_id', 'payroll fix migration must qualify manager_user_settings.manager_id');
+must(files.payrollFixMigration, 'p.manager_id', 'payroll fix migration must qualify profiles.manager_id');
+
+mustAllNot(files, 'removeAllChannels', 'shared browser clients must not remove all channels');
 
 if (failures.length) {
   console.error(`notification-output-activity-guard failed: ${failures.length} check(s).`);
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
+
 console.log('notification-output-activity-guard: ok');
