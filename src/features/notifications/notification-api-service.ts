@@ -2,6 +2,7 @@ import type { createSupabaseServerClient } from '../../../lib/supabase/server';
 import { ensureUserProfile } from '../../../lib/supabase/roles';
 import { clearDirectReadNotifications, listNotifications, markDirectNotificationsRead } from '../../../lib/notifications/notification-service';
 import { normalizeNotificationRole } from '../../../lib/notifications/notification-types';
+import { repairBellNotificationsForUser } from './bell-notification-repair-service';
 
 export type NotificationApiPayload = {
   notifications: Awaited<ReturnType<typeof listNotifications>>['notifications'];
@@ -35,6 +36,10 @@ async function syncRecentManagerGeneratedOutput(supabase: SupabaseServerClient, 
   return null;
 }
 
+function joinMessages(left: string | null, right: string | null) {
+  return [left, right].filter(Boolean).join(' | ') || null;
+}
+
 export async function loadNotificationsForCurrentUser(supabase: SupabaseServerClient, limit = 8): Promise<NotificationApiPayload> {
   const { data: userResult } = await supabase.auth.getUser();
   const user = userResult.user;
@@ -43,13 +48,14 @@ export async function loadNotificationsForCurrentUser(supabase: SupabaseServerCl
   const profile = await ensureUserProfile(supabase, user);
   const role = normalizeNotificationRole(profile?.role);
   const syncErrorMessage = await syncRecentManagerGeneratedOutput(supabase, user.id, role);
+  const bellErrorMessage = await repairBellNotificationsForUser(user.id, role);
   const result = await listNotifications({ supabase, userId: user.id, role, limit });
 
   return {
     notifications: result.notifications,
     unreadCount: result.unreadCount,
     errorMessage: result.errorMessage,
-    syncErrorMessage,
+    syncErrorMessage: joinMessages(syncErrorMessage, bellErrorMessage),
     status: 200
   };
 }
