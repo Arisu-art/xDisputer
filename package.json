@@ -30,6 +30,7 @@
     "manager-owned-docx:guard": "node scripts/manager-owned-docx-guard.mjs",
     "client-template:guard": "node scripts/client-template-runtime-guard.mjs",
     "responsive:guard": "node scripts/responsive-integrity-guard.mjs",
+    "website-stability:guard": "node scripts/website-stability-guard.mjs",
     "theme-governance:guard": "node scripts/theme-governance-contract-guard.mjs",
     "master-ui-workspace:guard": "node scripts/master-ui-workspace-guard.mjs",
     "theme:guard": "node scripts/theme-consistency-guard.mjs && npm run theme-governance:guard",
