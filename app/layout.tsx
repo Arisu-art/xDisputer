@@ -19,6 +19,7 @@ import './ui-layout-contracts.css';
 import './console-sticky-compact-header.css';
 import './console-navigation-polish.css';
 import './account-record-density.css';
+import './master-account-directory-polish.css';
 import './manager-payroll-modal.css';
 import './output-activity-flow.css';
 import './client-payroll-profile-flow.css';
