@@ -1,5 +1,5 @@
 export const XDISPUTER_RUNTIME_SYNC = {
-  marker: 'xdisputer-runtime-20260624-template-registration-v1',
+  marker: 'xdisputer-runtime-20260624-template-minimal-ui-v2',
   terminologyContract: 'platform-client-role-displays-as-disputer-letter-subject-stays-client',
   stickyHeaderProfile: 'zero-lag-border-only',
   expectedPullBranch: 'main',
@@ -11,7 +11,9 @@ export const XDISPUTER_RUNTIME_SYNC = {
     'sticky-header-zero-lag-css',
     'supporting-documents-runtime-wide-fix',
     'supporting-documents-conflict-css-neutralized',
-    'manager-template-registration-console'
+    'manager-template-registration-console',
+    'template-library-round-only-ui',
+    'template-studio-collapsed-advanced-analysis'
   ],
   verifyPaths: [
     'app/master/accounts/page.tsx',
@@ -26,6 +28,9 @@ export const XDISPUTER_RUNTIME_SYNC = {
     'app/supporting-slot-balance.css',
     'app/evidence-files-restored-layout.css',
     'components/templates/workspace/TemplateRegistrationConsole.tsx',
+    'components/templates/workspace/TemplateRoundOnlyLibrary.tsx',
+    'components/templates/workspace/TemplateLibraryHub.tsx',
+    'components/templates/workspace/TemplateStudioHub.tsx',
     'app/api/template-registration/route.ts',
     'lib/templates/workspace/template-registration-service.ts'
   ]
