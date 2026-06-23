@@ -24,6 +24,7 @@ import './output-activity-flow.css';
 import './client-payroll-profile-flow.css';
 import './output-activity-unread-badge.css';
 import './access-state-lightweight.css';
+import './stable-ui-primitives.css';
 import './workflow-header-slim.css';
 import './supporting-documents-layout-polish.css';
 import './supporting-documents-wide-stage.css';
