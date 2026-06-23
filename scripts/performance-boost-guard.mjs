@@ -12,6 +12,7 @@ const accountMenu = read('components/console/AccountMenu.tsx');
 const shell = read('components/console/ConsoleShell.tsx');
 const notifications = read('lib/notifications/notification-service.ts');
 const notificationDock = read('components/notifications/OwnedNotificationDock.tsx');
+const notificationHook = read('src/features/notifications/useOwnedNotifications.ts');
 const notificationContract = read('src/features/notifications/notification-ownership-contract.ts');
 const dashboard = read('components/DashboardOperationsWorkspace.tsx');
 const boundary = read('components/ClientOutputLimitBoundary.tsx');
@@ -41,7 +42,9 @@ mustNot(shell, '<NotificationDock', 'console shell must not mount notification d
 mustPass(hasStrictCanonicalNotificationProjection(notifications), 'notification queries must select explicit columns');
 must(notifications, '.limit(', 'notification queries must limit rows');
 must(notificationContract, 'pollIntervalMs: 120_000', 'notification polling contract must be throttled to 120 seconds');
-must(notificationDock, 'notificationOwnershipContract.pollIntervalMs', 'notification dock must read throttled polling from ownership contract');
+must(notificationDock, 'useOwnedNotifications', 'notification dock must use shared owned-notification hook');
+must(notificationHook, 'notificationOwnershipContract.pollIntervalMs', 'owned notification hook must read throttled polling from ownership contract');
+must(notificationHook, 'useSyncExternalStore', 'owned notification hook must avoid duplicate component fetch loops');
 mustNot(dashboard, retiredStaticChip, 'dashboard must not keep retired static entitlement chip');
 mustNot(dashboard, retiredChipClass, 'dashboard must not keep retired entitlement chip classes');
 mustNot(boundary, 'window.setInterval', 'output limit boundary must not run interval polling');
