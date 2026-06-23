@@ -1,5 +1,5 @@
 export const XDISPUTER_RUNTIME_SYNC = {
-  marker: 'xdisputer-runtime-20260624-disputer-terminology-wide-support-v3',
+  marker: 'xdisputer-runtime-20260624-template-registration-v1',
   terminologyContract: 'platform-client-role-displays-as-disputer-letter-subject-stays-client',
   stickyHeaderProfile: 'zero-lag-border-only',
   expectedPullBranch: 'main',
@@ -10,7 +10,8 @@ export const XDISPUTER_RUNTIME_SYNC = {
     'access-audit-disputer-ui',
     'sticky-header-zero-lag-css',
     'supporting-documents-runtime-wide-fix',
-    'supporting-documents-conflict-css-neutralized'
+    'supporting-documents-conflict-css-neutralized',
+    'manager-template-registration-console'
   ],
   verifyPaths: [
     'app/master/accounts/page.tsx',
@@ -23,6 +24,9 @@ export const XDISPUTER_RUNTIME_SYNC = {
     'app/word-style-image-crop.css',
     'app/supporting-editor-balanced-stage.css',
     'app/supporting-slot-balance.css',
-    'app/evidence-files-restored-layout.css'
+    'app/evidence-files-restored-layout.css',
+    'components/templates/workspace/TemplateRegistrationConsole.tsx',
+    'app/api/template-registration/route.ts',
+    'lib/templates/workspace/template-registration-service.ts'
   ]
 } as const;
