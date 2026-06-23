@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { createSupabaseBrowserClient } from '../lib/supabase/browser';
+import { PageStateBoundary, StableCard, StableEmptyState } from './stability';
 
 type EntitlementPayload = { outputLimit: number | null; outputUsedToday: number; outputRemainingToday: number | null; resetAt: string | null; resetSeconds: number | null; allowed: boolean; message: string | null; source?: string | null; serverTime?: string | null };
+type EntitlementState = 'checking' | 'allowed' | 'paused' | 'unavailable';
 
 function formatDuration(seconds: number | null) {
   if (seconds === null) return 'Calculating';
@@ -37,18 +39,30 @@ function isPaused(entitlement: EntitlementPayload | null) {
   return Boolean(entitlement?.outputLimit !== null && (entitlement?.allowed === false || entitlement?.outputRemainingToday === 0));
 }
 
+function resolveState(entitlement: EntitlementPayload | null, unavailable: boolean): EntitlementState {
+  if (unavailable) return 'unavailable';
+  if (!entitlement) return 'checking';
+  return isPaused(entitlement) ? 'paused' : 'allowed';
+}
+
 export default function ClientOutputLimitBoundary({ children }: { children: ReactNode }) {
   const [entitlement, setEntitlement] = useState<EntitlementPayload | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   const load = useCallback(async () => {
-    const response = await fetch(`/api/client/output-entitlement?t=${Date.now()}`, { cache: 'no-store', headers: { accept: 'application/json', 'cache-control': 'no-store' } });
-    if (!response.ok) return;
-    const payload = await response.json();
-    const next = payload.entitlement as EntitlementPayload | undefined;
-    if (!next) return;
-    setEntitlement(next);
-    setSecondsLeft(typeof next.resetSeconds === 'number' ? next.resetSeconds : null);
+    try {
+      const response = await fetch(`/api/client/output-entitlement?t=${Date.now()}`, { cache: 'no-store', headers: { accept: 'application/json', 'cache-control': 'no-store' } });
+      if (!response.ok) { setUnavailable(true); return; }
+      const payload = await response.json();
+      const next = payload.entitlement as EntitlementPayload | undefined;
+      if (!next) { setUnavailable(true); return; }
+      setUnavailable(false);
+      setEntitlement(next);
+      setSecondsLeft(typeof next.resetSeconds === 'number' ? next.resetSeconds : null);
+    } catch {
+      setUnavailable(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -59,6 +73,7 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
     const handleUpdate = (event: Event) => {
       const detail = (event as CustomEvent).detail;
       if (isEntitlementPayload(detail)) {
+        setUnavailable(false);
         setEntitlement(detail);
         setSecondsLeft(typeof detail.resetSeconds === 'number' ? detail.resetSeconds : null);
       } else refresh();
@@ -93,7 +108,8 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
     };
   }, [load]);
 
-  const paused = isPaused(entitlement);
+  const state = resolveState(entitlement, unavailable);
+  const paused = state === 'paused';
 
   useEffect(() => {
     if (!paused || typeof secondsLeft !== 'number') return;
@@ -110,9 +126,17 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
     return `${entitlement.outputUsedToday}/${entitlement.outputLimit} Daily Outputs Used`;
   }, [entitlement]);
 
-  if (!paused) return <>{children}</>;
+  if (state === 'checking') {
+    return <main className="client-output-limit-checking" aria-label="Checking client output allowance" data-output-entitlement-state="checking"><PageStateBoundary state="loading" loading={<StableCard eyebrow="Workspace access" title="Checking daily output allowance" description="Preparing this client workspace without showing unstable controls early." state="loading"><StableEmptyState tone="info" title="Loading entitlement" description="The workspace opens automatically after allowance is confirmed." /></StableCard>}>{children}</PageStateBoundary></main>;
+  }
 
-  return <main className="client-output-limit-pause" aria-label="Daily output limit reached" data-output-entitlement-sync="realtime-no-store">
+  if (state === 'unavailable') {
+    return <main className="client-output-limit-checking" aria-label="Client output allowance unavailable" data-output-entitlement-state="unavailable"><StableCard tone="warning" eyebrow="Workspace access" title="Output allowance could not be verified" description="Generation controls stay hidden until the current allowance is confirmed." actions={<button type="button" className="action-button" onClick={() => void load()}>Check again</button>}><StableEmptyState tone="warning" title="Entitlement check unavailable" description="Reconnect or refresh before generating output." /></StableCard></main>;
+  }
+
+  if (state === 'allowed') return <>{children}</>;
+
+  return <main className="client-output-limit-pause" aria-label="Daily output limit reached" data-output-entitlement-sync="realtime-no-store" data-output-entitlement-state="paused">
     <section className="client-output-limit-pause-card">
       <p className="eyebrow">Daily allowance reached</p>
       <h1>Workspace pauses until reset</h1>
