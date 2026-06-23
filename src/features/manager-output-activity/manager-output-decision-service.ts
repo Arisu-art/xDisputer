@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { createNotification } from '../../../lib/notifications/notification-write-service';
 import { requireRole } from '../../../lib/saas/session';
 import { outputActivityContract } from './output-activity-contract';
 
@@ -48,15 +47,16 @@ export async function applyManagerOutputDecision(request: NextRequest) {
   const updated = await supabase.from('manager_disputer_output_approvals').update(patch).eq('manager_id', user.id).eq('id', id);
   if (updated.error) return { ok: false as const, message: updated.error.message };
 
-  await createNotification({
-    supabase,
-    createdBy: user.id,
-    recipientUserId: existing.data.disputer_id,
-    title: status === outputActivityContract.status.approved ? 'Per-output letter confirmed' : 'Per-output letter returned',
-    body: existing.data.output_label,
-    href: '/workspace',
-    severity: status === outputActivityContract.status.rejected ? 'error' : 'success'
+  const notificationSync = await supabase.rpc('sync_output_activity_decision_notification_v1', {
+    activity_id_input: id
   });
+
+  if (notificationSync.error) {
+    return {
+      ok: true as const,
+      message: `${status === outputActivityContract.status.approved ? 'Output confirmed' : 'Output returned'}, but client notification sync needs repair: ${notificationSync.error.message}`
+    };
+  }
 
   return { ok: true as const, message: status === outputActivityContract.status.approved ? 'Output confirmed.' : 'Output returned.' };
 }
