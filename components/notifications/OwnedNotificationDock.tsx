@@ -48,6 +48,21 @@ function relativeTime(value: string) {
   return `${days}d ago`;
 }
 
+function phDateTime(value: string) {
+  try {
+    return new Intl.DateTimeFormat('en-PH', {
+      timeZone: 'Asia/Manila',
+      month: 'short',
+      day: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }).format(new Date(value));
+  } catch {
+    return '';
+  }
+}
+
 export default function OwnedNotificationDock() {
   const [open, setOpen] = useState(false);
   const {
@@ -92,7 +107,7 @@ export default function OwnedNotificationDock() {
           <a key={item.id} className={`notification-dock-item ${item.severity} ${item.read_at ? 'read' : 'unread'}`} href={item.href || '#'} onClick={() => void markOneRead(item.id)}>
             <span className="notification-dock-item-title"><span>{item.title}</span>{item.href && <span className="notification-dock-item-action">{notificationActionLabel(item)}</span>}</span>
             {item.body && <small>{item.body}</small>}
-            <span className="notification-dock-time">{relativeTime(item.created_at)}</span>
+            <span className="notification-dock-time">{relativeTime(item.created_at)} · {phDateTime(item.created_at)} PH</span>
           </a>
         ))}
       </div>}
