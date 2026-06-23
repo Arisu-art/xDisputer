@@ -1,8 +1,8 @@
 /* Manager payroll metadata modal contract.
-   Owns instant client-side salary lock, red no-circle close button, card-click open, and compact metadata tile. */
+   Owns instant client-side salary lock, red no-circle close button, card-click open, and compact metadata tile retirement. */
 
 :root {
-  --manager-payroll-modal-contract: portal-card-click-metadata-tile;
+  --manager-payroll-modal-contract: portal-card-click-no-visible-tile;
 }
 
 .manager-metadata-card-trigger {
@@ -22,88 +22,30 @@
   outline-offset: 4px !important;
 }
 
-.manager-metadata-card-trigger:hover .metadata-tile-trigger,
-.manager-metadata-card-trigger:focus-visible .metadata-tile-trigger {
-  border-color: rgba(59, 130, 246, .72) !important;
-  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%) !important;
-  box-shadow: 0 14px 30px rgba(37, 99, 235, .12) !important;
-}
-
 .manager-user-settings-details.manager-user-settings-client-modal {
-  display: grid !important;
-  place-items: stretch !important;
-  width: min(230px, 100%) !important;
+  display: contents !important;
+  width: 0 !important;
+  height: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
   overflow: visible !important;
 }
 
+.manager-user-settings-card-trigger-only,
 .manager-user-settings-open.metadata-tile-trigger {
-  min-height: 54px !important;
-  width: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: .75rem !important;
-  border: 1px solid rgba(191, 219, 254, .95) !important;
-  border-radius: 22px !important;
-  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%) !important;
-  color: #0f172a !important;
-  cursor: pointer !important;
-  font: inherit !important;
-  padding: .62rem .68rem .62rem .85rem !important;
-  text-align: left !important;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, .06) !important;
-  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease !important;
+  display: contents !important;
 }
 
-.manager-user-settings-open.metadata-tile-trigger:hover,
-.manager-user-settings-open.metadata-tile-trigger:focus-visible {
-  transform: translateY(-1px) !important;
-  border-color: rgba(37, 99, 235, .72) !important;
-  outline: none !important;
+.manager-user-settings-open.metadata-tile-trigger,
+.metadata-tile-copy,
+.metadata-tile-plus {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .manager-user-settings-open.metadata-tile-trigger::after {
   content: none !important;
-}
-
-.metadata-tile-copy {
-  min-width: 0 !important;
-  display: grid !important;
-  gap: .08rem !important;
-}
-
-.metadata-tile-copy strong {
-  color: #0f172a !important;
-  font-size: .76rem !important;
-  font-weight: 950 !important;
-  letter-spacing: .08em !important;
-  line-height: 1.05 !important;
-  text-transform: uppercase !important;
-}
-
-.metadata-tile-copy small {
-  color: #64748b !important;
-  font-size: .72rem !important;
-  font-weight: 850 !important;
-  line-height: 1.1 !important;
-  white-space: nowrap !important;
-}
-
-.metadata-tile-plus {
-  width: 30px !important;
-  height: 30px !important;
-  flex: 0 0 auto !important;
-  display: grid !important;
-  place-items: center !important;
-  border-radius: 999px !important;
-  background: #dbeafe !important;
-  color: #1d4ed8 !important;
-  font-size: .9rem !important;
-  font-weight: 950 !important;
-  line-height: 1 !important;
 }
 
 .manager-user-settings-modal-backdrop {
@@ -231,11 +173,5 @@
   .manager-user-settings-modal .metadata-output-rate-field,
   .manager-user-settings-modal .metadata-rule-hint {
     grid-column: 1 !important;
-  }
-}
-
-@media (max-width: 720px) {
-  .manager-user-settings-details.manager-user-settings-client-modal {
-    width: 100% !important;
   }
 }
