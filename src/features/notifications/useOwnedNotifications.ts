@@ -204,6 +204,14 @@ export function refreshOwnedNotifications() {
 export function useOwnedNotifications() {
   const current = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const refresh = useCallback(() => fetchNotifications('manual'), []);
+  const markOneRead = useCallback(async (id: string) => {
+    await fetch(notificationOwnershipContract.readEndpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ids: [id] })
+    }).catch(() => null);
+    await fetchNotifications('read-action');
+  }, []);
   const markAllRead = useCallback(async () => {
     await fetch(notificationOwnershipContract.readEndpoint, { method: 'POST' }).catch(() => null);
     await fetchNotifications('read-action');
@@ -213,5 +221,5 @@ export function useOwnedNotifications() {
     await fetchNotifications('read-action');
   }, []);
 
-  return { ...current, refresh, markAllRead, clearReadOnly, currentUserId };
+  return { ...current, refresh, markOneRead, markAllRead, clearReadOnly, currentUserId };
 }
