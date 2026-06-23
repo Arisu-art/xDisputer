@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache';
 import { NextResponse, type NextRequest } from 'next/server';
 import { createSupabaseServerClient } from '../../../../lib/supabase/server';
 import { ensureUserProfile, normalizeRole } from '../../../../lib/supabase/roles';
@@ -34,6 +35,13 @@ function isMissingRpcError(message: string) {
     || message.includes('schema cache');
 }
 
+function revalidateAccountControlViews() {
+  revalidatePath('/admin');
+  revalidatePath('/admin/access');
+  revalidatePath('/master/accounts');
+  revalidatePath('/app');
+}
+
 async function callWorkspaceFirstControl(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   primaryRpc: string,
@@ -57,6 +65,23 @@ async function callWorkspaceFirstControl(
   });
 
   return fallback.error?.message || null;
+}
+
+async function callManagerPauseControl(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  targetProfileId: string
+) {
+  const pause = await supabase.rpc('access_workspace_manager_suspend_v1', {
+    target_profile_id: targetProfileId
+  });
+
+  if (!pause.error) return null;
+
+  if (isMissingRpcError(pause.error.message)) {
+    return 'Manager Pause SQL is not applied yet. Run the latest output-limit sync migration, then retry Pause.';
+  }
+
+  return pause.error.message;
 }
 
 function isControlIntent(value: string): value is ControlIntent {
@@ -90,6 +115,7 @@ function isManagerIntent(intent: ControlIntent) {
     intent === 'approve' ||
     intent === 'reject' ||
     intent === 'disable' ||
+    intent === 'suspend' ||
     intent === 'activate' ||
     intent === 'reactivate' ||
     intent === 'clear_manager'
@@ -133,6 +159,7 @@ export async function POST(request: NextRequest) {
 
       if (errorMessage) return redirectBack(request, 'error', errorMessage);
 
+      revalidateAccountControlViews();
       return redirectBack(request, 'ok');
     }
 
@@ -142,17 +169,19 @@ export async function POST(request: NextRequest) {
       }
 
       const managerIntent = intent === 'reactivate' ? 'activate' : intent;
-
-      const errorMessage = await callWorkspaceFirstControl(
-        supabase,
-        'access_workspace_manager_control_v1',
-        'access_control_profile',
-        targetProfileId,
-        managerIntent
-      );
+      const errorMessage = managerIntent === 'suspend'
+        ? await callManagerPauseControl(supabase, targetProfileId)
+        : await callWorkspaceFirstControl(
+          supabase,
+          'access_workspace_manager_control_v1',
+          'access_control_profile',
+          targetProfileId,
+          managerIntent
+        );
 
       if (errorMessage) return redirectBack(request, 'error', errorMessage);
 
+      revalidateAccountControlViews();
       return redirectBack(request, 'ok');
     }
 
