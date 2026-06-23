@@ -2,7 +2,7 @@
    Owns manager filters, per-output confirmation cards, and client per-output intent panel. */
 
 :root {
-  --output-activity-flow-contract: client-intent-manager-confirmation;
+  --output-activity-flow-contract: header-actions-no-duplicated-output-field;
   --output-activity-count-card-contract: all-per-output-fulltime-counts;
 }
 
@@ -124,8 +124,9 @@
 }
 
 .output-activity-title-line {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   justify-content: space-between;
   gap: .75rem;
   min-width: 0;
@@ -136,6 +137,26 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.output-activity-title-actions {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: .5rem;
+  max-width: min(100%, 820px);
+}
+
+.output-activity-title-actions > .admin-status-badge {
+  order: 2;
+  white-space: nowrap;
+}
+
+.output-activity-title-actions > .output-activity-readonly-note,
+.output-activity-title-actions > .output-decision-form-inline {
+  order: 1;
 }
 
 .output-activity-subtitle {
@@ -217,16 +238,43 @@
   border-top: 1px solid rgba(226, 232, 240, .92);
 }
 
+.output-decision-form-inline {
+  display: inline-grid !important;
+  grid-template-columns: minmax(94px, 118px) auto auto !important;
+  align-items: end !important;
+  gap: .4rem !important;
+  padding: 0 !important;
+  border-top: 0 !important;
+}
+
 .output-decision-form label {
   margin: 0 !important;
+}
+
+.output-decision-form-inline label span {
+  font-size: .62rem !important;
+  letter-spacing: .08em !important;
 }
 
 .output-decision-form input {
   min-height: 38px !important;
 }
 
+.output-decision-form-inline input {
+  min-height: 34px !important;
+  border-radius: 999px !important;
+  padding-inline: .7rem !important;
+}
+
 .output-decision-form .admin-action-button {
   min-height: 42px;
+}
+
+.output-decision-form-inline .admin-action-button {
+  min-height: 34px !important;
+  padding: .45rem .7rem !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
 }
 
 .output-activity-readonly-note {
@@ -239,6 +287,12 @@
   border: 1px solid rgba(203, 213, 225, .86);
   color: #475569;
   font-weight: 800;
+}
+
+.output-activity-title-actions .output-activity-readonly-note {
+  padding: .48rem .72rem;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .client-per-output-intent-card {
@@ -269,11 +323,18 @@
   .output-activity-facts,
   .client-per-output-intent-card,
   .output-activity-meta-line,
-  .output-activity-toolbar {
+  .output-activity-toolbar,
+  .output-activity-title-line {
     grid-template-columns: 1fr;
   }
 
-  .output-decision-form {
+  .output-activity-title-actions {
+    justify-self: stretch;
+    justify-content: flex-start;
+  }
+
+  .output-decision-form,
+  .output-decision-form-inline {
     grid-template-columns: 1fr !important;
   }
 
