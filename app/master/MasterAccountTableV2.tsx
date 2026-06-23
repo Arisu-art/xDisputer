@@ -1,6 +1,7 @@
 import TableFlyout from '../../components/TableFlyout';
 import type { ManagedAccount } from '../../lib/saas/account-management';
 import type { EntitlementLimitMap, EntitlementLimitRow } from '../../lib/saas/entitlement-limits';
+import { displayAccountRole, displayAccountRoleLower } from '../../lib/saas/display-terminology';
 
 export type BossOption = { id: string; label: string; email: string | null };
 
@@ -25,13 +26,13 @@ function dayUsed(limit?: EntitlementLimitRow) { return limit?.output_used_today 
 function canEditLimits(account: ManagedAccount) { return isManager(account) || account.role === 'client'; }
 
 function agreementSummary(account: ManagedAccount, limit?: EntitlementLimitRow) {
-  if (isManager(account)) return `${limit?.current_clients || 0}/${numberText(limit?.max_clients)} clients`;
+  if (isManager(account)) return `${limit?.current_clients || 0}/${numberText(limit?.max_clients)} disputers`;
   if (account.role === 'client') return `${dayUsed(limit)}/${numberText(limit?.effective_output_limit)} outputs today`;
   return 'Protected';
 }
 
 function roleLabel(account: ManagedAccount) {
-  return account.role === 'admin' ? 'manager' : account.role;
+  return displayAccountRoleLower(account.role);
 }
 
 function ControlForm({ profileId, intent, label, primary = false }: { profileId: string; intent: string; label: string; primary?: boolean }) {
@@ -50,7 +51,7 @@ function LinkBadge({ account }: { account: ManagedAccount }) {
 }
 
 function LimitForm({ account, limit, formId }: { account: ManagedAccount; limit?: EntitlementLimitRow; formId: string }) {
-  if (isManager(account)) return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="manager" /><input type="hidden" name="profileId" value={account.id} /><div className="limit-meter"><strong>{limit?.current_clients || 0}/{numberText(limit?.max_clients)}</strong><small>active clients</small></div><label><span>Client limit</span><input name="maxClients" type="number" min="0" defaultValue={limit?.max_clients ?? ''} placeholder="Default" /></label><label><span>Default outputs per client/day</span><input name="defaultClientOutputLimit" type="number" min="0" defaultValue={limit?.default_client_output_limit ?? ''} placeholder="Default" /></label></form>;
+  if (isManager(account)) return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="manager" /><input type="hidden" name="profileId" value={account.id} /><div className="limit-meter"><strong>{limit?.current_clients || 0}/{numberText(limit?.max_clients)}</strong><small>active disputers</small></div><label><span>Disputer limit</span><input name="maxClients" type="number" min="0" defaultValue={limit?.max_clients ?? ''} placeholder="Default" /></label><label><span>Default outputs per disputer/day</span><input name="defaultClientOutputLimit" type="number" min="0" defaultValue={limit?.default_client_output_limit ?? ''} placeholder="Default" /></label></form>;
   if (account.role === 'client') return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="client" /><input type="hidden" name="profileId" value={account.id} /><div className="limit-meter"><strong>{dayUsed(limit)}/{numberText(limit?.effective_output_limit)}</strong><small>outputs today</small></div><label><span>Daily output limit</span><input name="outputLimit" type="number" min="0" defaultValue={limit?.client_output_limit ?? ''} placeholder="Blank uses manager default" /></label></form>;
   return <p className="flyout-muted">Master account limits are protected.</p>;
 }
@@ -68,7 +69,7 @@ function ActionForms({ account, currentUserId }: { account: ManagedAccount; curr
 }
 
 function AccountTrigger({ account, limit }: { account: ManagedAccount; limit?: EntitlementLimitRow }) {
-  return <span className="account-control-trigger-grid master-account-trigger-v3"><span className="account-control-identity master-account-identity"><strong>{account.full_name || account.email || 'Unnamed user'}</strong><small>{account.email || 'Protected account'}</small></span><span className="master-account-status-cluster"><span className={`admin-role-badge ${account.role}`}>{roleLabel(account)}</span><span className={`admin-status-badge ${account.account_status || 'pending'}`}>{statusText(account.account_status)}</span><LinkBadge account={account} /></span><span className="account-control-agreement master-account-limit"><strong>{agreementSummary(account, limit)}</strong><small>{isManager(account) ? 'client control' : account.role === 'client' ? 'daily output' : 'protected'}</small></span><span className="master-account-open">Open controls</span><span className="account-control-meta"><small>Invite</small><strong>{isManager(account) ? account.manager_invite_code || 'Not created' : '—'}</strong></span><span className="account-control-meta"><small>Updated</small><strong>{dateText(account.updated_at)}</strong></span></span>;
+  return <span className="account-control-trigger-grid master-account-trigger-v3"><span className="account-control-identity master-account-identity"><strong>{account.full_name || account.email || `Unnamed ${displayAccountRoleLower(account.role)}`}</strong><small>{account.email || `${displayAccountRole(account.role)} account`}</small></span><span className="master-account-status-cluster"><span className={`admin-role-badge ${account.role}`}>{roleLabel(account)}</span><span className={`admin-status-badge ${account.account_status || 'pending'}`}>{statusText(account.account_status)}</span><LinkBadge account={account} /></span><span className="account-control-agreement master-account-limit"><strong>{agreementSummary(account, limit)}</strong><small>{isManager(account) ? 'disputer control' : account.role === 'client' ? 'daily output' : 'protected'}</small></span><span className="master-account-open">Open controls</span><span className="account-control-meta"><small>Invite</small><strong>{isManager(account) ? account.manager_invite_code || 'Not created' : '—'}</strong></span><span className="account-control-meta"><small>Updated</small><strong>{dateText(account.updated_at)}</strong></span></span>;
 }
 
 function AccountControlCard({ account, currentUserId, limit, bossOptions }: { account: ManagedAccount; currentUserId: string; limit?: EntitlementLimitRow; bossOptions: BossOption[] }) {
