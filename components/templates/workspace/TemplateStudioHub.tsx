@@ -1,5 +1,6 @@
 import DynamicTemplateRuleControlPanel from './DynamicTemplateRuleControlPanel';
 import TemplateReadinessCard from './TemplateReadinessCard';
+import TemplateRegistrationConsole from './TemplateRegistrationConsole';
 import TemplateRuleEditor from './TemplateRuleEditor';
 import type { DynamicTemplateInspectionResult, DynamicTemplateRule } from '../../../lib/templates/intelligence';
 import type { TemplateLibraryContext } from '../../../lib/templates/workspace/template-library-service';
@@ -8,6 +9,7 @@ import type { TemplateStructureInspection } from '../../../lib/templates/workspa
 export default function TemplateStudioHub({ context, inspection, intelligence, intelligenceRules }: { context: TemplateLibraryContext; inspection: TemplateStructureInspection; intelligence: DynamicTemplateInspectionResult; intelligenceRules: DynamicTemplateRule[] }) {
   return <section className="template-workspace-hub" data-template-workspace-hub="studio" data-template-process="template-authoring-rules">
     <TemplateReadinessCard contract={context.contract} summary="Template Studio controls parser rules, canonical mapping, static preservation, variables, entities, and table layout before the engine can release output." action={context.nextAction} />
+    <TemplateRegistrationConsole context={context} intelligence={intelligence} rules={intelligenceRules} />
     <DynamicTemplateRuleControlPanel inspection={intelligence} rules={intelligenceRules} />
     <section className="template-workspace-hub-grid studio" aria-label="Template Studio inspection summary">
       <article className="admin-monitor-card template-workspace-status-card"><p className="eyebrow">Static text</p><strong>{intelligence.staticTextBlocks.length}</strong><span>Legal and instruction blocks marked for preservation.</span></article>
@@ -21,7 +23,7 @@ export default function TemplateStudioHub({ context, inspection, intelligence, i
         <div className="template-rule-list">
           <article className="template-rule-row valid"><div><strong>Preserve static legal text</strong><span>Legal copy and declarations remain stable unless explicitly overridden by a manager rule.</span></div><small>preserve</small></article>
           <article className="template-rule-row valid"><div><strong>Map variables to canonical fields</strong><span>Variables must resolve through the canonical layer before release.</span></div><small>mapping</small></article>
-          <article className="template-rule-row valid"><div><strong>Protect table layouts</strong><span>Tables preserve structure while rows can be generated from client data.</span></div><small>tables</small></article>
+          <article className="template-rule-row valid"><div><strong>Protect table layouts</strong><span>Tables preserve structure while rows can be generated from source data.</span></div><small>tables</small></article>
           <article className="template-rule-row warning"><div><strong>Route unresolved fields</strong><span>Unmapped required fields are routed to Studio, not hidden in the generation engine.</span></div><small>if/else</small></article>
         </div>
       </section>
