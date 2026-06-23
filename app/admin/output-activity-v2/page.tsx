@@ -55,6 +55,23 @@ function routeInfo(row: ManagerOutputApproval) {
   return row.letter_route || 'Generated letter';
 }
 
+function formatPHDateTime(value: string | null | undefined) {
+  if (!value) return 'Generation time not recorded';
+  try {
+    return new Intl.DateTimeFormat('en-PH', {
+      timeZone: 'Asia/Manila',
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }).format(new Date(value));
+  } catch {
+    return 'Generation time not recorded';
+  }
+}
+
 function filterHref(filter: OutputActivityFilter) {
   return filter === 'all' ? '/admin/output-activity-v2' : `/admin/output-activity-v2?filter=${filter}`;
 }
@@ -73,6 +90,22 @@ async function syncRecentGeneratedOutputActivity(supabase: any, managerId: strin
   const notificationError = notificationSync.error?.message || null;
 
   return activityError || notificationError;
+}
+
+function OutputActivityToolbar({ counts }: { counts: OutputActivityCounts }) {
+  const clearableCount = Math.max(0, counts.totalCount - counts.pendingCount);
+  return (
+    <section className="output-activity-toolbar" aria-label="Output activity actions">
+      <div className="output-activity-toolbar-copy">
+        <strong>History controls</strong>
+        <span>{numberText(clearableCount)} clearable · {numberText(counts.pendingCount)} pending per-output preserved</span>
+      </div>
+      <form action="/api/manager/output-activity/clear" method="post" className="output-activity-clear-form">
+        <input type="hidden" name="preservePending" value="true" />
+        <button type="submit" className="admin-action-button danger">Clear history</button>
+      </form>
+    </section>
+  );
 }
 
 function FilterTabs({ active, counts }: { active: OutputActivityFilter; counts: OutputActivityCounts }) {
@@ -100,7 +133,7 @@ function FilterTabs({ active, counts }: { active: OutputActivityFilter; counts: 
 
 function DecisionForm({ row, rateAmount }: { row: ManagerOutputApproval; rateAmount: number }) {
   if (!row.is_per_output) {
-    return <span className="output-activity-readonly-note">Fulltime Output — no salary confirmation needed.</span>;
+    return <span className="output-activity-readonly-note">Fulltime Output — no confirmation needed.</span>;
   }
 
   if (row.status === 'pending') {
@@ -123,22 +156,25 @@ function DecisionForm({ row, rateAmount }: { row: ManagerOutputApproval; rateAmo
 function ActivityRow({ row, account, rateAmount }: { row: ManagerOutputApproval; account?: AccountDirectoryRow; rateAmount: number }) {
   const isPerOutput = row.is_per_output;
   const statusLabel = outputActivityStatusLabel(row.status, isPerOutput);
+  const createdAtLabel = formatPHDateTime(row.created_at);
 
   return (
-    <article className={`output-activity-row ${isPerOutput ? 'payable' : 'recorded'}`} data-output-activity-kind={isPerOutput ? 'per-output' : 'fulltime-output'}>
-      <header>
-        <div>
-          <strong>{isPerOutput ? 'Per-output generated letter' : 'Fulltime generated letter'}</strong>
-          <span>{statusLabel}</span>
+    <article className={`output-activity-row output-activity-row-compact ${isPerOutput ? 'payable' : 'recorded'}`} data-output-activity-kind={isPerOutput ? 'per-output' : 'fulltime-output'}>
+      <header className="output-activity-card-header">
+        <div className="output-activity-card-main">
+          <div className="output-activity-title-line">
+            <strong>{isPerOutput ? 'Per-output generated letter' : 'Fulltime generated letter'}</strong>
+            <span className={`admin-status-badge ${isPerOutput ? 'active' : 'pending'}`}>{isPerOutput ? 'Per output' : 'Fulltime Output'}</span>
+          </div>
+          <span className="output-activity-subtitle">{statusLabel} · Generated {createdAtLabel} PH</span>
+          <div className="output-activity-meta-line" aria-label="Output activity details">
+            <span><b>Disputer</b>{clientLabel(account, row)}</span>
+            <span><b>Boss</b>{bossInfo(row)}</span>
+            <span><b>Round</b>{row.round_label || 'Round not set'}</span>
+            <span><b>Output</b>{numberText(row.output_count)} item(s) · {routeInfo(row)}</span>
+          </div>
         </div>
-        <span className={`admin-status-badge ${isPerOutput ? 'active' : 'pending'}`}>{isPerOutput ? 'Per output' : 'Fulltime Output'}</span>
       </header>
-      <div className="output-activity-facts output-activity-facts-compact">
-        <span><strong>Client user / Disputer</strong><small>{clientLabel(account, row)}</small></span>
-        <span><strong>Boss</strong><small>{bossInfo(row)}</small></span>
-        <span><strong>Round selected</strong><small>{row.round_label || 'Round not set'}</small></span>
-        <span><strong>Output</strong><small>{numberText(row.output_count)} item(s) · {routeInfo(row)}</small></span>
-      </div>
       <DecisionForm row={row} rateAmount={rateAmount} />
     </article>
   );
@@ -186,10 +222,11 @@ export default async function ManagerOutputActivityV2Page({ searchParams }: Page
       header={{
         eyebrow: 'Output Activity',
         title: 'Generated output.',
-        description: 'Use the filter cards to review all output, per-output confirmations, or fulltime output records.'
+        description: 'Review pending per-output work. Clear history safely while preserving unfinished confirmations.'
       }}
     >
       <AutoRouteRefresh />
+      <OutputActivityToolbar counts={counts} />
       {controlStatus && (
         <section className={`admin-monitor-card admin-feedback-card ${controlStatus === 'ok' ? 'success' : 'error'}`}>
           <strong>{controlStatus === 'ok' ? 'Output activity updated' : 'Output activity error'}</strong>
