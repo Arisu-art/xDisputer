@@ -31,6 +31,7 @@ const bundles = {
     ['node', ['scripts/css-ownership-guard.mjs']],
     ['node', ['scripts/manager-console-workflow-guard.mjs']],
     ['node', ['scripts/notification-output-activity-guard.mjs']],
+    ['node', ['scripts/website-stability-guard.mjs']],
     ['node', ['scripts/client-account-popover-guard.mjs']],
     ['node', ['scripts/client-critical-gaps-guard.mjs']],
     ['node', ['scripts/template-workspace-contract-guard.mjs']],
@@ -59,90 +60,37 @@ const bundles = {
   ]
 };
 
-function fail(message) {
-  console.error(message);
-  process.exit(1);
-}
-
-function sha(value) {
-  return createHash('sha256').update(value).digest('hex');
-}
-
-function readCache() {
-  if (!existsSync(CACHE_FILE)) return {};
-  try {
-    return JSON.parse(readFileSync(CACHE_FILE, 'utf8'));
-  } catch {
-    return {};
-  }
-}
-
-function writeCache(cache) {
-  mkdirSync(CACHE_DIR, { recursive: true });
-  writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2));
-}
-
+const fail = (message) => { console.error(message); process.exit(1); };
+const sha = (value) => createHash('sha256').update(value).digest('hex');
+const readCache = () => existsSync(CACHE_FILE) ? JSON.parse(readFileSync(CACHE_FILE, 'utf8') || '{}') : {};
+const writeCache = (cache) => { mkdirSync(CACHE_DIR, { recursive: true }); writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2)); };
 function runCapture(command, args) {
-  const result = spawnSync(command, args, {
-    cwd: process.cwd(),
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-  if (result.status !== 0) {
-    return `${result.stdout || ''}\n${result.stderr || ''}`.trim();
-  }
-  return `${result.stdout || ''}${result.stderr || ''}`.trim();
+  const result = spawnSync(command, args, { cwd: process.cwd(), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  return result.status === 0 ? `${result.stdout || ''}${result.stderr || ''}`.trim() : `${result.stdout || ''}\n${result.stderr || ''}`.trim();
 }
-
 function repoFingerprint(bundle) {
-  const head = runCapture('git', ['rev-parse', 'HEAD']) || 'no-git-head';
-  const status = runCapture('git', ['status', '--short', '--untracked-files=all']) || '';
-  const bundleDefinition = JSON.stringify(bundles[bundle] || []);
-  return sha(`${bundle}\n${bundleDefinition}\n${head}\n${status}`);
+  return sha(`${bundle}\n${JSON.stringify(bundles[bundle] || [])}\n${runCapture('git', ['rev-parse', 'HEAD']) || 'no-git-head'}\n${runCapture('git', ['status', '--short', '--untracked-files=all']) || ''}`);
 }
-
 function runCommand(command, args) {
-  const result = spawnSync(command, args, {
-    cwd: process.cwd(),
-    stdio: 'inherit',
-    env: process.env
-  });
-  if (result.status !== 0) {
-    fail(`${command} ${args.join(' ')} failed`);
-  }
+  const result = spawnSync(command, args, { cwd: process.cwd(), stdio: 'inherit', env: process.env });
+  if (result.status !== 0) fail(`${command} ${args.join(' ')} failed`);
 }
-
 function runBundle(bundle, cache, stack = new Set()) {
   if (!bundles[bundle]) fail(`Unknown guard bundle: ${bundle}`);
   if (stack.has(bundle)) fail(`Recursive guard bundle detected: ${bundle}`);
-
   const fingerprint = repoFingerprint(bundle);
-  const cached = cache[bundle];
-  if (cached?.fingerprint === fingerprint && cached?.ok === true) {
+  if (cache[bundle]?.fingerprint === fingerprint && cache[bundle]?.ok === true) {
     console.log(`${bundle}: cache hit`);
     return;
   }
-
   stack.add(bundle);
   console.log(`${bundle}: running`);
-  for (const [command, args] of bundles[bundle]) {
-    if (command === 'bundle') {
-      runBundle(args[0], cache, stack);
-      continue;
-    }
-    runCommand(command, args);
-  }
+  for (const [command, args] of bundles[bundle]) command === 'bundle' ? runBundle(args[0], cache, stack) : runCommand(command, args);
   stack.delete(bundle);
-
-  cache[bundle] = {
-    ok: true,
-    fingerprint,
-    updatedAt: new Date().toISOString()
-  };
+  cache[bundle] = { ok: true, fingerprint, updatedAt: new Date().toISOString() };
   writeCache(cache);
   console.log(`${bundle}: ok`);
 }
 
 if (!bundleName) fail('Usage: node scripts/guard-bundle-runner.mjs <performance|ui-source|preflight>');
-const cache = readCache();
-runBundle(bundleName, cache);
+runBundle(bundleName, readCache());
