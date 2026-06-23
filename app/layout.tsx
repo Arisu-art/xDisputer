@@ -30,6 +30,7 @@ import './stable-ui-primitives.css';
 import './workflow-header-slim.css';
 import './supporting-documents-layout-polish.css';
 import './supporting-documents-wide-stage.css';
+import './supporting-documents-runtime-wide-fix.css';
 import './console-debug-overlay.css';
 import ControlNavGlobalTelemetry from '../components/control/ControlNavGlobalTelemetry';
 import RenderDebuggerMount from '../components/console/RenderDebuggerMount';
