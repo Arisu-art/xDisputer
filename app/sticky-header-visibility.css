@@ -1,13 +1,12 @@
 /* Global sticky header visibility layer.
    Applies to master, manager, and client console headers.
-   Performance fix: no blur, no animation, no radial gradients, no transform promotion.
-   Purpose: visible sticky/header separation using only cheap paint properties. */
+   Emergency performance profile: no blur, no animation, no pseudo separators, no shadows, no contain, no transform.
+   Purpose: keep a visible sticky separation with cheap border/background only. */
 
 :root {
-  --sticky-header-visibility-contract: all-console-users-visible-sticky-header-lightweight;
+  --sticky-header-visibility-contract: all-console-users-visible-sticky-header-zero-lag;
   --sticky-header-bg: #ffffff;
   --sticky-header-border: #bfdbfe;
-  --sticky-header-shadow: 0 6px 18px rgba(15, 23, 42, .08);
   --sticky-header-separator: #2563eb;
 }
 
@@ -20,17 +19,18 @@
 main.app-shell[data-client-console-shell='true'] section.main-area.admin-monitor-main[data-console-header-grid='true'] > [data-console-header-primary='true'] {
   position: sticky !important;
   top: var(--console-sticky-header-top, .7rem) !important;
-  z-index: 160 !important;
-  border: 1px solid var(--sticky-header-border) !important;
-  border-left: 5px solid var(--sticky-header-separator) !important;
-  border-bottom: 2px solid rgba(37, 99, 235, .48) !important;
+  z-index: 120 !important;
   background: var(--sticky-header-bg) !important;
+  border: 1px solid var(--sticky-header-border) !important;
+  border-left: 4px solid var(--sticky-header-separator) !important;
+  border-bottom: 3px solid rgba(37, 99, 235, .55) !important;
+  box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  box-shadow: var(--sticky-header-shadow) !important;
   transform: none !important;
   will-change: auto !important;
-  contain: layout paint !important;
+  contain: none !important;
+  isolation: auto !important;
 }
 
 .admin-monitor-main[data-console-header-grid='true'] > [data-console-header-primary='true']::after,
@@ -40,16 +40,8 @@ main.app-shell[data-client-console-shell='true'] section.main-area.admin-monitor
 .admin-monitor-page[data-console-shell='true'] [data-console-main='true'][data-console-header-grid='true'] > .admin-monitor-header:first-of-type::after,
 .admin-monitor-page[data-console-shell='true'] [data-console-main='true'][data-console-header-grid='true'] > .native-command-hero:first-of-type::after,
 main.app-shell[data-client-console-shell='true'] section.main-area.admin-monitor-main[data-console-header-grid='true'] > [data-console-header-primary='true']::after {
-  content: '';
-  position: absolute;
-  right: clamp(1rem, 2vw, 1.75rem);
-  bottom: 0;
-  left: clamp(1rem, 2vw, 1.75rem);
-  height: 2px;
-  border-radius: 999px 999px 0 0;
-  background: var(--sticky-header-separator);
-  opacity: .45;
-  pointer-events: none;
+  content: none !important;
+  display: none !important;
 }
 
 .admin-monitor-main[data-console-header-grid='true'] > .manager-header-account-dock[data-manager-account-anchor='header-ratio-grid'],
@@ -60,22 +52,23 @@ main.app-shell[data-client-console-shell='true'] section.main-area.admin-monitor
 main.app-shell[data-client-console-shell='true'] section.main-area.admin-monitor-main[data-console-header-grid='true'] > .manager-header-account-dock[data-console-account-menu='true'] {
   position: sticky !important;
   top: var(--console-sticky-header-top, .7rem) !important;
-  z-index: 170 !important;
+  z-index: 121 !important;
   border: 1px solid var(--sticky-header-border) !important;
-  border-bottom: 2px solid rgba(37, 99, 235, .36) !important;
+  border-bottom: 3px solid rgba(37, 99, 235, .42) !important;
   border-radius: 22px !important;
   background: var(--sticky-header-bg) !important;
+  box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  box-shadow: var(--sticky-header-shadow) !important;
   transform: none !important;
   will-change: auto !important;
-  contain: layout paint !important;
+  contain: none !important;
+  isolation: auto !important;
 }
 
 .manager-header-account-dock .notification-dock-button,
 .manager-header-account-dock .manager-header-account-avatar {
-  box-shadow: 0 4px 12px rgba(37, 99, 235, .08) !important;
+  box-shadow: none !important;
 }
 
 .console-header-copy p {
@@ -97,7 +90,7 @@ main.app-shell[data-client-console-shell='true'] section.main-area.admin-monitor
   .admin-monitor-main[data-console-header-grid='true'] > .admin-monitor-header:first-of-type,
   .admin-monitor-main[data-console-header-grid='true'] > .native-command-hero:first-of-type,
   .admin-monitor-page[data-console-shell='true'] [data-console-main='true'][data-console-header-grid='true'] > [data-console-header-primary='true'] {
-    border-left-width: 4px !important;
+    border-left-width: 3px !important;
     border-radius: 18px !important;
   }
 
