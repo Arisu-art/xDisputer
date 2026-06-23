@@ -35,7 +35,7 @@ mustNot(admin, 'function PayrollPanel', 'manager page must not expose PayrollPan
 mustNot(admin, "activePanel === 'payroll'", 'manager page must not render payroll panel id directly');
 must(admin, 'intent="clear_manager"', 'manager access must expose unlink action');
 must(admin, 'intent="suspend"', 'manager access must expose pause action');
-must(admin, 'manager-user-settings-form', 'manager access must expose user metadata form');
+must(metadataEditor, 'manager-user-settings-form', 'manager access metadata editor must expose user metadata form');
 must(admin, 'payrollAmount', 'manager output activity must compute from settings and output count');
 must(settings, 'manager_user_settings', 'manager user settings helper missing table contract');
 must(payrollRoute, 'manager_user_settings', 'payroll route must save manager metadata');
@@ -67,7 +67,10 @@ must(metadataEditor, "import { createPortal } from 'react-dom';", 'manager metad
 must(metadataEditor, 'createPortal(modal, document.body)', 'manager metadata modal must mount to document.body');
 must(metadataEditor, 'role="dialog"', 'manager metadata modal must expose dialog semantics');
 must(metadataEditor, 'aria-modal="true"', 'manager metadata modal must be modal for assistive technology');
-must(payrollModalCss, '--manager-payroll-modal-contract: portal-card-click-metadata-tile;', 'manager metadata CSS contract must document viewport portal behavior');
+must(metadataEditor, 'manager-user-settings-card-trigger-only', 'manager metadata editor must keep card-click behavior without visible tile');
+mustNot(metadataEditor, 'metadata-tile-copy', 'manager metadata editor must not render the retired visible metadata tile copy');
+mustNot(metadataEditor, 'metadata-tile-plus', 'manager metadata editor must not render the retired visible metadata plus button');
+must(payrollModalCss, '--manager-payroll-modal-contract: portal-card-click-no-visible-tile;', 'manager metadata CSS contract must document no-visible-tile portal behavior');
 must(payrollModalCss, '.manager-user-settings-modal-backdrop', 'manager metadata CSS must own the backdrop');
 must(payrollModalCss, 'position: fixed !important;', 'manager metadata backdrop must stay viewport-fixed');
 mustNotMatch(payrollModalCss, /\.manager-metadata-card-trigger:hover\s*{[^}]*transform\s*:/s, 'manager metadata card hover must not transform the fixed-modal ancestor');
