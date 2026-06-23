@@ -18,6 +18,11 @@ type Snapshot = {
 
 type RefreshReason = 'mount' | 'manual' | 'focus' | 'visibility' | 'realtime' | 'warmup' | 'steady' | 'read-action' | 'auth-change';
 
+type LocalNotificationState = {
+  read: Record<string, string>;
+  cleared: Record<string, true>;
+};
+
 const EMPTY_SNAPSHOT: Snapshot = {
   notifications: [],
   unreadCount: 0,
@@ -29,6 +34,8 @@ const EMPTY_SNAPSHOT: Snapshot = {
 };
 
 const OUTPUT_ACTIVITY_HREF = '/admin/output-activity-v2';
+const STORAGE_PREFIX = 'xdisputer-notification-state-v2';
+const UUID_RE = /^[0-9a-f-]{36}$/i;
 const subscribers = new Set<() => void>();
 let snapshot = EMPTY_SNAPSHOT;
 let started = false;
@@ -46,6 +53,39 @@ function countOutputActivityUnread(notifications: NotificationRecord[]) {
   return notifications.filter((item) => !item.read_at && (item.href || '').includes(OUTPUT_ACTIVITY_HREF)).length;
 }
 
+function storageKey(userId = currentUserId) {
+  return `${STORAGE_PREFIX}:${userId || 'anonymous'}`;
+}
+
+function readLocalState(): LocalNotificationState {
+  if (typeof window === 'undefined') return { read: {}, cleared: {} };
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(storageKey()) || '{}') as Partial<LocalNotificationState>;
+    return { read: parsed.read || {}, cleared: parsed.cleared || {} };
+  } catch {
+    return { read: {}, cleared: {} };
+  }
+}
+
+function writeLocalState(next: LocalNotificationState) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(storageKey(), JSON.stringify(next));
+}
+
+function notificationKey(item: Pick<NotificationRecord, 'id' | 'href'>) {
+  return item.href || item.id;
+}
+
+function applyLocalState(input: NotificationRecord[]) {
+  const local = readLocalState();
+  return input
+    .filter((item) => !local.cleared[notificationKey(item)] && !local.cleared[item.id])
+    .map((item) => {
+      const readAt = local.read[notificationKey(item)] || local.read[item.id];
+      return readAt && !item.read_at ? { ...item, read_at: readAt } : item;
+    });
+}
+
 function snapshotSignature(value: Snapshot) {
   return JSON.stringify({
     ids: value.notifications.map((item) => `${item.id}:${item.read_at || ''}:${item.href || ''}`),
@@ -57,11 +97,12 @@ function snapshotSignature(value: Snapshot) {
 
 function normalizePayload(data: unknown): Snapshot {
   const input = data && typeof data === 'object' ? data as Record<string, unknown> : {};
-  const notifications = Array.isArray(input.notifications) ? input.notifications as NotificationRecord[] : [];
-  const unreadCount = Number(input.unreadCount || 0);
+  const rawNotifications = Array.isArray(input.notifications) ? input.notifications as NotificationRecord[] : [];
+  const notifications = applyLocalState(rawNotifications);
+  const unreadCount = notifications.filter((item) => !item.read_at).length;
   return {
     notifications,
-    unreadCount: Number.isFinite(unreadCount) ? unreadCount : notifications.filter((item) => !item.read_at).length,
+    unreadCount,
     outputActivityUnreadCount: countOutputActivityUnread(notifications),
     errorMessage: typeof input.errorMessage === 'string' ? input.errorMessage : null,
     syncErrorMessage: typeof input.syncErrorMessage === 'string' ? input.syncErrorMessage : null,
@@ -82,6 +123,16 @@ function emit(next: Snapshot, reason: RefreshReason) {
   }
 }
 
+function updateCurrentNotifications(nextItems: NotificationRecord[], reason: RefreshReason = 'read-action') {
+  emit({
+    ...snapshot,
+    notifications: nextItems,
+    unreadCount: nextItems.filter((item) => !item.read_at).length,
+    outputActivityUnreadCount: countOutputActivityUnread(nextItems),
+    loading: false
+  }, reason);
+}
+
 async function removeOwnedChannel(supabase: SupabaseClient) {
   if (!channel) return;
   const owned = channel;
@@ -95,6 +146,7 @@ function subscribeUserChannel(supabase: SupabaseClient, userId: string | null) {
     channel = supabase
       .channel(`owned-notifications-${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_user_id=eq.${userId}` }, () => scheduleRefresh('realtime'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'manager_disputer_output_approvals' }, () => scheduleRefresh('realtime'))
       .subscribe((status) => { if (status === 'SUBSCRIBED') scheduleRefresh('realtime'); });
   });
 }
@@ -225,6 +277,42 @@ function getServerSnapshot() {
   return EMPTY_SNAPSHOT;
 }
 
+function markLocalRead(id: string) {
+  const local = readLocalState();
+  const item = snapshot.notifications.find((notification) => notification.id === id || notification.href === id);
+  const readAt = new Date().toISOString();
+  local.read[id] = readAt;
+  if (item) local.read[notificationKey(item)] = readAt;
+  writeLocalState(local);
+  updateCurrentNotifications(snapshot.notifications.map((notification) => {
+    if (notification.id === id || (item && notificationKey(notification) === notificationKey(item))) return { ...notification, read_at: notification.read_at || readAt };
+    return notification;
+  }));
+}
+
+function markLocalAllRead() {
+  const local = readLocalState();
+  const readAt = new Date().toISOString();
+  for (const item of snapshot.notifications) {
+    local.read[item.id] = readAt;
+    local.read[notificationKey(item)] = readAt;
+  }
+  writeLocalState(local);
+  updateCurrentNotifications(snapshot.notifications.map((item) => ({ ...item, read_at: item.read_at || readAt })));
+}
+
+function clearLocalReadOnly() {
+  const local = readLocalState();
+  for (const item of snapshot.notifications) {
+    if (item.read_at) {
+      local.cleared[item.id] = true;
+      local.cleared[notificationKey(item)] = true;
+    }
+  }
+  writeLocalState(local);
+  updateCurrentNotifications(snapshot.notifications.filter((item) => !item.read_at));
+}
+
 export function refreshOwnedNotifications() {
   return fetchNotifications('manual');
 }
@@ -233,18 +321,23 @@ export function useOwnedNotifications() {
   const current = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const refresh = useCallback(() => fetchNotifications('manual'), []);
   const markOneRead = useCallback(async (id: string) => {
-    await fetch(notificationOwnershipContract.readEndpoint, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ids: [id] })
-    }).catch(() => null);
-    await fetchNotifications('read-action');
+    markLocalRead(id);
+    if (UUID_RE.test(id)) {
+      await fetch(notificationOwnershipContract.readEndpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: [id] })
+      }).catch(() => null);
+      await fetchNotifications('read-action');
+    }
   }, []);
   const markAllRead = useCallback(async () => {
+    markLocalAllRead();
     await fetch(notificationOwnershipContract.readEndpoint, { method: 'POST' }).catch(() => null);
     await fetchNotifications('read-action');
   }, []);
   const clearReadOnly = useCallback(async () => {
+    clearLocalReadOnly();
     await fetch(notificationOwnershipContract.clearReadEndpoint, { method: 'DELETE' }).catch(() => null);
     await fetchNotifications('read-action');
   }, []);
