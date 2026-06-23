@@ -54,12 +54,12 @@ export async function loadNotificationsForCurrentUser(supabase: SupabaseServerCl
   };
 }
 
-export async function markNotificationsReadForCurrentUser(supabase: SupabaseServerClient) {
+export async function markNotificationsReadForCurrentUser(supabase: SupabaseServerClient, ids?: unknown) {
   const { data: userResult } = await supabase.auth.getUser();
   const user = userResult.user;
   if (!user) return { updatedCount: 0, errorMessage: null, status: 401 };
 
-  const result = await markDirectNotificationsRead({ supabase, userId: user.id });
+  const result = await markDirectNotificationsRead({ supabase, userId: user.id, ids });
   return { updatedCount: result.updatedCount, errorMessage: result.errorMessage, status: 200 };
 }
 
