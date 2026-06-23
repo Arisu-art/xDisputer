@@ -20,6 +20,7 @@ function readPreferences() {
 
 function writePerOutputDefault(value: boolean) {
   const current = readPreferences();
+  if (current.perOutputGenerationDefault === value) return;
   localStorage.setItem(WORKSPACE_PREFERENCES_KEY, JSON.stringify({ ...current, perOutputGenerationDefault: value }));
 }
 
@@ -31,11 +32,37 @@ function normalizeProfile(payload: unknown): PayrollProfile | null {
   return { employmentType, isOutputBased: employmentType === 'output_based', isFullTime: employmentType === 'full_time' };
 }
 
+function setText(node: Element | null, value: string) {
+  if (node && node.textContent !== value) node.textContent = value;
+}
+
+function setCardHidden(card: HTMLElement, hidden: boolean) {
+  if (card.hidden !== hidden) card.hidden = hidden;
+  if (hidden) {
+    if (card.getAttribute('aria-hidden') !== 'true') card.setAttribute('aria-hidden', 'true');
+    if (card.style.display !== 'none') card.style.display = 'none';
+  } else {
+    if (card.hasAttribute('aria-hidden')) card.removeAttribute('aria-hidden');
+    if (card.style.display) card.style.removeProperty('display');
+  }
+}
+
+function setInputLocked(input: HTMLInputElement | null, checked: boolean | null, disabled: boolean) {
+  if (!input) return;
+  if (checked !== null && input.checked !== checked) input.checked = checked;
+  if (input.disabled !== disabled) input.disabled = disabled;
+  if (disabled) {
+    if (input.getAttribute('aria-disabled') !== 'true') input.setAttribute('aria-disabled', 'true');
+  } else if (input.hasAttribute('aria-disabled')) {
+    input.removeAttribute('aria-disabled');
+  }
+}
+
 function syncClientIntentCard(profile: PayrollProfile) {
   const card = document.querySelector<HTMLElement>('[data-output-activity-client-intent="true"]');
   if (!card) return;
 
-  card.dataset.clientOutputProfile = profile.employmentType;
+  if (card.dataset.clientOutputProfile !== profile.employmentType) card.dataset.clientOutputProfile = profile.employmentType;
   const title = card.querySelector('strong');
   const copy = card.querySelector('p');
   const input = card.querySelector<HTMLInputElement>('input[type="checkbox"]');
@@ -44,38 +71,37 @@ function syncClientIntentCard(profile: PayrollProfile) {
   if (profile.isOutputBased) {
     card.classList.add('locked');
     card.classList.remove('optional');
-    card.hidden = true;
-    card.setAttribute('aria-hidden', 'true');
-    card.style.display = 'none';
-    if (title) title.textContent = 'Per-output profile';
-    if (copy) copy.textContent = 'Every generated letter is automatically sent for manager confirmation.';
-    if (input) {
-      input.checked = true;
-      input.disabled = true;
-      input.setAttribute('aria-disabled', 'true');
-    }
-    if (labelText) labelText.textContent = 'Per-output required';
+    setCardHidden(card, true);
+    setText(title, 'Per-output profile');
+    setText(copy, 'Every generated letter is automatically sent for manager confirmation.');
+    setInputLocked(input, true, true);
+    setText(labelText, 'Per-output required');
     return;
   }
 
-  card.hidden = false;
-  card.removeAttribute('aria-hidden');
-  card.style.removeProperty('display');
+  setCardHidden(card, false);
   card.classList.add('optional');
   card.classList.remove('locked');
-  if (title) title.textContent = 'Full-time per-output add-on';
-  if (copy) copy.textContent = 'Your profile is full-time. Generate as fixed-salary work by default, or mark this packet as a per-output add-on for manager confirmation.';
-  if (input) {
-    input.disabled = false;
-    input.removeAttribute('aria-disabled');
-  }
-  if (labelText) labelText.textContent = 'Make this packet per-output';
+  setText(title, 'Full-time per-output add-on');
+  setText(copy, 'Your profile is full-time. Generate as fixed-salary work by default, or mark this packet as a per-output add-on for manager confirmation.');
+  setInputLocked(input, null, false);
+  setText(labelText, 'Make this packet per-output');
 }
 
 export default function ClientPayrollProfileSyncMount() {
   useEffect(() => {
     let cancelled = false;
     let observer: MutationObserver | null = null;
+    let profileCache: PayrollProfile | null = null;
+    let raf = 0;
+
+    const scheduleCardSync = () => {
+      if (!profileCache || cancelled || raf) return;
+      raf = window.requestAnimationFrame(() => {
+        raf = 0;
+        if (!cancelled && profileCache) syncClientIntentCard(profileCache);
+      });
+    };
 
     async function sync() {
       const response = await fetch('/api/client/payroll-profile', { cache: 'no-store', headers: { accept: 'application/json', 'cache-control': 'no-store' } });
@@ -83,18 +109,27 @@ export default function ClientPayrollProfileSyncMount() {
       const profile = normalizeProfile(await response.json().catch(() => null));
       if (!profile || cancelled) return;
 
-      document.body.dataset.clientPayrollEmploymentType = profile.employmentType;
+      profileCache = profile;
+      if (document.body.dataset.clientPayrollEmploymentType !== profile.employmentType) {
+        document.body.dataset.clientPayrollEmploymentType = profile.employmentType;
+      }
       if (profile.isOutputBased) writePerOutputDefault(true);
       syncClientIntentCard(profile);
 
-      observer = new MutationObserver(() => syncClientIntentCard(profile));
-      observer.observe(document.body, { childList: true, subtree: true });
+      if (!observer) {
+        observer = new MutationObserver((mutations) => {
+          if (!mutations.some((mutation) => Array.from(mutation.addedNodes).some((node) => node instanceof HTMLElement && (node.matches?.('[data-output-activity-client-intent="true"]') || Boolean(node.querySelector?.('[data-output-activity-client-intent="true"]')))))) return;
+          scheduleCardSync();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
     }
 
     void sync().catch(() => undefined);
 
     return () => {
       cancelled = true;
+      if (raf) window.cancelAnimationFrame(raf);
       observer?.disconnect();
     };
   }, []);
