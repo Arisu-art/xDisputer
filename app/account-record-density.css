@@ -41,13 +41,43 @@
   padding: clamp(.9rem, 1.3vw, 1.1rem) !important;
 }
 
-.manager-console-user-card > header {
+.manager-console-user-card > header,
+.manager-console-user-header-v2 {
   grid-column: 1 / -1 !important;
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) auto !important;
   align-items: start !important;
   gap: .8rem !important;
   min-width: 0 !important;
+}
+
+.manager-console-status-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: wrap !important;
+  gap: .5rem !important;
+  min-width: 0 !important;
+}
+
+.manager-console-status-actions .admin-status-badge {
+  order: 2 !important;
+}
+
+.manager-console-top-actions {
+  order: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: wrap !important;
+  gap: .45rem !important;
+}
+
+.manager-console-top-actions .admin-action-button {
+  min-height: 36px !important;
+  border-radius: 999px !important;
+  padding: .48rem .8rem !important;
+  white-space: nowrap !important;
 }
 
 .manager-console-user-card > header div,
@@ -89,7 +119,6 @@
 }
 
 .manager-console-actions-row {
-  grid-column: 1 !important;
   display: flex !important;
   flex-wrap: wrap !important;
   align-items: center !important;
@@ -258,46 +287,31 @@
 }
 
 .boss-assignment-form,
-.boss-assignment-display { display: grid !important; gap: .55rem !important; }
-.boss-assignment-form select,
-.boss-assignment-display select { min-height: 46px !important; border-radius: 16px !important; }
-
-.account-control-trigger-grid,
-.manager-client-trigger-grid {
+.limit-editor-form,
+.flyout-form {
   display: grid !important;
-  grid-template-columns: minmax(0, 1.25fr) auto minmax(120px, .7fr) !important;
-  gap: .65rem !important;
-  align-items: center !important;
-  padding: .75rem !important;
+  gap: .8rem !important;
 }
 
-.account-control-meta { display: none !important; }
-
-.single-header-dataset-action { display: flex !important; justify-content: flex-end !important; margin-top: -.25rem !important; }
-
-@media (max-width: 860px) {
+@media (max-width: 720px) {
   .manager-console-user-card[data-compact-account-record="true"],
-  .manager-console-user-card { grid-template-columns: 1fr !important; }
-
-  .manager-console-actions-row,
-  .manager-user-settings-details { grid-column: 1 !important; justify-self: stretch !important; width: 100% !important; }
-
-  .manager-user-settings-details[open] > summary {
-    top: 1rem !important;
-    right: 1rem !important;
-    left: auto !important;
-    transform: none !important;
+  .manager-console-user-card {
+    grid-template-columns: 1fr !important;
   }
 
-  .manager-user-settings-details[open] .manager-user-settings-form { grid-template-columns: 1fr !important; }
+  .manager-console-user-card > header,
+  .manager-console-user-header-v2 {
+    grid-template-columns: 1fr !important;
+  }
 
-  .manager-user-settings-details[open] .client-status-job-field,
-  .manager-user-settings-details[open] .manager-user-settings-notes,
-  .manager-user-settings-details[open] .metadata-salary-field,
-  .manager-user-settings-details[open] .metadata-output-rate-field { grid-column: 1 !important; }
+  .manager-console-status-actions,
+  .manager-console-top-actions {
+    justify-content: flex-start !important;
+  }
 
-  .manager-user-settings-details[open] .metadata-rule-hint { grid-column: 1 !important; }
-
-  .account-control-trigger-grid,
-  .manager-client-trigger-grid { grid-template-columns: 1fr !important; }
+  .manager-user-settings-details {
+    grid-column: 1 !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+  }
 }
