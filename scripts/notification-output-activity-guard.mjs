@@ -25,6 +25,7 @@ const files = {
   outputPage: read('app/admin/output-activity-v2/page.tsx'),
   outputApi: read('app/api/manager/output-activity/route.ts'),
   outputService: read('lib/saas/manager-user-settings.ts'),
+  outputCss: read('app/output-activity-flow.css'),
   payrollMount: read('components/client/ClientPayrollProfileSyncMount.tsx'),
   payrollRoute: read('app/api/client/payroll-profile/route.ts'),
   canonicalMigration: read('supabase/migrations/20260622141000_canonical_output_activity_notification_sync_v2.sql'),
@@ -66,6 +67,14 @@ must(files.outputPage, 'listManagerOutputApprovals(supabase, user.id, [], filter
 must(files.outputApi, 'listManagerOutputApprovals(supabase, user.id, [], filter)', 'manager output activity JSON endpoint must query all manager rows');
 must(files.outputApi, "export const dynamic = 'force-dynamic'", 'manager output activity API must be dynamic');
 must(files.outputService, 'if (ids.length) query = query.in', 'output service must only apply disputer id filter when ids are explicitly provided');
+must(files.outputPage, 'output-activity-title-actions', 'output activity page must render decisions in the header action cluster');
+must(files.outputPage, '<DecisionForm row={row} rateAmount={rateAmount} />', 'output activity decision control must be before the per-output badge');
+must(files.outputPage, 'data-output-count={row.output_count || 0}', 'output activity must preserve output count as data instead of a duplicated visible field');
+mustNot(files.outputPage, 'routeInfo(', 'output activity row must not render duplicated generated-letter output detail');
+mustNot(files.outputPage, '<b>Output</b>', 'output activity row must not show duplicated Output field in metadata grid');
+must(files.outputCss, '--output-activity-flow-contract: header-actions-no-duplicated-output-field;', 'output activity CSS contract must document header actions and removed output field');
+must(files.outputCss, '.output-activity-title-actions', 'output activity CSS must own the header action cluster');
+must(files.outputCss, '.output-decision-form-inline', 'output activity CSS must support compact inline decisions');
 
 must(files.payrollRoute, 'readPayrollProfileFallback', 'payroll profile route must have server fallback');
 must(files.payrollRoute, 'syncWarning', 'payroll profile route must return sync warning instead of hard failing when fallback works');
