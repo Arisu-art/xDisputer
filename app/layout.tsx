@@ -24,6 +24,7 @@ import './manager-account-header-actions.css';
 import './master-account-directory-polish.css';
 import './manager-payroll-modal.css';
 import './output-activity-flow.css';
+import './manager-report-workflow.css';
 import './client-payroll-profile-flow.css';
 import './output-activity-unread-badge.css';
 import './access-state-lightweight.css';
