@@ -32,6 +32,10 @@ function positiveOrNull(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
 }
 
+function nonnegativeOrNull(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
 function normalizeRow(row: RawEntitlementRow): EntitlementLimitRow {
   return {
     profile_id: String(row.profile_id || ''),
@@ -41,11 +45,7 @@ function normalizeRow(row: RawEntitlementRow): EntitlementLimitRow {
     client_output_limit: positiveOrNull(row.client_output_limit),
     effective_output_limit: positiveOrNull(row.effective_output_limit),
     output_used_today: Number(row.output_used_today ?? row.output_used_this_month ?? 0),
-    output_remaining_today: typeof row.output_remaining_today === 'number' && row.output_remaining_today > 0
-      ? row.output_remaining_today
-      : typeof row.output_remaining_this_month === 'number' && row.output_remaining_this_month > 0
-        ? row.output_remaining_this_month
-        : null,
+    output_remaining_today: nonnegativeOrNull(row.output_remaining_today ?? row.output_remaining_this_month),
     updated_at: row.updated_at || null
   };
 }
