@@ -38,8 +38,9 @@ export default function ManagerConsoleRealtimeRefreshMount() {
       channel = supabase.channel(`manager-console-stable-sync-${managerId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'client_manager_assignments', filter: `manager_id=eq.${managerId}` }, scheduleRefresh)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'manager_user_settings', filter: `manager_id=eq.${managerId}` }, scheduleRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'manager_entitlement_limits', filter: `manager_id=eq.${managerId}` }, scheduleRefresh)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'client_entitlement_limits', filter: `manager_id=eq.${managerId}` }, scheduleRefresh)
-        .subscribe();
+        .subscribe((status) => { if (status === 'SUBSCRIBED') scheduleRefresh(); });
     }).catch(() => undefined);
 
     return () => {
