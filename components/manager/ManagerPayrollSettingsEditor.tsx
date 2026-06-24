@@ -17,25 +17,30 @@ function moneyInput(value: number) {
   return Number.isFinite(value) ? String(Math.max(0, value)) : '0';
 }
 
-function shouldIgnoreCardOpen(target: EventTarget | null) {
+const CARD_CLICK_BLOCKERS = [
+  'a',
+  'button',
+  'form',
+  'input',
+  'select',
+  'textarea',
+  'label',
+  'summary',
+  'details',
+  '[data-ignore-card-metadata-open="true"]',
+  '.manager-console-status-actions',
+  '.manager-user-settings-details',
+  '.manager-user-settings-modal-backdrop'
+].join(',');
+
+function shouldIgnoreCardOpen(target: EventTarget | null, card: HTMLElement) {
   if (!(target instanceof HTMLElement)) return true;
 
-  return Boolean(target.closest([
-    'a',
-    'button',
-    'form',
-    'input',
-    'select',
-    'textarea',
-    'label',
-    'summary',
-    'details',
-    '[role="button"]',
-    '[data-ignore-card-metadata-open="true"]',
-    '.manager-console-status-actions',
-    '.manager-user-settings-details',
-    '.manager-user-settings-modal-backdrop'
-  ].join(',')));
+  const blocker = target.closest<HTMLElement>(CARD_CLICK_BLOCKERS);
+  if (blocker && blocker !== card) return true;
+
+  const nestedButtonRole = target.closest<HTMLElement>('[role="button"]');
+  return Boolean(nestedButtonRole && nestedButtonRole !== card);
 }
 
 export default function ManagerPayrollSettingsEditor({ profileId, initialEmploymentType, initialBaseSalary, initialPerOutputRate, initialNotes }: Props) {
@@ -65,7 +70,7 @@ export default function ManagerPayrollSettingsEditor({ profileId, initialEmploym
     if (!hadTabIndex) card.setAttribute('tabindex', '0');
 
     const handleCardClick = (event: MouseEvent) => {
-      if (shouldIgnoreCardOpen(event.target)) return;
+      if (shouldIgnoreCardOpen(event.target, card)) return;
       setOpen(true);
     };
 
