@@ -34,7 +34,8 @@ must(globalCss, 'prefers-reduced-motion: reduce', 'global responsive CSS must re
 must(globalCss, 'overflow-x: clip', 'global responsive CSS must prevent horizontal overflow');
 
 must(supportCss, 'Layout contract: side panels are secondary; the center document canvas gets the maximum safe space first', 'Supporting Documents CSS must document center priority');
-must(supportCss, '--support-runtime-page-max: 1320px', 'Supporting Documents CSS must allow large center canvas');
+must(supportCss, '--support-runtime-canvas-target: clamp(430px, 56vw, var(--support-runtime-page-max))', 'Supporting Documents CSS must maximize center canvas target');
+must(supportCss, 'min-height: clamp(520px, calc(100dvh - 230px), 980px)', 'Supporting Documents CSS must reserve vertical stage space for a large page');
 must(supportCss, 'grid-template-areas: "documents page controls"', 'Supporting Documents CSS must use wide three-area grid');
 must(supportCss, 'grid-template-areas: "documents" "page" "controls"', 'Supporting Documents CSS must stack on narrow screens');
 must(supportCss, 'overflow-x: clip', 'Supporting Documents CSS must prevent horizontal overflow');
