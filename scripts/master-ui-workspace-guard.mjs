@@ -32,9 +32,11 @@ has('app/master/accounts/page.tsx', 'Limit saved', 'master accounts page must sh
 has('app/master/accounts/page.tsx', 'controlStatus', 'master accounts page must read control status from entitlement redirects');
 has('app/master/MasterAccountTableV2.tsx', 'Needs Master limit', 'master account table must show missing manager limits as needing Master setup');
 has('app/master/MasterAccountTableV2.tsx', 'function canEditLimits(account: ManagedAccount) { return isManager(account); }', 'only manager rows can expose Master limit editing');
+has('app/master/MasterAccountTableV2.tsx', 'savedManagerLimits', 'master account table must centralize saved manager limit display');
+has('app/master/MasterAccountTableV2.tsx', 'Saved limits:', 'manager flyout must show saved manager limit snapshot');
 has('app/master/MasterAccountTableV2.tsx', 'return account.manager_id ? \'Boss assigned\' : \'Needs boss assignment\'', 'client rows must show boss assignment instead of output limit controls');
-has('app/master/MasterAccountTableV2.tsx', 'required defaultValue={positiveValue(limit?.max_clients)', 'manager Disputer limit input must be required and read back from entitlements');
-has('app/master/MasterAccountTableV2.tsx', 'required defaultValue={positiveValue(limit?.default_client_output_limit)', 'manager default output input must be required and read back from entitlements');
+has('app/master/MasterAccountTableV2.tsx', 'required defaultValue={saved.maxClients', 'manager Disputer limit input must be required and read back from entitlements');
+has('app/master/MasterAccountTableV2.tsx', 'required defaultValue={saved.defaultOutput', 'manager default output input must be required and read back from entitlements');
 has('app/master/MasterAccountTableV2.tsx', "if (!isManager(account)) return null;", 'client daily output override form must be removed');
 not('app/master/MasterAccountTableV2.tsx', 'Daily output override', 'client Daily output override UI must not exist');
 not('app/master/MasterAccountTableV2.tsx', 'Daily agreement limits', 'manager flyout must not show duplicate Daily agreement limits meter');
@@ -51,6 +53,8 @@ not('app/api/master/entitlements/route.ts', 'access_set_client_entitlement_v1', 
 has('app/api/master/entitlements/route.ts', "revalidatePath('/workspace')", 'master entitlement route must revalidate Disputer workspace');
 has('app/api/master/entitlements/route.ts', 'entitlementsSyncedAt', 'master entitlement redirect must force a fresh URL state');
 has('lib/saas/entitlement-limits.ts', 'function numericValue(value: unknown)', 'entitlement reader must normalize numeric strings for saved value readback');
+has('lib/saas/entitlement-limits.ts', 'readManagerLimitTableRows', 'entitlement reader must use direct manager table fallback for saved limit readback');
+has('lib/saas/entitlement-limits.ts', 'access_list_entitlement_limits_v1', 'entitlement reader must merge legacy entitlement RPC fallback');
 has('lib/saas/entitlement-limits.ts', 'const effectiveLimit = positiveOrNull(row.effective_output_limit)', 'entitlement reader must expose missing caps as not configured');
 has('components/manager/ManagerConsoleRealtimeRefreshMount.tsx', "table: 'manager_entitlement_limits'", 'manager console must refresh when master updates manager entitlement limits');
 has('components/ClientOutputLimitBoundary.tsx', 'managerId?: string | null', 'Disputer entitlement payload must carry manager id for master cap realtime sync');
