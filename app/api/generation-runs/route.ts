@@ -19,6 +19,16 @@ type OutputActivitySyncRow = {
   sync_status?: string | null;
 };
 
+type DailyEntitlement = {
+  allowed: boolean;
+  outputLimit: number | null;
+  outputUsedToday: number;
+  outputRemainingToday: number | null;
+  resetAt: string | null;
+  resetSeconds: number | null;
+  message: string | null;
+};
+
 function noStoreJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
   response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
@@ -29,23 +39,75 @@ function isMissingRpcError(message: string | undefined) {
   return Boolean(message && (message.includes('Could not find the function') || message.includes('does not exist') || message.includes('schema cache')));
 }
 
-function normalizeDailyEntitlement(row: any) {
+function numericValue(value: unknown) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function positiveOrNull(value: unknown) {
+  const parsed = numericValue(value);
+  return parsed !== null && parsed > 0 ? parsed : null;
+}
+
+function nonnegativeOrNull(value: unknown) {
+  const parsed = numericValue(value);
+  return parsed !== null && parsed >= 0 ? parsed : null;
+}
+
+function normalizeDailyEntitlement(row: any): DailyEntitlement | null {
   if (!row) return null;
+  const outputLimit = positiveOrNull(row.output_limit);
+  const outputUsedToday = nonnegativeOrNull(row.output_used_today ?? row.output_used_this_month) ?? 0;
+  const outputRemainingToday = outputLimit === null ? null : nonnegativeOrNull(row.output_remaining_today ?? row.output_remaining_this_month) ?? Math.max(outputLimit - outputUsedToday, 0);
+  const allowed = outputLimit !== null && row.allowed !== false && outputRemainingToday > 0;
   return {
-    allowed: row.allowed !== false,
-    outputLimit: typeof row.output_limit === 'number' ? row.output_limit : null,
-    outputUsedToday: Number(row.output_used_today ?? row.output_used_this_month ?? 0),
-    outputRemainingToday: typeof row.output_remaining_today === 'number' ? row.output_remaining_today : typeof row.output_remaining_this_month === 'number' ? row.output_remaining_this_month : null,
+    allowed,
+    outputLimit,
+    outputUsedToday,
+    outputRemainingToday,
     resetAt: row.reset_at || null,
-    resetSeconds: typeof row.reset_seconds === 'number' ? row.reset_seconds : null,
-    message: row.message || null
+    resetSeconds: nonnegativeOrNull(row.reset_seconds),
+    message: allowed ? row.message || null : row.message || (outputLimit === null ? 'Master must set this manager daily output limit before this Disputer can generate output.' : 'Daily output limit reached. This Disputer allowance resets at the next US Eastern day.')
   };
 }
 
 async function readDailyEntitlement(supabase: SupabaseServerClient, ownerId: string) {
+  const strict = await supabase.rpc('access_assert_client_can_generate_v1', { owner_id_input: ownerId });
+  if (!strict.error || !isMissingRpcError(strict.error.message)) return strict;
   const daily = await supabase.rpc('access_client_daily_output_entitlement_v1', { owner_id_input: ownerId });
   if (!daily.error || !isMissingRpcError(daily.error.message)) return daily;
   return supabase.rpc('access_check_generation_output_limit_v1', { owner_id_input: ownerId });
+}
+
+async function requireGenerationAllowance(input: { supabase: SupabaseServerClient; ownerId: string; requestId: string; startedAt: number }) {
+  const limitCheck = await readDailyEntitlement(input.supabase, input.ownerId);
+  if (limitCheck.error) {
+    const message = isMissingRpcError(limitCheck.error.message)
+      ? 'Output allowance SQL is not synced. Generation is blocked until the latest entitlement migration is applied.'
+      : limitCheck.error.message;
+    await logSystemEvent(input.supabase, { requestId: input.requestId, routePath: '/api/generation-runs', eventType: 'generation_output_limit_unavailable', eventStatus: 'error', durationMs: Date.now() - input.startedAt, safeMessage: message });
+    return { ok: false as const, status: isMissingRpcError(limitCheck.error.message) ? 503 : 500, error: message, entitlement: null as DailyEntitlement | null };
+  }
+
+  const row = Array.isArray(limitCheck.data) ? limitCheck.data[0] : null;
+  const entitlement = normalizeDailyEntitlement(row);
+  if (!entitlement || entitlement.outputLimit === null) {
+    const message = entitlement?.message || 'Master must set this manager daily output limit before this Disputer can generate output.';
+    await logSystemEvent(input.supabase, { requestId: input.requestId, routePath: '/api/generation-runs', eventType: 'generation_output_limit_blocked', eventStatus: 'warning', durationMs: Date.now() - input.startedAt, safeMessage: message, metadata: entitlement || {} });
+    return { ok: false as const, status: 403, error: message, entitlement };
+  }
+
+  if (!entitlement.allowed || entitlement.outputRemainingToday === null || entitlement.outputRemainingToday <= 0) {
+    const message = entitlement.message || 'Daily output limit reached. This Disputer allowance resets at the next US Eastern day.';
+    await logSystemEvent(input.supabase, { requestId: input.requestId, routePath: '/api/generation-runs', eventType: 'generation_output_limit_blocked', eventStatus: 'warning', durationMs: Date.now() - input.startedAt, safeMessage: message, metadata: entitlement });
+    return { ok: false as const, status: 403, error: message, entitlement };
+  }
+
+  return { ok: true as const, entitlement };
 }
 
 function firstSyncRow(value: unknown): OutputActivitySyncRow | null {
@@ -124,16 +186,8 @@ export async function POST(request: NextRequest) {
     if (!allowedStatuses.includes(status)) return noStoreJson({ error: 'Invalid generation status.' }, { status: 400 });
     if (!manifest || typeof manifest !== 'object') return noStoreJson({ error: 'Generation manifest is required.' }, { status: 400 });
 
-    if (status !== 'failed') {
-      const limitCheck = await readDailyEntitlement(supabase, userResult.user.id);
-      if (limitCheck.error && !isMissingRpcError(limitCheck.error.message)) throw limitCheck.error;
-      const limitRow = Array.isArray(limitCheck.data) ? limitCheck.data[0] : null;
-      const entitlement = normalizeDailyEntitlement(limitRow);
-      if (entitlement && entitlement.allowed === false) {
-        await logSystemEvent(supabase, { requestId, routePath: '/api/generation-runs', eventType: 'generation_output_limit_blocked', eventStatus: 'warning', durationMs: Date.now() - startedAt, safeMessage: entitlement.message || 'Daily output limit reached.', metadata: entitlement });
-        return noStoreJson({ error: entitlement.message || 'Daily output limit reached.', entitlement }, { status: 403 });
-      }
-    }
+    const beforeAllowance = status === 'failed' ? null : await requireGenerationAllowance({ supabase, ownerId: userResult.user.id, requestId, startedAt });
+    if (beforeAllowance && !beforeAllowance.ok) return noStoreJson({ error: beforeAllowance.error, entitlement: beforeAllowance.entitlement }, { status: beforeAllowance.status });
 
     const { data, error } = await supabase
       .from('generation_runs')
@@ -149,7 +203,7 @@ export async function POST(request: NextRequest) {
     const integrityError = await recordGenerationIntegrity(supabase, { generationRunId: data.id, eventType: 'generation_run_recorded', manifest, rules: { allowedRounds, allowedStatuses, selectedRound: round, selectedStatus: status, perOutputPay }, status: status === 'failed' ? 'failed' : 'recorded', metadata: { clientName, round, status, perOutputPay, outputActivity } });
     await logSystemEvent(supabase, { requestId, routePath: '/api/generation-runs', eventType: 'generation_run_create', eventStatus: integrityError || (outputActivity && 'errorMessage' in outputActivity && outputActivity.errorMessage) ? 'warning' : 'success', durationMs: Date.now() - startedAt, safeMessage: integrityError || (outputActivity && 'errorMessage' in outputActivity ? outputActivity.errorMessage : null), metadata: { generationRunId: data.id, round, status, perOutputPay, outputActivity } });
     const afterLimit = status === 'failed' ? null : await readDailyEntitlement(supabase, userResult.user.id);
-    const entitlement = afterLimit && !afterLimit.error && Array.isArray(afterLimit.data) ? normalizeDailyEntitlement(afterLimit.data[0]) : null;
+    const entitlement = afterLimit && !afterLimit.error && Array.isArray(afterLimit.data) ? normalizeDailyEntitlement(afterLimit.data[0]) : beforeAllowance?.entitlement || null;
     return noStoreJson({ run: data, entitlement, outputActivity });
   } catch (error) {
     await logSystemEvent(supabase, { requestId, routePath: '/api/generation-runs', eventType: 'generation_run_create', eventStatus: 'error', durationMs: Date.now() - startedAt, safeMessage: safeErrorMessage(error) });
