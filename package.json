@@ -23,7 +23,7 @@
     "client-critical:guard": "node scripts/client-critical-gaps-guard.mjs",
     "client-account:guard": "node scripts/client-account-popover-guard.mjs && npm run client-critical:guard",
     "css-ownership:guard": "node scripts/css-ownership-guard.mjs",
-    "manager-console:guard": "node scripts/manager-console-workflow-guard.mjs && node scripts/notification-output-activity-guard.mjs",
+    "manager-console:guard": "node scripts/manager-console-workflow-guard.mjs && node scripts/manager-report-workflow-guard.mjs && node scripts/notification-output-activity-guard.mjs",
     "modernization-next:guard": "node scripts/modernization-canvas-next-actions-guard.mjs && npm run css-ownership:guard",
     "dti:guard": "node scripts/dti-check.mjs",
     "dynamic-template:anchor-guard": "node scripts/dynamic-template-anchor-guard.mjs",
