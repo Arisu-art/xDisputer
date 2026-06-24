@@ -133,6 +133,13 @@ must(files['components/console/AutoRouteRefresh.tsx'], 'xdisputer:notifications-
 mustNot(files['components/console/AutoRouteRefresh.tsx'], 'setInterval', 'AutoRouteRefresh must not permanently poll RSC pages');
 must(files['app/admin/page.tsx'], '<ManagerConsoleRealtimeRefreshMount />', 'manager console must use the single manager route refresh owner');
 mustNot(files['app/admin/page.tsx'], 'AutoRouteRefresh', 'manager console must not mount duplicate route refresh owners');
+must(files['components/manager/ManagerConsoleRealtimeRefreshMount.tsx'], 'MANAGER_REFRESH_MIN_INTERVAL_MS = 8000', 'manager refresh owner must have a long stability throttle');
+must(files['components/manager/ManagerConsoleRealtimeRefreshMount.tsx'], 'xdisputer:manager-console-refresh', 'manager refresh owner must use explicit manager refresh events');
+mustNot(files['components/manager/ManagerConsoleRealtimeRefreshMount.tsx'], "window.addEventListener('focus'", 'manager refresh owner must not refresh RSC on window focus');
+mustNot(files['components/manager/ManagerConsoleRealtimeRefreshMount.tsx'], "window.addEventListener('online'", 'manager refresh owner must not refresh RSC on online events');
+mustNot(files['components/manager/ManagerConsoleRealtimeRefreshMount.tsx'], "document.addEventListener('visibilitychange'", 'manager refresh owner must not refresh RSC on visibility changes');
+mustNot(files['components/manager/ManagerConsoleRealtimeRefreshMount.tsx'], "table: 'generation_runs'", 'manager refresh owner must not refresh all managers on every generation run');
+mustNot(files['components/manager/ManagerConsoleRealtimeRefreshMount.tsx'], 'xdisputer:output-entitlement-refresh', 'manager refresh owner must not listen to client entitlement refresh spam');
 
 must(files['src/features/notifications/notification-api-service.ts'], 'repairBellNotificationsForUser', 'notification API must repair bell rows before read');
 must(files['lib/notifications/notification-service.ts'], 'outputActivityFallbackNotifications', 'notification service must bridge Output Activity fallback rows');
