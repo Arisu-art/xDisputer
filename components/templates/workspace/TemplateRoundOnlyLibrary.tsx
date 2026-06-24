@@ -125,8 +125,8 @@ export default function TemplateRoundOnlyLibrary() {
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(messageFromPayload(payload, 'Could not verify manager templates.'));
       const data = payloadData(payload);
-      setScope(data?.managerTemplateScope as ManagerTemplateScopeUi | null || null);
-      setStorage(data?.templateStorage as TemplateStorageState || null);
+      setScope((data?.managerTemplateScope as ManagerTemplateScopeUi | null) || null);
+      setStorage((data?.templateStorage as TemplateStorageState) || null);
       setAssets(Array.isArray(data?.assets) ? data.assets as TemplateAsset[] : []);
     } catch (error) {
       setScope(null);
