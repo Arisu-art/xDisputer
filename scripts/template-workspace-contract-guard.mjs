@@ -5,6 +5,7 @@ const failures = [];
 function read(path) { if (!existsSync(path)) { failures.push(`Missing required file: ${path}`); return ''; } return readFileSync(path, 'utf8'); }
 function has(path, term) { const source = read(path); if (source && !source.includes(term)) failures.push(`${path} must include ${term}`); }
 function notHas(path, term) { const source = read(path); if (source && source.includes(term)) failures.push(`${path} must not include ${term}`); }
+function before(path, first, second, message) { const source = read(path); const a = source.indexOf(first); const b = source.indexOf(second); if (a < 0 || b < 0 || a >= b) failures.push(`${path}: ${message}`); }
 
 const nav = read('lib/templates/workspace/template-workspace-navigation.ts');
 const contract = read('lib/templates/workspace/template-workspace-contract.ts');
@@ -29,6 +30,7 @@ if (!engineService.includes('previewGenerationPlan')) failures.push('generation 
 for (const path of [
   'components/templates/workspace/TemplateWorkspaceShell.tsx',
   'components/templates/workspace/TemplateLibraryHub.tsx',
+  'components/templates/workspace/TemplateRoundOnlyLibrary.tsx',
   'components/templates/workspace/TemplateStudioHub.tsx',
   'components/templates/workspace/GenerationEngineHub.tsx',
   'components/templates/workspace/TemplateReadinessCard.tsx',
@@ -37,7 +39,9 @@ for (const path of [
   'app/manager-workspace/page.tsx',
   'app/manager-workspace/studio/page.tsx',
   'app/manager-workspace/engine/page.tsx',
-  'app/template-workspace-hubs.css'
+  'app/api/template-assets/route.ts',
+  'app/template-workspace-hubs.css',
+  'app/manager-template-library-upload.css'
 ]) read(path);
 
 has('components/templates/workspace/TemplateWorkspaceShell.tsx', 'templateWorkspaceNavForPath');
@@ -46,6 +50,24 @@ has('app/manager-workspace/studio/page.tsx', 'TemplateStudioHub');
 has('app/manager-workspace/engine/page.tsx', 'GenerationEngineHub');
 notHas('app/manager-workspace/page.tsx', "navItemsForDomain('manager-authoring'");
 has('app/layout.tsx', "import './template-workspace-hubs.css';");
+has('app/layout.tsx', "import './manager-template-library-upload.css';");
+before('app/layout.tsx', './template-workspace-hubs.css', './manager-template-library-upload.css', 'manager Template Library upload CSS must load after base template workspace CSS');
+
+has('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', 'templateSlots', 'Template Library must own upload slot definitions.');
+has('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', 'uploadTemplate', 'Template Library must expose manager template upload handler.');
+has('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', "fetch('/api/template-assets'", 'Template Library upload must post to template-assets API.');
+has('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', "method: 'DELETE'", 'Template Library must support removing active templates.');
+has('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', "x-template-upload': 'workspace'", 'Template Library upload must request JSON workspace responses.');
+has('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', 'payloadData', 'Template Library GET must support service-result data envelope.');
+has('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', 'data-template-library-minimal="upload-enabled"', 'Template Library must expose upload-enabled marker.');
+notHas('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', 'data-template-library-minimal="round-only"', 'Template Library must not be round-only without upload.');
+has('app/manager-template-library-upload.css', 'Template Library upload layout', 'Template Library upload CSS must declare ownership.');
+has('app/manager-template-library-upload.css', '.template-upload-slot-grid', 'Template Library layout must style upload slots.');
+has('app/manager-template-library-upload.css', 'grid-template-columns: repeat(2, minmax(0, 1fr))', 'Template Library slots must use responsive two-column desktop layout.');
+has('app/manager-template-library-upload.css', '@media (max-width: 1180px)', 'Template Library layout must respond on narrower screens.');
+has('app/api/template-assets/route.ts', 'export async function POST', 'template-assets API must support POST upload.');
+has('app/api/template-assets/route.ts', 'request.formData()', 'template-assets API must read multipart form data.');
+has('app/api/template-assets/route.ts', 'uploadManagerTemplateObject', 'template-assets API must upload to manager template storage.');
 
 const redirects = [
   ['app/manager-workspace/contracts/page.tsx', '/manager-workspace/studio'],
