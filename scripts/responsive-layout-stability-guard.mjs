@@ -43,12 +43,11 @@ must(supportCss, 'grid-template-areas: "documents page controls"', 'Supporting D
 must(supportCss, 'grid-template-areas: "documents" "page" "controls"', 'Supporting Documents CSS must stack on narrow screens');
 must(supportCss, 'overflow-x: clip', 'Supporting Documents CSS must prevent horizontal overflow');
 
-must(centerCanvasCss, 'final owner of the Supporting Documents layout editor', 'final center canvas CSS must declare ownership');
-must(centerCanvasCss, 'practical 20/60/20 rail-center-rail ratio', 'final center canvas CSS must document native ratio layout');
-must(centerCanvasCss, '--support-native-page-target: clamp(560px, 52vw, var(--support-native-page-max))', 'final center canvas CSS must make the page materially larger');
-must(centerCanvasCss, 'grid-template-columns: minmax(190px, var(--support-native-left)) minmax(0, 1fr) minmax(210px, var(--support-native-right))', 'final center canvas CSS must compact rails and prioritize center');
-must(centerCanvasCss, 'justify-content: flex-start !important', 'final left rail CSS must remove old space-between vertical gap');
-must(centerCanvasCss, 'width: min(100%, var(--support-native-page-target)) !important', 'final center canvas CSS must set page and toolbar to the native target');
+must(centerCanvasCss, 'middle canvas owns all remaining width', 'final center canvas CSS must declare edge-to-edge center ownership');
+must(centerCanvasCss, '--support-native-page-target: 100%', 'final center canvas CSS must remove fixed page cap and use all center width');
+must(centerCanvasCss, 'grid-template-columns: minmax(180px, var(--support-native-left)) minmax(0, 1fr) minmax(200px, var(--support-native-right))', 'final center canvas CSS must compact rails and prioritize center');
+must(centerCanvasCss, 'justify-items: stretch !important', 'final center frame must stretch canvas side to side');
+must(centerCanvasCss, 'width: 100% !important', 'final center canvas CSS must set the page and toolbar to full center width');
 must(centerCanvasCss, '.word-rotate-actions', 'final center canvas CSS must control right rail button layout');
 
 must(entitlement, 'ENTITLEMENT_FETCH_TIMEOUT_MS = 8000', 'entitlement check must timeout cold fetches');
