@@ -11,12 +11,14 @@ for (const file of [
   'components/templates/workspace/TemplateRoundOnlyLibrary.tsx',
   'components/templates/workspace/TemplateStudioHub.tsx',
   'components/templates/workspace/TemplateWorkflowFrameworkPanel.tsx',
+  'components/templates/workspace/TemplateRegistrationConsole.tsx',
   'lib/templates/workspace/template-workflow-framework.ts',
   'lib/templates/intelligence/dynamic-template-inspector.ts',
   'components/TemplateProgressiveWorkspace.tsx',
   'components/TemplatePacketConfigurator.tsx',
   'components/templates/workspace/TemplateTestLabHub.tsx',
   'lib/templates/workspace/template-test-lab-service.ts',
+  'app/api/template-registration/route.ts',
   'app/api/template-assets/route.ts',
   'app/api/template-assets/download/route.ts',
   'app/manager-template-test-lab.css',
@@ -41,6 +43,11 @@ must('components/templates/workspace/TemplateStudioHub.tsx', 'TemplateWorkflowFr
 must('app/manager-workspace/studio/page.tsx', 'buildTemplateWorkflowFramework', 'Studio page must build universal framework');
 must('lib/templates/workspace/template-workflow-framework.ts', 'Account Name - Account number', 'framework must include account in-place default');
 must('lib/templates/workspace/template-workflow-framework.ts', 'Replace this wording in the same paragraph or table cell', 'framework must prevent wrong-location rendering');
+must('components/templates/workspace/TemplateRegistrationConsole.tsx', 'name="inPlaceAnchor"', 'registration UI must allow anchor customization');
+must('components/templates/workspace/TemplateRegistrationConsole.tsx', 'name="renderPolicy"', 'registration UI must allow render policy customization');
+must('components/templates/workspace/TemplateRegistrationConsole.tsx', 'name="preservationPolicy"', 'registration UI must allow preservation policy customization');
+must('app/api/template-registration/route.ts', 'workflowPolicy', 'registration API must persist workflow policy');
+must('app/api/template-registration/route.ts', 'workflowAnchorPolicy', 'registration API must persist anchor policy');
 must('lib/templates/intelligence/dynamic-template-inspector.ts', 'natural-anchor-account-name-account-number', 'inspector must detect account in-place anchors');
 must('lib/templates/intelligence/dynamic-template-inspector.ts', 'do not append or increment', 'inspector must explain wrong-location prevention');
 must('lib/templates/workspace/template-test-lab-service.ts', 'buildTemplateTestLabContext', 'test service missing');
