@@ -101,7 +101,7 @@ function adjustTop(base: SupportingPlacement, requested: number) {
 }
 function adjustBottom(base: SupportingPlacement, requested: number) {
   const ratio = base.cropHeight / base.height;
-  const delta = clamp(requested, Math.max(-(base.height - MIN), -(base.cropHeight - MIN_CROP) / ratio), Math.min(1 - base.y - base.height, (1 - base.cropY - base.cropWidth) / ratio));
+  const delta = clamp(requested, Math.max(-(base.height - MIN), -(base.cropHeight - MIN_CROP) / ratio), Math.min(1 - base.y - base.height, (1 - base.cropY - base.cropHeight) / ratio));
   return { ...base, height: base.height + delta, cropHeight: base.cropHeight + delta * ratio };
 }
 function cropWithHandle(base: SupportingPlacement, handle: CropHandle, dx: number, dy: number) {
