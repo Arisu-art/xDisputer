@@ -5,7 +5,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { createSupabaseBrowserClient } from '../lib/supabase/browser';
 import { PageStateBoundary, StableCard, StableEmptyState } from './stability';
 
-type EntitlementPayload = { outputLimit: number | null; outputUsedToday: number; outputRemainingToday: number | null; resetAt: string | null; resetSeconds: number | null; allowed: boolean; message: string | null; source?: string | null; serverTime?: string | null };
+type EntitlementPayload = { outputLimit: number | null; outputUsedToday: number; outputRemainingToday: number | null; resetAt: string | null; resetSeconds: number | null; allowed: boolean; message: string | null; managerId?: string | null; source?: string | null; serverTime?: string | null };
 type EntitlementState = 'checking' | 'allowed' | 'paused' | 'unavailable';
 
 const ENTITLEMENT_FETCH_TIMEOUT_MS = 8000;
@@ -29,7 +29,7 @@ function formatResetAt(value: string | null) {
 
 function isEntitlementPayload(value: unknown): value is EntitlementPayload { return Boolean(value && typeof value === 'object' && 'outputUsedToday' in value); }
 function countdownStep(secondsLeft: number | null) { if (secondsLeft === null || secondsLeft > 3600) return { delay: 60_000, decrement: 60 }; if (secondsLeft > 300) return { delay: 10_000, decrement: 10 }; return { delay: 1000, decrement: 1 }; }
-function isPaused(entitlement: EntitlementPayload | null) { return Boolean(entitlement?.outputLimit !== null && (entitlement?.allowed === false || entitlement?.outputRemainingToday === 0)); }
+function isPaused(entitlement: EntitlementPayload | null) { return Boolean(entitlement && (entitlement.allowed === false || (entitlement.outputLimit !== null && entitlement.outputRemainingToday === 0))); }
 function resolveState(entitlement: EntitlementPayload | null, unavailable: boolean): EntitlementState { if (unavailable && !entitlement) return 'unavailable'; if (!entitlement) return 'checking'; return isPaused(entitlement) ? 'paused' : 'allowed'; }
 function disputerMessage(value: string | null | undefined) { return (value || 'Generation is paused for this Disputer account.').replace(/client user/gi, 'Disputer').replace(/client account/gi, 'Disputer account').replace(/client output/gi, 'Disputer output').replace(/client\b/gi, 'Disputer'); }
 
@@ -110,11 +110,26 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
     };
   }, [applyEntitlement, scheduleRefresh]);
 
+  useEffect(() => {
+    const managerId = entitlement?.managerId;
+    if (!managerId) return;
+    const supabase = createSupabaseBrowserClient();
+    let cancelled = false;
+    const channel = supabase
+      .channel(`client-manager-entitlement-${managerId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'manager_entitlement_limits', filter: `manager_id=eq.${managerId}` }, () => { if (!cancelled) scheduleRefresh(0); })
+      .subscribe((status) => { if (status === 'SUBSCRIBED' && !cancelled) scheduleRefresh(0); });
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
+  }, [entitlement?.managerId, scheduleRefresh]);
+
   const state = resolveState(entitlement, unavailable);
   const paused = state === 'paused';
   useEffect(() => { if (!paused || typeof secondsLeft !== 'number') return; const step = countdownStep(secondsLeft); const timer = window.setTimeout(() => setSecondsLeft((value) => typeof value === 'number' ? Math.max(0, value - step.decrement) : value), step.delay); return () => window.clearTimeout(timer); }, [paused, secondsLeft]);
   useEffect(() => { if (secondsLeft === 0) scheduleRefresh(0); }, [secondsLeft, scheduleRefresh]);
-  const usageLabel = useMemo(() => { if (!entitlement) return 'Checking daily output limit'; if (entitlement.outputLimit === null) return 'No daily output limit configured'; return `${entitlement.outputUsedToday}/${entitlement.outputLimit} Daily Outputs Used`; }, [entitlement]);
+  const usageLabel = useMemo(() => { if (!entitlement) return 'Checking daily output limit'; if (entitlement.outputLimit === null) return entitlement.allowed === false ? 'Manager output cap is not set' : 'No daily output limit configured'; return `${entitlement.outputUsedToday}/${entitlement.outputLimit} Daily Outputs Used`; }, [entitlement]);
   if (state === 'checking') return <main className="client-output-limit-checking" aria-label="Checking Disputer output allowance" data-output-entitlement-state="checking"><PageStateBoundary state="loading" loading={<StableCard eyebrow="Workspace access" title="Checking daily output allowance" description="Preparing this Disputer workspace without showing unstable controls early." state="loading"><StableEmptyState tone="info" title="Loading entitlement" description="The workspace opens automatically after allowance is confirmed." /></StableCard>}>{children}</PageStateBoundary></main>;
   if (state === 'unavailable') return <main className="client-output-limit-checking" aria-label="Disputer output allowance unavailable" data-output-entitlement-state="unavailable"><StableCard tone="warning" eyebrow="Workspace access" title="Output allowance could not be verified" description="Generation controls stay hidden until the current allowance is confirmed." actions={<button type="button" className="action-button" onClick={() => scheduleRefresh(0)}>Check again</button>}><StableEmptyState tone="warning" title="Entitlement check unavailable" description="Reconnect or refresh before generating output." /></StableCard></main>;
   if (state === 'allowed') return <>{children}</>;
