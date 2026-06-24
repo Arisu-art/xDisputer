@@ -95,7 +95,7 @@ function normalizeEntitlement(row: EntitlementRow | null, source: 'daily' | 'fal
         ? null
         : Math.max(outputLimit - used, 0);
   const rowAllowed = typeof row?.allowed === 'boolean' ? row.allowed : outputLimit !== null && remaining !== 0;
-  const allowed = rowAllowed && (outputLimit === null ? source !== 'none' : remaining !== 0);
+  const allowed = outputLimit !== null && rowAllowed && remaining !== 0;
 
   return {
     outputLimit,
