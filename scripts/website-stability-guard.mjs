@@ -84,6 +84,7 @@ const files = Object.fromEntries([
   'components/SupportingDocumentsSetup.tsx',
   'components/TemplateProgressiveWorkspace.tsx',
   'app/stable-ui-primitives.css',
+  'app/responsive-layout-stability-system.css',
   'app/workflow-header-slim.css',
   'app/supporting-documents-layout-polish.css',
   'app/supporting-documents-wide-stage.css',
@@ -93,14 +94,24 @@ const files = Object.fromEntries([
 must(files['docs/website-stability-cleanup-canvas.md'], 'Architecture rule: one owner per state', 'stability canvas must document one-owner state rule');
 must(files['docs/website-stability-cleanup-canvas.md'], 'scripts/website-stability-guard.mjs', 'stability canvas must name the guard');
 must(files['docs/responsive-layout-stability-canvas.md'], 'Responsive Layout and Stability Canvas', 'responsive canvas must exist');
+must(files['docs/responsive-layout-stability-canvas.md'], 'app/responsive-layout-stability-system.css', 'responsive canvas must point to the coded global CSS owner');
 must(files['docs/responsive-layout-stability-canvas.md'], 'Center page fills the available middle column', 'responsive canvas must document center-priority layout');
 must(files['docs/responsive-layout-stability-canvas.md'], 'ENTITLEMENT_FETCH_TIMEOUT_MS', 'responsive canvas must document entitlement timeout');
 must(files['package.json'], 'website-stability:guard', 'package.json must expose website-stability:guard');
 must(files['scripts/guard-bundle-runner.mjs'], 'scripts/website-stability-guard.mjs', 'ui-source bundle must run website-stability guard');
+before(files['app/layout.tsx'], './final-responsive-integrity.css', './responsive-layout-stability-system.css', 'responsive stability system must load after final responsive integrity');
+before(files['app/layout.tsx'], './responsive-layout-stability-system.css', './stable-ui-primitives.css', 'responsive stability system must load before stable primitives/final feature layers');
 before(files['app/layout.tsx'], './stable-ui-primitives.css', './workflow-header-slim.css', 'stable primitive CSS must load before final workflow layers');
 before(files['app/layout.tsx'], './workflow-header-slim.css', './supporting-documents-layout-polish.css', 'workflow header slim must load before Supporting Documents polish');
 before(files['app/layout.tsx'], './supporting-documents-layout-polish.css', './supporting-documents-wide-stage.css', 'wide Supporting Documents stage must load last');
 before(files['app/layout.tsx'], './supporting-documents-wide-stage.css', './supporting-documents-runtime-wide-fix.css', 'runtime Supporting Documents wide fix must load after wide stage');
+
+must(files['app/responsive-layout-stability-system.css'], '--responsive-layout-stability-system: coded', 'responsive stability CSS must expose coded contract marker');
+must(files['app/responsive-layout-stability-system.css'], 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', 'responsive stability CSS must code auto-fit card grids');
+must(files['app/responsive-layout-stability-system.css'], '.client-output-limit-checking', 'responsive stability CSS must stabilize entitlement loading screen layout');
+must(files['app/responsive-layout-stability-system.css'], "[role='dialog']", 'responsive stability CSS must bound modal layouts');
+must(files['app/responsive-layout-stability-system.css'], 'prefers-reduced-motion: reduce', 'responsive stability CSS must respect reduced motion');
+must(files['app/responsive-layout-stability-system.css'], 'overflow-x: clip', 'responsive stability CSS must prevent horizontal overflow');
 
 must(files['components/stability/StableCard.tsx'], 'stable-card', 'StableCard must provide stable-card shell');
 must(files['components/stability/StableCommandHeader.tsx'], 'stable-command-header', 'StableCommandHeader must provide stable command shell');
@@ -168,7 +179,8 @@ must(files['app/supporting-documents-wide-stage.css'], '--support-doc-shell-max:
 must(files['app/supporting-documents-wide-stage.css'], 'prefers-reduced-motion', 'sticky-header animation must respect reduced motion');
 must(files['app/supporting-documents-wide-stage.css'], 'grid-template-areas: "documents page controls"', 'Supporting Documents must use left-center-right grid');
 must(files['app/supporting-documents-runtime-wide-fix.css'], 'Layout contract: side panels are secondary; the center document canvas gets the maximum safe space first', 'runtime Supporting Documents fix must document center priority');
-must(files['app/supporting-documents-runtime-wide-fix.css'], '--support-runtime-page-max: 1320px', 'runtime Supporting Documents page must support larger center canvas');
+must(files['app/supporting-documents-runtime-wide-fix.css'], '--support-runtime-canvas-target: clamp(430px, 56vw, var(--support-runtime-page-max))', 'runtime Supporting Documents page must maximize center canvas target');
+must(files['app/supporting-documents-runtime-wide-fix.css'], 'min-height: clamp(520px, calc(100dvh - 230px), 980px)', 'runtime Supporting Documents frame must reserve vertical space for a large canvas');
 must(files['app/supporting-documents-runtime-wide-fix.css'], 'grid-template-areas: "documents page controls"', 'runtime Supporting Documents layout must use wide three-area grid');
 must(files['app/supporting-documents-runtime-wide-fix.css'], 'grid-template-areas: "documents" "page" "controls"', 'runtime Supporting Documents layout must stack on narrow screens');
 must(files['app/supporting-documents-runtime-wide-fix.css'], 'overflow-x: clip', 'runtime Supporting Documents layout must prevent horizontal overflow');
