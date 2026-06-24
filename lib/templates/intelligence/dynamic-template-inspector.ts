@@ -36,6 +36,18 @@ function contractRecord(asset: DynamicTemplateAssetInput) {
   return asset.contract_json && typeof asset.contract_json === 'object' ? asset.contract_json : {};
 }
 
+function aliasStrings(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (typeof item === 'string') return [item];
+    if (item && typeof item === 'object') {
+      const record = item as Record<string, unknown>;
+      return [record.alias, record.canonical].filter(Boolean).map(String);
+    }
+    return [];
+  });
+}
+
 function slotKind(asset: DynamicTemplateAssetInput) {
   const validation = validationRecord(asset);
   const slot = validation.slot && typeof validation.slot === 'object' ? validation.slot as Record<string, unknown> : {};
@@ -49,6 +61,7 @@ function hasAccountSignal(asset: DynamicTemplateAssetInput, variables: DynamicTe
     ...asStringArray(validation.fulfilledFields),
     ...asStringArray(validation.missingFields),
     ...asStringArray(validation.unknownRequiredFields),
+    ...aliasStrings(validation.aliasesUsed),
     ...variables.map((variable) => variable.sourceText)
   ].join(' ').toLowerCase();
   return fields.includes('account') || slotKind(asset) === 'AFFIDAVIT';
@@ -77,7 +90,7 @@ function detectVariablesFromValidation(asset: DynamicTemplateAssetInput) {
   const required = asStringArray(validation.requiredFields);
   const fulfilled = asStringArray(validation.fulfilledFields);
   const missing = new Set([...asStringArray(validation.missingFields), ...asStringArray(validation.unknownRequiredFields)]);
-  const aliases = asStringArray(validation.aliasesUsed).concat(asStringArray((validation.aliasesUsed as { alias?: string }[] | undefined)?.map?.((item) => item?.alias) || []));
+  const aliases = aliasStrings(validation.aliasesUsed);
   const merged = Array.from(new Set([...required, ...fulfilled, ...aliases, ...Array.from(missing)]));
   return merged.map((token, index) => finding({
     key: `variable-${index + 1}-${token}`,
