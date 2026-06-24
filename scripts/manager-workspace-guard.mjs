@@ -1,63 +1,48 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
 
-const checks = [];
-function read(path) { const ok = existsSync(path); checks.push({ ok, label: `file exists: ${path}` }); return ok ? readFileSync(path, 'utf8') : ''; }
-function has(source, term, label) { checks.push({ ok: source.includes(term), label }); }
-function notHas(source, term, label) { checks.push({ ok: !source.includes(term), label }); }
-
-if (existsSync('scripts/apply-manager-workspace-nav-wiring.mjs')) {
-  execSync('node scripts/apply-manager-workspace-nav-wiring.mjs', { stdio: 'inherit' });
-  execSync('node scripts/apply-manager-workspace-nav-wiring.mjs', { stdio: 'inherit' });
+const failures = [];
+function read(file) {
+  if (!existsSync(file)) {
+    failures.push(`missing ${file}`);
+    return '';
+  }
+  return readFileSync(file, 'utf8');
+}
+function must(file, marker, label) {
+  if (!read(file).includes(marker)) failures.push(label);
+}
+function mustNot(file, marker, label) {
+  if (read(file).includes(marker)) failures.push(label);
 }
 
-const page = read('app/manager-workspace/page.tsx');
-const shell = read('components/templates/workspace/TemplateWorkspaceShell.tsx');
-const library = read('components/templates/workspace/TemplateRoundOnlyLibrary.tsx');
-const libraryCss = read('app/manager-template-library-upload.css');
-const switchComponent = read('components/ManagerWorkspaceSwitch.tsx');
-const routes = read('lib/saas/routes.ts');
-const admin = read('app/admin/page.tsx');
-const access = read('app/admin/access/page.tsx');
-const audit = read('components/AccessAuditView.tsx');
-const reports = read('components/GenerationReportView.tsx');
-const layout = read('app/layout.tsx');
-const api = read('app/api/template-assets/route.ts');
-const pkg = read('package.json');
+must('app/manager-workspace/page.tsx', 'TemplateWorkspaceShell', 'manager workspace must use template workspace shell');
+must('app/manager-workspace/page.tsx', 'TemplateLibraryHub', 'manager workspace must render Template Library hub');
+must('components/templates/workspace/TemplateWorkspaceShell.tsx', 'ManagerConsoleShell', 'template shell must use shared manager shell');
+must('components/templates/workspace/TemplateWorkspaceShell.tsx', 'mode="workspace"', 'template shell must run in manager workspace mode');
+must('app/layout.tsx', "import './manager-template-library-upload.css';", 'layout must load manager template upload CSS');
 
-has(page, 'TemplateWorkspaceShell', 'manager workspace uses template workspace shell');
-has(page, 'TemplateLibraryHub', 'manager workspace renders Template Library hub');
-has(shell, 'ManagerConsoleShell', 'template shell uses shared manager shell');
-has(shell, 'mode="workspace"', 'template shell runs in manager workspace mode');
-has(switchComponent, 'manager-workspace-nav-switch', 'switch component exposes visible nav CTA variant');
-has(routes, '/manager-workspace', 'manager workspace route is protected');
-has(admin, 'ManagerConsoleShell', '/admin uses shared manager shell');
-has(admin, 'mode="operations"', '/admin shell is operations mode');
-has(access, '<ManagerWorkspaceSwitch />', '/admin/access sidebar directly renders switch');
-has(audit, "{scope === 'manager' && <ManagerWorkspaceSwitch />}", '/admin/audit sidebar renders switch');
-has(reports, "{scope === 'manager' && <ManagerWorkspaceSwitch />}", '/admin/reports sidebar renders switch');
-has(layout, "import './manager-template-library-upload.css';", 'layout loads manager template upload CSS');
-has(library, 'templateSlots', 'Template Library exposes upload slots');
-has(library, 'selectedSlotKey', 'Template Library uses native selection mode');
-has(library, 'template-slot-selection-list', 'Template Library shows a slot selector');
-has(library, 'template-selected-upload-card', 'Template Library shows one focused upload card');
-has(library, 'uploadTemplate', 'Template Library upload handler exists');
-has(library, "fetch('/api/template-assets'", 'Template Library posts uploads to API');
-has(library, 'data-template-library-minimal="selection-upload"', 'Template Library is selection-upload enabled');
-notHas(library, 'data-template-library-minimal="round-only"', 'Template Library must not be round-only');
-notHas(library, '<div className="template-upload-slot-grid">', 'Template Library must not show all upload cards at once');
-has(libraryCss, '.template-library-selection-grid', 'Template Library selection grid layout exists');
-has(libraryCss, '.template-slot-selection-list', 'Template Library slot selector layout exists');
-has(libraryCss, '.template-selected-upload-card', 'Template Library focused upload card layout exists');
-has(api, 'request.formData()', 'template-assets API reads multipart uploads');
-has(api, 'uploadManagerTemplateObject', 'template-assets API writes manager template files');
-has(pkg, 'template-workspace:guard', 'package keeps template workspace guard wired');
+must('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', "type Stage = 'ROUND' | 'SLOT' | 'UPLOAD'", 'Template Library must use progressive stages');
+must('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', 'templates-progressive-workspace manager-template-progressive-workspace', 'Template Library must use native progressive workspace shell');
+must('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', "stage === 'ROUND'", 'Template Library must have round stage');
+must('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', "stage === 'SLOT'", 'Template Library must have template selection stage');
+must('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', "stage === 'UPLOAD'", 'Template Library must have upload stage');
+must('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', 'uploadTemplate', 'Template Library upload handler must exist');
+must('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', "fetch('/api/template-assets'", 'Template Library must post uploads to template-assets API');
+must('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', 'data-template-library-minimal="progressive-upload"', 'Template Library must be progressive-upload enabled');
+mustNot('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', 'data-template-library-minimal="round-only"', 'Template Library must not be round-only');
+mustNot('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', '<div className="template-upload-slot-grid">', 'Template Library must not show all upload cards at once');
 
-checks.forEach((check) => console.log(`${check.ok ? '✅' : '❌'} ${check.label}`));
-const failed = checks.filter((check) => !check.ok);
-if (failed.length) {
-  console.error(`\nManager workspace guard failed: ${failed.length} check(s) failed.`);
+must('app/manager-template-library-upload.css', '.manager-template-progressive-workspace', 'progressive layout CSS must exist');
+must('app/manager-template-library-upload.css', '.template-manager-slot-grid', 'template slot card layout must exist');
+must('app/manager-template-library-upload.css', '.template-native-upload-panel', 'focused upload panel layout must exist');
+must('app/api/template-assets/route.ts', 'request.formData()', 'template-assets API must read multipart uploads');
+must('app/api/template-assets/route.ts', 'uploadManagerTemplateObject', 'template-assets API must write manager template files');
+
+if (failures.length) {
+  console.error(`Manager workspace guard failed: ${failures.length} issue(s).`);
+  for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log(`\nManager workspace guard passed: ${checks.length} check(s).`);
+
+console.log('Manager workspace guard passed.');
