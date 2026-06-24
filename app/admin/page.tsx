@@ -29,9 +29,10 @@ import {
 } from '../../lib/saas/manager-user-settings';
 import { requireRole } from '../../lib/saas/session';
 import { managerOperationsNavItems, normalizeManagerOperationsPanel } from '../../lib/manager-console/manager-operations-panels';
+import { listManagerReportData, moneyText, parseManagerReportInput, type ManagerReportData, type ManagerReportType } from '../../lib/manager-console/manager-reporting';
 
 type PageProps = {
-  searchParams?: Promise<{ panel?: string | string[]; control?: string | string[]; message?: string | string[] }>;
+  searchParams?: Promise<{ panel?: string | string[]; control?: string | string[]; message?: string | string[]; reportType?: string | string[]; from?: string | string[]; to?: string | string[] }>;
 };
 
 type ManagerOperationsPanel = ReturnType<typeof normalizeManagerOperationsPanel>;
@@ -66,7 +67,7 @@ function managerPanelHeader(activePanel: ManagerOperationsPanel, fallbackLabel?:
   if (activePanel === 'access') return { title: 'Access Control', description: 'Manage Disputer account status, approval, and compact metadata from one focused stable view.' };
   if (activePanel === 'output_activity') return { title: 'Output Activity', description: 'Confirm generated output before it affects payday pay.' };
   if (activePanel === 'requests') return { title: 'Request', description: 'Review pending confirmations and invite requests.' };
-  if (activePanel === 'reports') return { title: 'Report', description: 'Generate a clean operational report.' };
+  if (activePanel === 'reports') return { title: 'Report', description: 'Generate date-based output, salary, and user reports with clean Excel export.' };
   return { title: fallbackLabel || 'Monitoring', description: 'Monitor outputs and Disputer status from one clean panel.' };
 }
 
@@ -92,7 +93,42 @@ function ManagerAccountCard({ account, entitlements, settings }: { account: Acco
 function EmptyState({ children }: { children: string }) { return <div className="admin-monitor-empty manager-console-empty">{children}</div>; }
 function MonitoringPanel({ summary, pending, active, entitlements }: { summary: Awaited<ReturnType<typeof getManagerClientSummary>>['summary']; pending: AccountDirectoryListResult; active: AccountDirectoryListResult; entitlements: EntitlementLimitMap }) { const outputToday = active.accounts.reduce((sum, account) => sum + (entitlements[account.id]?.output_used_today || 0), 0); return <><ManagerKpiGrid summary={summary} outputToday={outputToday} /><section className="manager-console-two-column"><article className="admin-monitor-card native-operation-card"><header className="manager-console-card-header"><div><p>Monitoring</p><h2>Active output status</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin/output-queue">Open queue</ConsoleNavLink></header>{active.accounts.length ? <div className="manager-console-compact-list">{active.accounts.map((account) => <div key={account.id}><strong>{account.full_name || account.email || 'Disputer'}</strong><span>{outputUsage(entitlements, account.id)}</span></div>)}</div> : <EmptyState>No active Disputers to monitor yet.</EmptyState>}</article><article className="admin-monitor-card native-operation-card"><header className="manager-console-card-header"><div><p>Request</p><h2>Pending confirmation</h2></div><ConsoleNavLink className="dashboard-card-link" href="/admin?panel=requests">Review</ConsoleNavLink></header>{pending.accounts.length ? <div className="manager-console-compact-list">{pending.accounts.map((account) => <div key={account.id}><strong>{account.full_name || account.email || 'Disputer'}</strong><span>{statusText(account.account_status)}</span></div>)}</div> : <EmptyState>No pending confirmations.</EmptyState>}</article></section></>; }
 function AccessPanel({ accounts, entitlements, settings }: { accounts: AccountDirectoryRow[]; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) { return <section className="manager-console-stack account-record-compact-stack">{accounts.length ? accounts.map((account) => <ManagerAccountCard key={account.id} account={account} entitlements={entitlements} settings={settings} />) : <EmptyState>No Disputers are assigned to this manager workspace yet.</EmptyState>}</section>; }
-function ReportPanel({ summary, accounts, entitlements }: { summary: Awaited<ReturnType<typeof getManagerClientSummary>>['summary']; accounts: AccountDirectoryRow[]; entitlements: EntitlementLimitMap }) { const outputs = accounts.reduce((sum, account) => sum + (entitlements[account.id]?.output_used_today || 0), 0); return <section className="admin-monitor-card native-operation-card manager-console-report"><header className="manager-console-card-header"><div><p>Report</p><h2>Manager operations summary</h2></div><strong>{outputs} output(s)</strong></header><div className="manager-console-report-grid"><span>Total Disputers <strong>{summary.clients}</strong></span><span>Active <strong>{summary.active}</strong></span><span>Pending <strong>{summary.pending}</strong></span><span>Blocked <strong>{summary.blocked}</strong></span><span>Outputs today <strong>{outputs}</strong></span><span>Unassigned <strong>{summary.unassigned}</strong></span></div><div className="manager-console-compact-list">{accounts.slice(0, 8).map((account) => <div key={account.id}><strong>{account.full_name || account.email || 'Disputer'}</strong><span>{statusText(account.account_status)} • {outputUsage(entitlements, account.id)}</span></div>)}</div></section>; }
+
+function reportTypeLabel(type: ManagerReportType) {
+  if (type === 'salary') return 'Salary';
+  if (type === 'users') return 'Users';
+  if (type === 'outputs') return 'Outputs';
+  return 'Summary';
+}
+
+function dateTimeText(value: string) {
+  if (!value) return '—';
+  try { return new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value)); } catch { return '—'; }
+}
+
+function reportExportHref(report: ManagerReportData) {
+  const params = new URLSearchParams({ reportType: report.input.type, from: report.input.range.fromDate, to: report.input.range.toDate });
+  return `/api/manager/report-export?${params.toString()}`;
+}
+
+function ReportTable({ report }: { report: ManagerReportData }) {
+  if (report.input.type === 'outputs') return <div className="manager-report-table-scroll"><table className="manager-report-table"><thead><tr><th>Date</th><th>Disputer</th><th>Letter client</th><th>Round</th><th>Status</th><th>Output</th><th>Rate</th><th>Pay</th></tr></thead><tbody>{report.outputs.map((row) => <tr key={row.id}><td>{dateTimeText(row.createdAt)}</td><td>{row.disputerName}</td><td>{row.clientName}</td><td>{row.roundLabel}</td><td>{row.status}</td><td>{row.outputCount}</td><td>{moneyText(row.rateAmount)}</td><td>{moneyText(row.estimatedPay)}</td></tr>)}</tbody></table></div>;
+  if (report.input.type === 'salary') return <div className="manager-report-table-scroll"><table className="manager-report-table"><thead><tr><th>Disputer</th><th>Type</th><th>Base salary</th><th>Rate</th><th>Approved outputs</th><th>Pending outputs</th><th>Estimated pay</th></tr></thead><tbody>{report.users.map((row) => <tr key={row.id}><td><strong>{row.name}</strong><small>{row.email}</small></td><td>{row.employmentType}</td><td>{moneyText(row.baseSalary)}</td><td>{moneyText(row.perOutputRate)}</td><td>{row.approvedOutputs}</td><td>{row.pendingOutputs}</td><td>{moneyText(row.estimatedPay)}</td></tr>)}</tbody></table></div>;
+  if (report.input.type === 'users') return <div className="manager-report-table-scroll"><table className="manager-report-table"><thead><tr><th>Disputer</th><th>Status</th><th>Type</th><th>Daily cap</th><th>Outputs</th><th>Approved</th><th>Pending</th><th>Returned</th></tr></thead><tbody>{report.users.map((row) => <tr key={row.id}><td><strong>{row.name}</strong><small>{row.email}</small></td><td>{row.status}</td><td>{row.employmentType}</td><td>{row.outputLimit ?? 'Needs Master cap'}</td><td>{row.outputs}</td><td>{row.approvedOutputs}</td><td>{row.pendingOutputs}</td><td>{row.returnedOutputs}</td></tr>)}</tbody></table></div>;
+  return <div className="manager-report-table-scroll"><table className="manager-report-table"><thead><tr><th>Disputer</th><th>Status</th><th>Outputs</th><th>Approved</th><th>Pending</th><th>Returned</th><th>Estimated pay</th></tr></thead><tbody>{report.users.map((row) => <tr key={row.id}><td><strong>{row.name}</strong><small>{row.email}</small></td><td>{row.status}</td><td>{row.outputs}</td><td>{row.approvedOutputs}</td><td>{row.pendingOutputs}</td><td>{row.returnedOutputs}</td><td>{moneyText(row.estimatedPay)}</td></tr>)}</tbody></table></div>;
+}
+
+function ReportPanel({ report }: { report: ManagerReportData }) {
+  const type = report.input.type;
+  return <section className="admin-monitor-card native-operation-card manager-console-report manager-report-workspace">
+    <header className="manager-console-card-header manager-report-header"><div><p>Report builder</p><h2>{reportTypeLabel(type)} report</h2><span>{report.input.range.fromDate} to {report.input.range.toDate}</span></div><ConsoleNavLink className="admin-action-button primary" href={reportExportHref(report)}>Export Excel</ConsoleNavLink></header>
+    <form action="/admin" method="get" className="manager-report-controls"><input type="hidden" name="panel" value="reports" /><label><span>Start date</span><input type="date" name="from" defaultValue={report.input.range.fromDate} /></label><label><span>End date</span><input type="date" name="to" defaultValue={report.input.range.toDate} /></label><label><span>Report type</span><select name="reportType" defaultValue={type}><option value="summary">Summary</option><option value="salary">Salary</option><option value="users">Users</option><option value="outputs">Outputs</option></select></label><button className="admin-action-button primary" type="submit">Generate report</button></form>
+    {report.errorMessage && <div className="admin-monitor-empty">Report warning: {report.errorMessage}</div>}
+    <div className="manager-report-kpis"><span><small>Disputers</small><strong>{report.totals.userCount}</strong></span><span><small>Outputs</small><strong>{report.totals.totalOutputItems}</strong></span><span><small>Approved</small><strong>{report.totals.approvedRows}</strong></span><span><small>Pending</small><strong>{report.totals.pendingRows}</strong></span><span><small>Returned</small><strong>{report.totals.returnedRows}</strong></span><span><small>Estimated pay</small><strong>{moneyText(report.totals.estimatedPayTotal)}</strong></span></div>
+    <ReportTable report={report} />
+  </section>;
+}
+
 function OutputActivityPanel({ accounts, entitlements, settings }: { accounts: AccountDirectoryRow[]; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) { const total = accounts.reduce((sum, account) => sum + payrollAmount(settings[account.id], entitlements[account.id]?.output_used_today || 0), 0); return <section className="admin-monitor-card native-operation-card manager-console-report"><header className="manager-console-card-header"><div><p>Output Activity</p><h2>Confirmed disputer output pay</h2></div><strong>{money(total)}</strong></header><div className="manager-console-stack account-record-compact-stack">{accounts.length ? accounts.map((account) => <ManagerAccountCard key={account.id} account={account} entitlements={entitlements} settings={settings} />) : <EmptyState>No active Disputers for output activity computation.</EmptyState>}</div></section>; }
 function RequestsPanel({ pending, blocked, entitlements, settings }: { pending: AccountDirectoryListResult; blocked: AccountDirectoryListResult; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) { const requests = uniqueAccounts(pending.accounts, blocked.accounts); return <section className="manager-console-stack account-record-compact-stack">{requests.length ? requests.map((account) => <ManagerAccountCard key={account.id} account={account} entitlements={entitlements} settings={settings} />) : <EmptyState>No pending confirmations or blocked users.</EmptyState>}</section>; }
 
@@ -101,6 +137,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   const activePanel = normalizeManagerOperationsPanel(params.panel);
   const controlStatus = stringParam(params.control);
   const controlMessage = stringParam(params.message);
+  const reportInput = parseManagerReportInput({ reportType: params.reportType, from: params.from, to: params.to });
   const { user, profile, supabase } = await requireRole('manager');
 
   let pendingPromise: Promise<AccountDirectoryListResult> = Promise.resolve(emptyDirectoryResult);
@@ -114,7 +151,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   else if (activePanel === 'output_activity') activePromise = listManagerClientDirectory(supabase, { view: 'active', page: 1, pageSize: PANEL_PAGE_SIZE });
   else if (activePanel === 'requests') { pendingPromise = listManagerClientDirectory(supabase, { view: 'pending', page: 1, pageSize: COMPACT_PAGE_SIZE }); blockedPromise = listManagerClientDirectory(supabase, { view: 'blocked', page: 1, pageSize: COMPACT_PAGE_SIZE }); invitePromise = ensureManagerInviteCode(supabase, user.id); }
 
-  const [summaryResult, pendingResult, activeResult, blockedResult, allResult, inviteCode] = await Promise.all([getManagerClientSummary(supabase), pendingPromise, activePromise, blockedPromise, allPromise, invitePromise]);
+  const [summaryResult, pendingResult, activeResult, blockedResult, allResult, inviteCode, reportResult] = await Promise.all([getManagerClientSummary(supabase), pendingPromise, activePromise, blockedPromise, allPromise, invitePromise, activePanel === 'reports' ? listManagerReportData(supabase, user.id, reportInput) : Promise.resolve(null)]);
   const panelAccounts = accountsForPanel(activePanel, pendingResult, activeResult, blockedResult, allResult);
   const entitlementIds = accountIds(panelAccounts);
   const needsUserSettings = activePanel === 'access' || activePanel === 'output_activity' || activePanel === 'requests';
@@ -133,7 +170,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
     {queryError && <section className="admin-monitor-card"><div className="admin-monitor-empty">Could not load a manager console dataset: {queryError}</div></section>}
     {activePanel === 'monitoring' && <MonitoringPanel summary={summary} pending={pendingResult} active={activeResult} entitlements={entitlementResult.entitlements} />}
     {activePanel === 'access' && <AccessPanel accounts={panelAccounts} entitlements={entitlementResult.entitlements} settings={settingsResult.settings} />}
-    {activePanel === 'reports' && <ReportPanel summary={summary} accounts={panelAccounts} entitlements={entitlementResult.entitlements} />}
+    {activePanel === 'reports' && reportResult && <ReportPanel report={reportResult} />}
     {activePanel === 'output_activity' && <OutputActivityPanel accounts={panelAccounts} entitlements={entitlementResult.entitlements} settings={settingsResult.settings} />}
     {activePanel === 'requests' && <><section className="admin-monitor-card native-operation-card"><div className="manager-invite-panel"><div><p>Invite link</p><strong>{inviteLink || 'Create or rotate invite from the master account.'}</strong></div>{inviteLink && <ConsoleNavLink className="admin-action-button primary" href={inviteLink}>Open invite</ConsoleNavLink>}</div></section><RequestsPanel pending={pendingResult} blocked={blockedResult} entitlements={entitlementResult.entitlements} settings={settingsResult.settings} /></>}
   </ManagerConsoleShell>;
