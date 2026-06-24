@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { rounds, type Round } from '../../../lib/reference-store';
 
+type Stage = 'ROUND' | 'SLOT' | 'UPLOAD';
+
 type TemplateAsset = {
   id: string;
   round_label?: string | null;
@@ -100,6 +102,7 @@ function messageFromPayload(payload: unknown, fallback: string) {
 }
 
 export default function TemplateRoundOnlyLibrary() {
+  const [stage, setStage] = useState<Stage>('ROUND');
   const [round, setRound] = useState<Round>('1st Round');
   const [selectedSlotKey, setSelectedSlotKey] = useState(templateSlots[0].key);
   const [assets, setAssets] = useState<TemplateAsset[]>([]);
@@ -144,6 +147,18 @@ export default function TemplateRoundOnlyLibrary() {
   }, []);
 
   useEffect(() => { void loadRound(round); }, [round, loadRound]);
+
+  function chooseRound(next: Round) {
+    setRound(next);
+    setNotice(null);
+    setStage('SLOT');
+  }
+
+  function chooseSlot(slot: TemplateSlot) {
+    setSelectedSlotKey(slot.key);
+    setNotice(null);
+    setStage('UPLOAD');
+  }
 
   async function uploadTemplate(event: FormEvent<HTMLFormElement>, slot: TemplateSlot) {
     event.preventDefault();
@@ -201,60 +216,71 @@ export default function TemplateRoundOnlyLibrary() {
   const selectedUploadBusy = busyKey === `upload-${selectedSlot.key}`;
   const selectedDeleteBusy = busyKey === `delete-${selectedSlot.key}`;
 
-  return <section className="template-round-only-library template-library-selection-workspace" aria-label="Template Library selection upload workspace" data-template-library-minimal="selection-upload">
-    <header className="template-round-only-heading template-library-command-card">
-      <div>
+  return <div className="templates-progressive-workspace manager-template-progressive-workspace" data-template-library-minimal="progressive-upload" data-manager-template-progressive="enabled">
+    {stage === 'ROUND' ? <section className="panel template-selection-stage template-round-stage manager-template-stage" aria-label="Select template round">
+      <header className="template-stage-heading">
         <p className="eyebrow">Manager-approved reusable templates</p>
-        <h2>Template Library</h2>
-        <p>Select a round, choose one template slot, then upload or replace only that selected template.</p>
+        <h2>Select a round</h2>
+        <p>Choose the filing round. Each round owns its own active manager template files.</p>
+      </header>
+      <div className="template-round-selection-grid manager-template-native-grid">
+        {rounds.map((item, index) => <button type="button" key={item} className={`template-round-choice ${item === round ? 'current' : ''}`} onClick={() => chooseRound(item)}>
+          <span className="template-choice-number">{String(index + 1).padStart(2, '0')}</span>
+          <span className="template-choice-copy"><strong>{item}</strong><small>{item === round ? 'Current round' : 'Select round'}</small></span>
+          <span className="template-choice-arrow" aria-hidden="true">→</span>
+        </button>)}
       </div>
-      <div className="template-library-status-stack">
+    </section> : null}
+
+    {stage === 'SLOT' ? <section className="panel template-selection-stage template-packet-stage manager-template-stage" aria-label="Select template slot">
+      <header className="template-stage-command">
+        <div className="template-stage-heading">
+          <p className="eyebrow">{round}</p>
+          <h2>Choose a template</h2>
+          <p>Select one manager-owned template slot. Upload controls appear after a slot is selected.</p>
+        </div>
+        <div className="template-selected-actions">
+          <button type="button" className="secondary-button" onClick={() => { setNotice(null); setStage('ROUND'); }}>Change round</button>
+        </div>
+      </header>
+      <div className="template-library-status-row">
         <span className={`template-round-only-status ${loadError ? 'error' : loading ? 'loading' : 'ready'}`}>{statusLabel(loading, loadError, canManage)}</span>
         <small>{uploadedCount}/{templateSlots.length} active for {round}</small>
+        <small>{storage?.warning || 'Active versions sync to assigned Disputer workspaces.'}</small>
       </div>
-    </header>
+      {loadError ? <p className="template-round-only-error">{loadError}</p> : null}
+      <div className="template-manager-slot-grid">
+        {templateSlots.map((slot, index) => {
+          const asset = assetsBySlot.get(slot.key) || null;
+          return <button type="button" key={slot.key} className={`template-packet-choice manager-template-choice ${asset ? 'ready' : 'missing'}`} onClick={() => chooseSlot(slot)}>
+            <span className="template-selection-tag">{slot.expected}</span>
+            <h3>{slot.title}</h3>
+            <p>{asset ? activeAssetLabel(asset) : slot.description}</p>
+            <div className="template-choice-footer"><strong>{asset ? 'Ready' : 'Missing'}</strong><span>{String(index + 1).padStart(2, '0')} →</span></div>
+          </button>;
+        })}
+      </div>
+    </section> : null}
 
-    <div className="template-library-selection-grid">
-      <aside className="template-library-round-panel" aria-label="Round selector">
-        <strong>1. Select round</strong>
-        <div className="template-round-selection-grid compact">
-          {rounds.map((item, index) => <button type="button" key={item} className={`template-round-choice ${item === round ? 'current' : ''}`} onClick={() => { setRound(item); setNotice(null); }}>
-            <span className="template-choice-number">{String(index + 1).padStart(2, '0')}</span>
-            <span className="template-choice-copy"><strong>{item}</strong><small>{item === round ? 'Current round' : 'Select round'}</small></span>
-          </button>)}
+    {stage === 'UPLOAD' ? <section className="template-selected-editor manager-template-upload-stage" aria-label={`${selectedSlot.title} upload`}>
+      <header className="panel template-selected-command template-merged-command">
+        <div className="template-selected-identity">
+          <p className="eyebrow">{round} · {selectedSlot.expected}</p>
+          <h2>{selectedSlot.title}</h2>
+          <p className="template-selected-order">{selectedSlot.description}</p>
+          <div className="template-selected-badges"><span>{selectedAsset ? 'Active version ready' : 'Missing template'}</span><span>{statusLabel(loading, loadError, canManage)}</span></div>
         </div>
-        <div className="template-library-storage-note">
-          <span>Storage</span>
-          <strong>{storage?.mode || 'Manager template storage'}</strong>
-          {storage?.warning ? <small>{storage.warning}</small> : <small>Active versions sync to assigned Disputer workspaces.</small>}
+        <div className="template-selected-actions">
+          <button type="button" className="secondary-button" onClick={() => { setNotice(null); setStage('SLOT'); }}>Change template</button>
+          <button type="button" className="secondary-button" onClick={() => { setNotice(null); setStage('ROUND'); }}>Change round</button>
         </div>
-      </aside>
+      </header>
 
-      <aside className="template-library-slot-panel" aria-label="Template slot selector">
-        <strong>2. Select template</strong>
-        <div className="template-slot-selection-list">
-          {templateSlots.map((slot, index) => {
-            const asset = assetsBySlot.get(slot.key) || null;
-            const current = selectedSlot.key === slot.key;
-            return <button type="button" key={slot.key} className={`template-slot-choice ${current ? 'current' : ''} ${asset ? 'ready' : 'missing'}`} onClick={() => { setSelectedSlotKey(slot.key); setNotice(null); }}>
-              <span className="template-slot-index">{String(index + 1).padStart(2, '0')}</span>
-              <span className="template-slot-copy"><strong>{slot.shortTitle}</strong><small>{asset ? activeAssetLabel(asset) : `Needs ${slot.expected}`}</small></span>
-              <span className="template-slot-state">{asset ? 'Ready' : 'Missing'}</span>
-            </button>;
-          })}
-        </div>
-      </aside>
-
-      <div className="template-selected-upload-panel">
+      <div className="panel template-native-upload-panel">
         {notice ? <p className={`template-library-notice ${notice.tone}`}>{notice.message}</p> : null}
         {loadError ? <p className="template-round-only-error">{loadError}</p> : null}
         {!canManage && !loading && !loadError ? <p className="template-library-notice error">This account can view templates but cannot upload manager template versions.</p> : null}
-        <article className={`template-selected-upload-card ${selectedAsset ? 'ready' : 'missing'}`}>
-          <div className="template-selected-upload-header">
-            <span>{selectedSlot.expected}</span>
-            <h3>{selectedSlot.title}</h3>
-            <p>{selectedSlot.description}</p>
-          </div>
+        <div className={`template-native-upload-card ${selectedAsset ? 'ready' : 'missing'}`}>
           <div className="template-upload-active-state selected">
             <strong>{activeAssetLabel(selectedAsset)}</strong>
             <small>{selectedAsset ? `Updated ${formatDate(selectedAsset.updated_at || selectedAsset.created_at)}` : 'Upload a file to activate this slot.'}</small>
@@ -274,8 +300,8 @@ export default function TemplateRoundOnlyLibrary() {
               <button type="button" className="admin-action-button" disabled={!canManage || !selectedAsset || Boolean(busyKey)} onClick={() => void removeTemplate(selectedSlot)}>{selectedDeleteBusy ? 'Removing...' : 'Remove active'}</button>
             </div>
           </form>
-        </article>
+        </div>
       </div>
-    </div>
-  </section>;
+    </section> : null}
+  </div>;
 }
