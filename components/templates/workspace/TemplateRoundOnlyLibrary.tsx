@@ -34,6 +34,7 @@ type ManagerTemplateScopeUi = {
 type TemplateSlot = {
   key: string;
   title: string;
+  shortTitle: string;
   description: string;
   templateKind: 'LETTER' | 'EXHIBIT';
   letterType: 'DISPUTE' | 'LATE_PAYMENT' | '';
@@ -43,12 +44,12 @@ type TemplateSlot = {
 };
 
 const templateSlots: TemplateSlot[] = [
-  { key: 'DISPUTE', title: 'Dispute Letter', description: 'Main dispute letter template for the selected round.', templateKind: 'LETTER', letterType: 'DISPUTE', exhibitKind: '', accepts: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document', expected: 'DOCX' },
-  { key: 'LATE_PAYMENT', title: 'Late Payment Letter', description: 'Late payment correction letter template for the selected round.', templateKind: 'LETTER', letterType: 'LATE_PAYMENT', exhibitKind: '', accepts: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document', expected: 'DOCX' },
-  { key: 'FCRA', title: 'FCRA Supporting Document', description: 'PDF supporting document used with generated dispute packets.', templateKind: 'EXHIBIT', letterType: '', exhibitKind: 'FCRA', accepts: '.pdf,application/pdf', expected: 'PDF' },
-  { key: 'AFFIDAVIT', title: 'Affidavit Template', description: 'DOCX affidavit template with manager-approved wording.', templateKind: 'EXHIBIT', letterType: '', exhibitKind: 'AFFIDAVIT', accepts: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document', expected: 'DOCX' },
-  { key: 'ATTACHMENT', title: 'Attachment PDF', description: 'Static PDF attachment template for packet assembly.', templateKind: 'EXHIBIT', letterType: '', exhibitKind: 'ATTACHMENT', accepts: '.pdf,application/pdf', expected: 'PDF' },
-  { key: 'FTC', title: 'FTC Template', description: 'DOCX FTC-style supporting template for the selected round.', templateKind: 'EXHIBIT', letterType: '', exhibitKind: 'FTC', accepts: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document', expected: 'DOCX' }
+  { key: 'DISPUTE', title: 'Dispute Letter', shortTitle: 'Dispute', description: 'Main dispute letter template for the selected round.', templateKind: 'LETTER', letterType: 'DISPUTE', exhibitKind: '', accepts: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document', expected: 'DOCX' },
+  { key: 'LATE_PAYMENT', title: 'Late Payment Letter', shortTitle: 'Late Payment', description: 'Late payment correction letter template for the selected round.', templateKind: 'LETTER', letterType: 'LATE_PAYMENT', exhibitKind: '', accepts: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document', expected: 'DOCX' },
+  { key: 'FCRA', title: 'FCRA Supporting Document', shortTitle: 'FCRA', description: 'PDF supporting document used with generated dispute packets.', templateKind: 'EXHIBIT', letterType: '', exhibitKind: 'FCRA', accepts: '.pdf,application/pdf', expected: 'PDF' },
+  { key: 'AFFIDAVIT', title: 'Affidavit Template', shortTitle: 'Affidavit', description: 'DOCX affidavit template with manager-approved wording.', templateKind: 'EXHIBIT', letterType: '', exhibitKind: 'AFFIDAVIT', accepts: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document', expected: 'DOCX' },
+  { key: 'ATTACHMENT', title: 'Attachment PDF', shortTitle: 'Attachment', description: 'Static PDF attachment template for packet assembly.', templateKind: 'EXHIBIT', letterType: '', exhibitKind: 'ATTACHMENT', accepts: '.pdf,application/pdf', expected: 'PDF' },
+  { key: 'FTC', title: 'FTC Template', shortTitle: 'FTC', description: 'DOCX FTC-style supporting template for the selected round.', templateKind: 'EXHIBIT', letterType: '', exhibitKind: 'FTC', accepts: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document', expected: 'DOCX' }
 ];
 
 function slotKeyForAsset(asset: TemplateAsset) {
@@ -100,6 +101,7 @@ function messageFromPayload(payload: unknown, fallback: string) {
 
 export default function TemplateRoundOnlyLibrary() {
   const [round, setRound] = useState<Round>('1st Round');
+  const [selectedSlotKey, setSelectedSlotKey] = useState(templateSlots[0].key);
   const [assets, setAssets] = useState<TemplateAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -116,6 +118,9 @@ export default function TemplateRoundOnlyLibrary() {
     });
     return map;
   }, [assets]);
+
+  const selectedSlot = templateSlots.find((slot) => slot.key === selectedSlotKey) || templateSlots[0];
+  const selectedAsset = assetsBySlot.get(selectedSlot.key) || null;
 
   const loadRound = useCallback(async (selectedRound: Round) => {
     setLoading(true);
@@ -193,13 +198,15 @@ export default function TemplateRoundOnlyLibrary() {
 
   const canManage = scope?.canManageTemplates === true;
   const uploadedCount = templateSlots.filter((slot) => assetsBySlot.has(slot.key)).length;
+  const selectedUploadBusy = busyKey === `upload-${selectedSlot.key}`;
+  const selectedDeleteBusy = busyKey === `delete-${selectedSlot.key}`;
 
-  return <section className="template-round-only-library template-library-upload-workspace" aria-label="Template Library upload workspace" data-template-library-minimal="upload-enabled">
+  return <section className="template-round-only-library template-library-selection-workspace" aria-label="Template Library selection upload workspace" data-template-library-minimal="selection-upload">
     <header className="template-round-only-heading template-library-command-card">
       <div>
         <p className="eyebrow">Manager-approved reusable templates</p>
         <h2>Template Library</h2>
-        <p>Choose a round, upload the required manager template files, and keep one active version for each slot.</p>
+        <p>Select a round, choose one template slot, then upload or replace only that selected template.</p>
       </div>
       <div className="template-library-status-stack">
         <span className={`template-round-only-status ${loadError ? 'error' : loading ? 'loading' : 'ready'}`}>{statusLabel(loading, loadError, canManage)}</span>
@@ -207,9 +214,9 @@ export default function TemplateRoundOnlyLibrary() {
       </div>
     </header>
 
-    <div className="template-library-layout-grid">
+    <div className="template-library-selection-grid">
       <aside className="template-library-round-panel" aria-label="Round selector">
-        <strong>Round</strong>
+        <strong>1. Select round</strong>
         <div className="template-round-selection-grid compact">
           {rounds.map((item, index) => <button type="button" key={item} className={`template-round-choice ${item === round ? 'current' : ''}`} onClick={() => { setRound(item); setNotice(null); }}>
             <span className="template-choice-number">{String(index + 1).padStart(2, '0')}</span>
@@ -223,43 +230,51 @@ export default function TemplateRoundOnlyLibrary() {
         </div>
       </aside>
 
-      <div className="template-library-upload-panel">
+      <aside className="template-library-slot-panel" aria-label="Template slot selector">
+        <strong>2. Select template</strong>
+        <div className="template-slot-selection-list">
+          {templateSlots.map((slot, index) => {
+            const asset = assetsBySlot.get(slot.key) || null;
+            const current = selectedSlot.key === slot.key;
+            return <button type="button" key={slot.key} className={`template-slot-choice ${current ? 'current' : ''} ${asset ? 'ready' : 'missing'}`} onClick={() => { setSelectedSlotKey(slot.key); setNotice(null); }}>
+              <span className="template-slot-index">{String(index + 1).padStart(2, '0')}</span>
+              <span className="template-slot-copy"><strong>{slot.shortTitle}</strong><small>{asset ? activeAssetLabel(asset) : `Needs ${slot.expected}`}</small></span>
+              <span className="template-slot-state">{asset ? 'Ready' : 'Missing'}</span>
+            </button>;
+          })}
+        </div>
+      </aside>
+
+      <div className="template-selected-upload-panel">
         {notice ? <p className={`template-library-notice ${notice.tone}`}>{notice.message}</p> : null}
         {loadError ? <p className="template-round-only-error">{loadError}</p> : null}
         {!canManage && !loading && !loadError ? <p className="template-library-notice error">This account can view templates but cannot upload manager template versions.</p> : null}
-        <div className="template-upload-slot-grid">
-          {templateSlots.map((slot) => {
-            const asset = assetsBySlot.get(slot.key) || null;
-            const uploadBusy = busyKey === `upload-${slot.key}`;
-            const deleteBusy = busyKey === `delete-${slot.key}`;
-            return <article key={slot.key} className={`template-upload-slot-card ${asset ? 'ready' : 'missing'}`}>
-              <div className="template-upload-slot-copy">
-                <span>{slot.expected}</span>
-                <strong>{slot.title}</strong>
-                <small>{slot.description}</small>
-              </div>
-              <div className="template-upload-active-state">
-                <strong>{activeAssetLabel(asset)}</strong>
-                <small>{asset ? `Updated ${formatDate(asset.updated_at || asset.created_at)}` : 'Upload a file to activate this slot.'}</small>
-                <em>{validationSummary(asset)}</em>
-              </div>
-              <form className="template-upload-form" onSubmit={(event) => void uploadTemplate(event, slot)}>
-                <input type="hidden" name="round" value={round} />
-                <input type="hidden" name="templateKind" value={slot.templateKind} />
-                <input type="hidden" name="letterType" value={slot.letterType} />
-                <input type="hidden" name="exhibitKind" value={slot.exhibitKind} />
-                <label>
-                  <span>Replace active file</span>
-                  <input name={`file-${slot.key}`} type="file" accept={slot.accepts} disabled={!canManage || Boolean(busyKey)} />
-                </label>
-                <div className="template-upload-actions">
-                  <button type="submit" className="admin-action-button primary" disabled={!canManage || Boolean(busyKey)}>{uploadBusy ? 'Uploading...' : asset ? 'Replace template' : 'Upload template'}</button>
-                  <button type="button" className="admin-action-button" disabled={!canManage || !asset || Boolean(busyKey)} onClick={() => void removeTemplate(slot)}>{deleteBusy ? 'Removing...' : 'Remove'}</button>
-                </div>
-              </form>
-            </article>;
-          })}
-        </div>
+        <article className={`template-selected-upload-card ${selectedAsset ? 'ready' : 'missing'}`}>
+          <div className="template-selected-upload-header">
+            <span>{selectedSlot.expected}</span>
+            <h3>{selectedSlot.title}</h3>
+            <p>{selectedSlot.description}</p>
+          </div>
+          <div className="template-upload-active-state selected">
+            <strong>{activeAssetLabel(selectedAsset)}</strong>
+            <small>{selectedAsset ? `Updated ${formatDate(selectedAsset.updated_at || selectedAsset.created_at)}` : 'Upload a file to activate this slot.'}</small>
+            <em>{validationSummary(selectedAsset)}</em>
+          </div>
+          <form className="template-upload-form selected" onSubmit={(event) => void uploadTemplate(event, selectedSlot)}>
+            <input type="hidden" name="round" value={round} />
+            <input type="hidden" name="templateKind" value={selectedSlot.templateKind} />
+            <input type="hidden" name="letterType" value={selectedSlot.letterType} />
+            <input type="hidden" name="exhibitKind" value={selectedSlot.exhibitKind} />
+            <label>
+              <span>{selectedAsset ? 'Replace active file' : 'Upload active file'}</span>
+              <input name={`file-${selectedSlot.key}`} type="file" accept={selectedSlot.accepts} disabled={!canManage || Boolean(busyKey)} />
+            </label>
+            <div className="template-upload-actions selected">
+              <button type="submit" className="admin-action-button primary" disabled={!canManage || Boolean(busyKey)}>{selectedUploadBusy ? 'Uploading...' : selectedAsset ? 'Replace template' : 'Upload template'}</button>
+              <button type="button" className="admin-action-button" disabled={!canManage || !selectedAsset || Boolean(busyKey)} onClick={() => void removeTemplate(selectedSlot)}>{selectedDeleteBusy ? 'Removing...' : 'Remove active'}</button>
+            </div>
+          </form>
+        </article>
       </div>
     </div>
   </section>;
