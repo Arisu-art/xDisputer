@@ -58,15 +58,21 @@ has('lib/saas/entitlement-limits.ts', 'access_list_entitlement_limits_v1', 'enti
 has('lib/saas/entitlement-limits.ts', 'const effectiveLimit = positiveOrNull(row.effective_output_limit)', 'entitlement reader must expose missing caps as not configured');
 has('components/manager/ManagerConsoleRealtimeRefreshMount.tsx', "table: 'manager_entitlement_limits'", 'manager console must refresh when master updates manager entitlement limits');
 has('components/ClientOutputLimitBoundary.tsx', 'managerId?: string | null', 'Disputer entitlement payload must carry manager id for master cap realtime sync');
+has('components/ClientOutputLimitBoundary.tsx', 'managerDefaultOutputLimit', 'Disputer pause screen must expose Master manager output cap');
+has('components/ClientOutputLimitBoundary.tsx', 'Master manager limit', 'Disputer pause screen must show the Master manager limit panel');
 has('components/ClientOutputLimitBoundary.tsx', "table: 'manager_entitlement_limits'", 'Disputer workspace must refresh when master updates manager output cap');
-has('app/api/client/output-entitlement/route.ts', 'managerId', 'Disputer entitlement API must return manager id');
-has('app/api/client/output-entitlement/route.ts', 'rowAllowed', 'Disputer entitlement API must respect server blocked entitlement state');
+has('app/api/client/output-entitlement/route.ts', 'managerDefaultOutputLimit', 'Disputer entitlement API must return the Master manager default output cap');
+has('app/api/client/output-entitlement/route.ts', 'managerDisputerLimit', 'Disputer entitlement API must return the Master manager Disputer seat cap');
+has('app/api/client/output-entitlement/route.ts', "source: managerDefaultLimit !== null ? 'master-manager-limit'", 'Disputer entitlement API must prefer manager limit source');
 has('src/features/manager-console/admin-page-presenters.ts', 'Manager cap not set', 'manager UI must not show Default when master cap is missing');
 has('supabase/migrations/20260624123000_master_authority_required_limits.sql', 'access_positive_limit_required_v1', 'latest entitlement migration must require positive manager limits');
 has('supabase/migrations/20260624123000_master_authority_required_limits.sql', 'Master must set this manager daily output limit', 'latest entitlement migration must block Disputer generation when master cap is missing');
 has('supabase/migrations/20260624123000_master_authority_required_limits.sql', 'Master must set this manager Disputer limit', 'latest entitlement migration must block manager assignments when master seat limit is missing');
 has('supabase/migrations/20260624133000_entitlement_realtime_master_sync.sql', 'manager_entitlement_limits_select_sync_v1', 'latest realtime migration must allow safe manager entitlement select/realtime visibility');
 has('supabase/migrations/20260624133000_entitlement_realtime_master_sync.sql', 'client_entitlement_limits_select_sync_v1', 'latest realtime migration must allow safe client entitlement select/realtime visibility');
+has('supabase/migrations/20260624140000_manager_only_disputer_output_entitlement.sql', 'Manager-only Disputer output entitlement contract', 'latest migration must enforce manager-only Disputer allowance');
+has('supabase/migrations/20260624140000_manager_only_disputer_output_entitlement.sql', 'nullif(mel.default_client_output_limit, 0)', 'Disputer SQL entitlement must use manager default output limit');
+has('supabase/migrations/20260624140000_manager_only_disputer_output_entitlement.sql', 'Per-Disputer output overrides are retired', 'Disputer-specific output override RPC must be retired');
 
 if (failures.length) {
   console.error('Master workspace retirement guard failed.');
