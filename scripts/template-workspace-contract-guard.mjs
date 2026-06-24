@@ -9,6 +9,10 @@ const mustNot = (file, marker, label) => { if (read(file).includes(marker)) fail
 for (const file of [
   'lib/templates/workspace/template-workspace-navigation.ts',
   'components/templates/workspace/TemplateRoundOnlyLibrary.tsx',
+  'components/templates/workspace/TemplateStudioHub.tsx',
+  'components/templates/workspace/TemplateWorkflowFrameworkPanel.tsx',
+  'lib/templates/workspace/template-workflow-framework.ts',
+  'lib/templates/intelligence/dynamic-template-inspector.ts',
   'components/TemplateProgressiveWorkspace.tsx',
   'components/TemplatePacketConfigurator.tsx',
   'components/templates/workspace/TemplateTestLabHub.tsx',
@@ -16,7 +20,9 @@ for (const file of [
   'app/api/template-assets/route.ts',
   'app/api/template-assets/download/route.ts',
   'app/manager-template-test-lab.css',
+  'app/template-workflow-framework.css',
   'app/layout.tsx',
+  'app/manager-workspace/studio/page.tsx',
   'app/manager-workspace/test/page.tsx'
 ]) read(file);
 
@@ -25,11 +31,18 @@ must('lib/templates/workspace/template-workspace-navigation.ts', 'TEMPLATE_WORKS
 must('app/manager-workspace/test/page.tsx', 'TemplateTestLabHub', 'test route must render hub');
 must('app/manager-workspace/test/page.tsx', "dynamic = 'force-dynamic'", 'test route must be dynamic');
 must('app/layout.tsx', "import './manager-template-test-lab.css';", 'layout must import test CSS');
+must('app/layout.tsx', "import './template-workflow-framework.css';", 'layout must import workflow CSS');
 must('components/TemplateProgressiveWorkspace.tsx', "type Stage = 'ROUND' | 'PACKET' | 'EDITOR'", 'shared workflow stages missing');
 must('components/TemplatePacketConfigurator.tsx', 'manager-template-direct-actions', 'manager actions missing');
 must('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', "import TemplateProgressiveWorkspace from '../../TemplateProgressiveWorkspace'", 'manager library must use shared workflow');
 must('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', 'data-template-library-minimal="progressive-upload"', 'manager library must be progressive upload');
 mustNot('components/templates/workspace/TemplateRoundOnlyLibrary.tsx', 'data-template-library-minimal="round-only"', 'old round-only marker returned');
+must('components/templates/workspace/TemplateStudioHub.tsx', 'TemplateWorkflowFrameworkPanel', 'Template Studio must show workflow framework panel');
+must('app/manager-workspace/studio/page.tsx', 'buildTemplateWorkflowFramework', 'Studio page must build universal framework');
+must('lib/templates/workspace/template-workflow-framework.ts', 'Account Name - Account number', 'framework must include account in-place default');
+must('lib/templates/workspace/template-workflow-framework.ts', 'Replace this wording in the same paragraph or table cell', 'framework must prevent wrong-location rendering');
+must('lib/templates/intelligence/dynamic-template-inspector.ts', 'natural-anchor-account-name-account-number', 'inspector must detect account in-place anchors');
+must('lib/templates/intelligence/dynamic-template-inspector.ts', 'do not append or increment', 'inspector must explain wrong-location prevention');
 must('lib/templates/workspace/template-test-lab-service.ts', 'buildTemplateTestLabContext', 'test service missing');
 must('lib/templates/workspace/template-test-lab-service.ts', 'previewGenerationPlan', 'preview plan missing');
 must('components/templates/workspace/TemplateTestLabHub.tsx', 'template-test-side-panel', 'side panel missing');
@@ -38,6 +51,7 @@ must('components/templates/workspace/TemplateTestLabHub.tsx', 'Active template d
 must('app/api/template-assets/download/route.ts', 'downloadManagerTemplateObject', 'file reader missing');
 must('app/api/template-assets/download/route.ts', 'scope.managerUserId', 'scope check missing');
 must('app/manager-template-test-lab.css', '.template-test-side-panel', 'side panel CSS missing');
+must('app/template-workflow-framework.css', '.template-workflow-framework-panel', 'workflow framework CSS missing');
 must('app/api/template-assets/route.ts', 'request.formData()', 'template API upload parser missing');
 
 if (failures.length) {
