@@ -1,25 +1,40 @@
 /* Runtime Supporting Documents wide fix.
    Loaded last. This overrides older base/recovery rules that can still cap the preview at 540-680px.
-   Zero animation/zero blur so large pages stay responsive. */
+   Layout contract: side panels are secondary; the center document canvas gets the maximum safe space first. */
 
 :root {
-  --support-runtime-left: clamp(188px, 13vw, 250px);
-  --support-runtime-right: clamp(194px, 13vw, 258px);
-  --support-runtime-page: min(100%, clamp(720px, 58vw, 1180px));
+  --support-runtime-left: clamp(160px, 10vw, 220px);
+  --support-runtime-right: clamp(174px, 11vw, 240px);
+  --support-runtime-page-max: 1320px;
   --support-runtime-gap: clamp(6px, .55vw, 10px);
+}
+
+.progressive-supporting,
+.source-supporting-panel,
+.source-supporting-embedded,
+.required-supporting-embedded {
+  min-width: 0 !important;
+  overflow-x: clip !important;
 }
 
 .progressive-supporting .progressive-content,
 .source-supporting-panel .progressive-content,
-.source-supporting-embedded .progressive-content {
-  padding-inline: clamp(4px, .55vw, 10px) !important;
+.source-supporting-embedded .progressive-content,
+.required-supporting-embedded .progressive-content {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  padding-inline: clamp(2px, .45vw, 8px) !important;
+  overflow-x: clip !important;
 }
 
 .support-layout-editor.professional-evidence-editor.word-crop-editor,
 .source-supporting-panel .support-layout-editor.professional-evidence-editor.word-crop-editor,
-.source-supporting-embedded .support-layout-editor.professional-evidence-editor.word-crop-editor {
+.source-supporting-embedded .support-layout-editor.professional-evidence-editor.word-crop-editor,
+.required-supporting-embedded .support-layout-editor.professional-evidence-editor.word-crop-editor {
   width: 100% !important;
   max-width: none !important;
+  min-width: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
   overflow: visible !important;
@@ -28,27 +43,30 @@
 .support-layout-grid.word-crop-grid,
 .support-layout-editor.professional-evidence-editor.word-crop-editor > .support-layout-grid.word-crop-grid,
 .source-supporting-panel .support-layout-grid.word-crop-grid,
-.source-supporting-embedded .support-layout-grid.word-crop-grid {
+.source-supporting-embedded .support-layout-grid.word-crop-grid,
+.required-supporting-embedded .support-layout-grid.word-crop-grid {
   display: grid !important;
-  grid-template-columns: minmax(180px, var(--support-runtime-left)) minmax(0, 1fr) minmax(186px, var(--support-runtime-right)) !important;
+  grid-template-columns: minmax(148px, var(--support-runtime-left)) minmax(0, 1fr) minmax(164px, var(--support-runtime-right)) !important;
   grid-template-areas: "documents page controls" !important;
   gap: var(--support-runtime-gap) !important;
-  width: 100% !important;
+  width: min(100%, 100vw) !important;
   max-width: 1920px !important;
   margin: 0 auto !important;
   align-items: start !important;
   justify-content: stretch !important;
   overflow: visible !important;
+  container-type: inline-size !important;
 }
 
 .word-left-evidence-manager,
 .source-supporting-panel .word-left-evidence-manager,
-.source-supporting-embedded .word-left-evidence-manager {
+.source-supporting-embedded .word-left-evidence-manager,
+.required-supporting-embedded .word-left-evidence-manager {
   grid-area: documents !important;
   width: 100% !important;
   max-width: none !important;
   min-width: 0 !important;
-  padding: .55rem !important;
+  padding: .48rem !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -56,7 +74,8 @@
 
 .support-page-frame,
 .source-supporting-panel .support-page-frame,
-.source-supporting-embedded .support-page-frame {
+.source-supporting-embedded .support-page-frame,
+.required-supporting-embedded .support-page-frame {
   grid-area: page !important;
   width: 100% !important;
   max-width: none !important;
@@ -69,10 +88,11 @@
 .support-page-canvas,
 .source-supporting-panel .support-page-canvas,
 .source-supporting-embedded .support-page-canvas,
+.required-supporting-embedded .support-page-canvas,
 .support-layout-editor.professional-evidence-editor.word-crop-editor .support-page-canvas {
-  width: var(--support-runtime-page) !important;
-  max-width: 1180px !important;
-  min-width: min(100%, 640px) !important;
+  width: min(100%, var(--support-runtime-page-max)) !important;
+  max-width: var(--support-runtime-page-max) !important;
+  min-width: 0 !important;
   margin-inline: auto !important;
   box-shadow: none !important;
 }
@@ -80,21 +100,23 @@
 .support-canvas-caption.evidence-preview-toolbar-header,
 .evidence-preview-toolbar-header,
 .source-supporting-panel .support-canvas-caption.evidence-preview-toolbar-header,
-.source-supporting-embedded .support-canvas-caption.evidence-preview-toolbar-header {
-  width: var(--support-runtime-page) !important;
-  max-width: 1180px !important;
+.source-supporting-embedded .support-canvas-caption.evidence-preview-toolbar-header,
+.required-supporting-embedded .support-canvas-caption.evidence-preview-toolbar-header {
+  width: min(100%, var(--support-runtime-page-max)) !important;
+  max-width: var(--support-runtime-page-max) !important;
   margin-inline: auto !important;
 }
 
 .support-layout-controls.word-crop-controls,
 .word-crop-controls,
 .source-supporting-panel .support-layout-controls.word-crop-controls,
-.source-supporting-embedded .support-layout-controls.word-crop-controls {
+.source-supporting-embedded .support-layout-controls.word-crop-controls,
+.required-supporting-embedded .support-layout-controls.word-crop-controls {
   grid-area: controls !important;
   width: 100% !important;
   max-width: none !important;
   min-width: 0 !important;
-  padding: .58rem !important;
+  padding: .5rem !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -114,21 +136,50 @@
   box-shadow: none !important;
 }
 
-@media (max-width: 1200px) {
+.supporting-document-card-v2,
+.evidence-card-v2,
+.word-crop-controls,
+.word-left-evidence-manager,
+.support-canvas-caption.evidence-preview-toolbar-header {
+  min-width: 0 !important;
+}
+
+.supporting-document-meta-v2 strong,
+.supporting-document-meta-v2 small,
+.evidence-meta-v2 strong,
+.evidence-meta-v2 small,
+.word-crop-controls header strong {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+@media (min-width: 1700px) {
   :root {
-    --support-runtime-left: clamp(176px, 15vw, 220px);
-    --support-runtime-right: clamp(180px, 15vw, 228px);
-    --support-runtime-page: min(100%, clamp(620px, 56vw, 920px));
+    --support-runtime-left: clamp(170px, 9vw, 226px);
+    --support-runtime-right: clamp(186px, 10vw, 248px);
+    --support-runtime-page-max: 1420px;
   }
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1280px) {
+  :root {
+    --support-runtime-left: clamp(150px, 12vw, 190px);
+    --support-runtime-right: clamp(160px, 13vw, 206px);
+    --support-runtime-page-max: 980px;
+  }
+}
+
+@media (max-width: 1100px) {
   .support-layout-grid.word-crop-grid,
   .support-layout-editor.professional-evidence-editor.word-crop-editor > .support-layout-grid.word-crop-grid,
   .source-supporting-panel .support-layout-grid.word-crop-grid,
-  .source-supporting-embedded .support-layout-grid.word-crop-grid {
+  .source-supporting-embedded .support-layout-grid.word-crop-grid,
+  .required-supporting-embedded .support-layout-grid.word-crop-grid {
     grid-template-columns: 1fr !important;
     grid-template-areas: "documents" "page" "controls" !important;
+    width: 100% !important;
   }
 
   .word-left-evidence-manager,
@@ -136,16 +187,32 @@
   .support-layout-controls.word-crop-controls,
   .word-crop-controls {
     position: static !important;
-    width: min(100%, 860px) !important;
-    max-width: 860px !important;
+    width: min(100%, 900px) !important;
+    max-width: 900px !important;
     justify-self: center !important;
   }
 
   .support-page-canvas,
   .support-canvas-caption.evidence-preview-toolbar-header,
   .evidence-preview-toolbar-header {
-    width: min(100%, 820px) !important;
-    max-width: 820px !important;
+    width: min(100%, 900px) !important;
+    max-width: 900px !important;
     min-width: 0 !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .progressive-supporting .progressive-content,
+  .source-supporting-panel .progressive-content,
+  .source-supporting-embedded .progressive-content,
+  .required-supporting-embedded .progressive-content {
+    padding-inline: 0 !important;
+  }
+
+  .support-page-canvas,
+  .support-canvas-caption.evidence-preview-toolbar-header,
+  .evidence-preview-toolbar-header {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }
