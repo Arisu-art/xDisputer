@@ -7,11 +7,20 @@ function cleanValue(formData: FormData, key: string) {
   return String(formData.get(key) || '').trim();
 }
 
-function cleanLimit(value: string) {
-  const normalized = value.trim().toLowerCase();
-  if (!normalized || normalized === 'default' || normalized === 'unlimited') return null;
+function parsePositiveLimit(value: string, label: string) {
+  const normalized = value.trim();
   const parsed = Number(normalized);
-  if (!Number.isInteger(parsed)) throw new Error('Limit must be blank/default or a positive whole number.');
+  if (!normalized || !Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${label} must be a positive whole number set by Master.`);
+  }
+  return parsed;
+}
+
+function parseOptionalOverrideLimit(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  if (!Number.isInteger(parsed)) throw new Error('Disputer output override must be blank or a positive whole number.');
   if (parsed <= 0) return null;
   return parsed;
 }
@@ -62,8 +71,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (mode === 'manager') {
-      const maxClients = cleanLimit(cleanValue(formData, 'maxClients'));
-      const defaultOutputLimit = cleanLimit(cleanValue(formData, 'defaultClientOutputLimit'));
+      const maxClients = parsePositiveLimit(cleanValue(formData, 'maxClients'), 'Manager Disputer limit');
+      const defaultOutputLimit = parsePositiveLimit(cleanValue(formData, 'defaultClientOutputLimit'), 'Manager default outputs per Disputer/day');
       const { error } = await supabase.rpc('access_set_manager_entitlement_v1', {
         manager_id_input: profileId,
         max_clients_input: maxClients,
@@ -73,10 +82,10 @@ export async function POST(request: NextRequest) {
 
       if (error) return redirectBack(request, 'error', error.message);
       revalidateEntitlementViews();
-      return redirectBack(request, 'ok', maxClients === null && defaultOutputLimit === null ? 'Manager limits reset to Default.' : 'Manager limits updated.');
+      return redirectBack(request, 'ok', 'Master-set manager limits synced.');
     }
 
-    const outputLimit = cleanLimit(cleanValue(formData, 'outputLimit'));
+    const outputLimit = parseOptionalOverrideLimit(cleanValue(formData, 'outputLimit'));
     const { error } = await supabase.rpc('access_set_client_entitlement_v1', {
       client_id_input: profileId,
       output_limit_input: outputLimit,
@@ -85,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     if (error) return redirectBack(request, 'error', error.message);
     revalidateEntitlementViews();
-    return redirectBack(request, 'ok', outputLimit === null ? 'Client daily output limit now uses manager default.' : 'Client daily output limit updated.');
+    return redirectBack(request, 'ok', outputLimit === null ? 'Disputer now inherits the manager output cap.' : 'Disputer output override synced.');
   } catch (error) {
     return redirectBack(request, 'error', error instanceof Error ? error.message : 'Entitlement update failed.');
   }
