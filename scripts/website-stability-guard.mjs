@@ -55,6 +55,7 @@ function hasPermanentRefreshLoop(source) {
 
 const files = Object.fromEntries([
   'docs/website-stability-cleanup-canvas.md',
+  'docs/responsive-layout-stability-canvas.md',
   'app/layout.tsx',
   'app/admin/page.tsx',
   'package.json',
@@ -85,16 +86,21 @@ const files = Object.fromEntries([
   'app/stable-ui-primitives.css',
   'app/workflow-header-slim.css',
   'app/supporting-documents-layout-polish.css',
-  'app/supporting-documents-wide-stage.css'
+  'app/supporting-documents-wide-stage.css',
+  'app/supporting-documents-runtime-wide-fix.css'
 ].map((name) => [name, read(name)]));
 
 must(files['docs/website-stability-cleanup-canvas.md'], 'Architecture rule: one owner per state', 'stability canvas must document one-owner state rule');
 must(files['docs/website-stability-cleanup-canvas.md'], 'scripts/website-stability-guard.mjs', 'stability canvas must name the guard');
+must(files['docs/responsive-layout-stability-canvas.md'], 'Responsive Layout and Stability Canvas', 'responsive canvas must exist');
+must(files['docs/responsive-layout-stability-canvas.md'], 'Center page fills the available middle column', 'responsive canvas must document center-priority layout');
+must(files['docs/responsive-layout-stability-canvas.md'], 'ENTITLEMENT_FETCH_TIMEOUT_MS', 'responsive canvas must document entitlement timeout');
 must(files['package.json'], 'website-stability:guard', 'package.json must expose website-stability:guard');
 must(files['scripts/guard-bundle-runner.mjs'], 'scripts/website-stability-guard.mjs', 'ui-source bundle must run website-stability guard');
 before(files['app/layout.tsx'], './stable-ui-primitives.css', './workflow-header-slim.css', 'stable primitive CSS must load before final workflow layers');
 before(files['app/layout.tsx'], './workflow-header-slim.css', './supporting-documents-layout-polish.css', 'workflow header slim must load before Supporting Documents polish');
 before(files['app/layout.tsx'], './supporting-documents-layout-polish.css', './supporting-documents-wide-stage.css', 'wide Supporting Documents stage must load last');
+before(files['app/layout.tsx'], './supporting-documents-wide-stage.css', './supporting-documents-runtime-wide-fix.css', 'runtime Supporting Documents wide fix must load after wide stage');
 
 must(files['components/stability/StableCard.tsx'], 'stable-card', 'StableCard must provide stable-card shell');
 must(files['components/stability/StableCommandHeader.tsx'], 'stable-command-header', 'StableCommandHeader must provide stable command shell');
@@ -110,6 +116,8 @@ must(files['components/ClientOutputLimitBoundary.tsx'], 'data-output-entitlement
 must(files['components/ClientOutputLimitBoundary.tsx'], 'removeChannel(channel)', 'ClientOutputLimitBoundary must clean only its own channel');
 must(files['components/ClientOutputLimitBoundary.tsx'], 'entitlementRef', 'ClientOutputLimitBoundary must preserve the last known entitlement during transient refresh errors');
 must(files['components/ClientOutputLimitBoundary.tsx'], 'markUnavailableIfCold', 'ClientOutputLimitBoundary must only show unavailable before a stable entitlement exists');
+must(files['components/ClientOutputLimitBoundary.tsx'], 'ENTITLEMENT_FETCH_TIMEOUT_MS = 8000', 'ClientOutputLimitBoundary must timeout cold entitlement checks');
+must(files['components/ClientOutputLimitBoundary.tsx'], 'AbortController', 'ClientOutputLimitBoundary must abort stuck entitlement fetches');
 must(files['components/ClientOutputLimitBoundary.tsx'], "status === 'SUBSCRIBED'", 'ClientOutputLimitBoundary must not refresh on every realtime status');
 
 must(files['app/api/debug/notification-state/route.ts'], 'directNotificationCount', 'debug notification state endpoint must report direct notification count');
@@ -159,6 +167,11 @@ must(files['app/supporting-documents-wide-stage.css'], '--support-doc-page-max: 
 must(files['app/supporting-documents-wide-stage.css'], '--support-doc-shell-max: 1920px', 'wide stage must allow wide shell');
 must(files['app/supporting-documents-wide-stage.css'], 'prefers-reduced-motion', 'sticky-header animation must respect reduced motion');
 must(files['app/supporting-documents-wide-stage.css'], 'grid-template-areas: "documents page controls"', 'Supporting Documents must use left-center-right grid');
+must(files['app/supporting-documents-runtime-wide-fix.css'], 'Layout contract: side panels are secondary; the center document canvas gets the maximum safe space first', 'runtime Supporting Documents fix must document center priority');
+must(files['app/supporting-documents-runtime-wide-fix.css'], '--support-runtime-page-max: 1320px', 'runtime Supporting Documents page must support larger center canvas');
+must(files['app/supporting-documents-runtime-wide-fix.css'], 'grid-template-areas: "documents page controls"', 'runtime Supporting Documents layout must use wide three-area grid');
+must(files['app/supporting-documents-runtime-wide-fix.css'], 'grid-template-areas: "documents" "page" "controls"', 'runtime Supporting Documents layout must stack on narrow screens');
+must(files['app/supporting-documents-runtime-wide-fix.css'], 'overflow-x: clip', 'runtime Supporting Documents layout must prevent horizontal overflow');
 
 must(files['components/TemplateProgressiveWorkspace.tsx'], 'compact-command-header', 'template workflow must use compact command header class');
 must(files['components/TemplateProgressiveWorkspace.tsx'], 'Use for Source Data', 'template handoff button must use short stable copy');
