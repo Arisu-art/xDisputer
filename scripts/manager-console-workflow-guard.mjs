@@ -68,6 +68,9 @@ must(metadataEditor, 'createPortal(modal, document.body)', 'manager metadata mod
 must(metadataEditor, 'role="dialog"', 'manager metadata modal must expose dialog semantics');
 must(metadataEditor, 'aria-modal="true"', 'manager metadata modal must be modal for assistive technology');
 must(metadataEditor, 'manager-user-settings-card-trigger-only', 'manager metadata editor must keep card-click behavior without visible tile');
+must(metadataEditor, 'CARD_CLICK_BLOCKERS', 'manager metadata editor must keep a scoped blocker list');
+must(metadataEditor, 'shouldIgnoreCardOpen(event.target, card)', 'manager metadata card click must compare against the current card');
+must(metadataEditor, 'nestedButtonRole && nestedButtonRole !== card', 'manager metadata card must not block itself when role="button" is applied');
 mustNot(metadataEditor, 'metadata-tile-copy', 'manager metadata editor must not render the retired visible metadata tile copy');
 mustNot(metadataEditor, 'metadata-tile-plus', 'manager metadata editor must not render the retired visible metadata plus button');
 must(payrollModalCss, '--manager-payroll-modal-contract: portal-card-click-no-visible-tile;', 'manager metadata CSS contract must document no-visible-tile portal behavior');
