@@ -79,9 +79,13 @@ function nextUsEasternReset(now = new Date()) {
   };
 }
 
-function normalizeEntitlement(row: EntitlementRow | null, source: 'daily' | 'fallback' | 'none') {
+function normalizeManagerId(value: unknown) {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function normalizeEntitlement(row: EntitlementRow | null, source: 'daily' | 'fallback' | 'none', managerId: string | null) {
   const reset = nextUsEasternReset();
-  const outputLimit = typeof row?.output_limit === 'number' ? row.output_limit : null;
+  const outputLimit = typeof row?.output_limit === 'number' && row.output_limit > 0 ? row.output_limit : null;
   const used = Number(row?.output_used_today ?? row?.output_used_this_month ?? 0);
   const remaining = typeof row?.output_remaining_today === 'number'
     ? row.output_remaining_today
@@ -90,6 +94,8 @@ function normalizeEntitlement(row: EntitlementRow | null, source: 'daily' | 'fal
       : outputLimit === null
         ? null
         : Math.max(outputLimit - used, 0);
+  const rowAllowed = typeof row?.allowed === 'boolean' ? row.allowed : outputLimit !== null && remaining !== 0;
+  const allowed = rowAllowed && (outputLimit === null ? source !== 'none' : remaining !== 0);
 
   return {
     outputLimit,
@@ -97,13 +103,22 @@ function normalizeEntitlement(row: EntitlementRow | null, source: 'daily' | 'fal
     outputRemainingToday: remaining,
     resetAt: row?.reset_at || reset.resetAt,
     resetSeconds: typeof row?.reset_seconds === 'number' ? row.reset_seconds : reset.resetSeconds,
-    allowed: outputLimit === null ? true : row?.allowed !== false && remaining !== 0,
-    message: outputLimit !== null && remaining === 0
-      ? row?.message || 'Daily output limit reached. Your workspace unlocks when the limit is increased or at the next reset.'
-      : row?.message || (source === 'fallback' ? 'Using configured output limit fallback. Apply the daily entitlement SQL migration for exact daily usage.' : null),
+    allowed,
+    message: allowed
+      ? row?.message || null
+      : row?.message || (outputLimit === null
+        ? 'Master must set this manager daily output limit before this Disputer can generate output.'
+        : 'Daily output limit reached. Your workspace unlocks when the limit is increased or at the next reset.'),
+    managerId,
     source,
     serverTime: new Date().toISOString()
   };
+}
+
+async function currentManagerId(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, userId: string) {
+  const result = await supabase.rpc('access_current_client_manager_id_v1', { client_id_input: userId });
+  if (result.error) return null;
+  return normalizeManagerId(result.data);
 }
 
 export async function GET() {
@@ -114,13 +129,14 @@ export async function GET() {
     return noStoreJson({ error: userError?.message || 'No authenticated user.' }, { status: 401 });
   }
 
+  const managerId = await currentManagerId(supabase, userResult.user.id);
   const daily = await supabase.rpc('access_client_daily_output_entitlement_v1', {
     owner_id_input: userResult.user.id
   });
 
   if (!daily.error) {
     const row = Array.isArray(daily.data) ? daily.data[0] : null;
-    return noStoreJson({ entitlement: normalizeEntitlement(row, 'daily') });
+    return noStoreJson({ entitlement: normalizeEntitlement(row, 'daily', managerId) });
   }
 
   if (!isMissingRpc(daily.error.message)) {
@@ -133,12 +149,12 @@ export async function GET() {
 
   if (!fallback.error) {
     const row = Array.isArray(fallback.data) ? fallback.data[0] : null;
-    return noStoreJson({ entitlement: normalizeEntitlement(row, 'fallback') });
+    return noStoreJson({ entitlement: normalizeEntitlement(row, 'fallback', managerId) });
   }
 
   if (!isMissingRpc(fallback.error.message)) {
     return noStoreJson({ error: fallback.error.message }, { status: 500 });
   }
 
-  return noStoreJson({ entitlement: normalizeEntitlement(null, 'none') });
+  return noStoreJson({ entitlement: normalizeEntitlement(null, 'none', managerId) });
 }
