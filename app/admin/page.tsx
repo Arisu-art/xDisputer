@@ -68,7 +68,7 @@ function managerPanelHeader(activePanel: ManagerOperationsPanel, fallbackLabel?:
   if (activePanel === 'access') return { title: 'Access Control', description: 'Manage Disputer account status, approval, and compact metadata from one focused stable view.' };
   if (activePanel === 'output_activity') return { title: 'Output Activity', description: 'Confirm generated output before it affects payday pay.' };
   if (activePanel === 'requests') return { title: 'Request', description: 'Review pending confirmations and invite requests.' };
-  if (activePanel === 'reports') return { title: 'Report', description: 'Generate salary plus output reports from Monday-based PH work weeks.' };
+  if (activePanel === 'reports') return { title: 'Report', description: 'Generate salary reports with output details from Monday-based PH work weeks.' };
   return { title: fallbackLabel || 'Monitoring', description: 'Monitor outputs and Disputer status from one clean panel.' };
 }
 
@@ -96,7 +96,7 @@ function MonitoringPanel({ summary, pending, active, entitlements }: { summary: 
 function AccessPanel({ accounts, entitlements, settings }: { accounts: AccountDirectoryRow[]; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) { return <section className="manager-console-stack account-record-compact-stack">{accounts.length ? accounts.map((account) => <ManagerAccountCard key={account.id} account={account} entitlements={entitlements} settings={settings} />) : <EmptyState>No Disputers are assigned to this manager workspace yet.</EmptyState>}</section>; }
 
 function reportTypeLabel(type: ManagerReportType) {
-  if (type === 'salary_outputs') return 'Salary + Outputs';
+  if (type === 'salary_outputs') return 'Salary';
   if (type === 'users') return 'Users';
   return 'Summary';
 }
