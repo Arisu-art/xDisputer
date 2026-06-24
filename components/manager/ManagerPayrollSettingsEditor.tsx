@@ -13,7 +13,7 @@ type Props = {
   initialNotes?: string | null;
 };
 
-const METADATA_CARD_SELECTOR = '.manager-console-user-card, .output-activity-row[data-metadata-profile-id]';
+const METADATA_CARD_SELECTOR = '.manager-console-user-card';
 
 function moneyInput(value: number) {
   return Number.isFinite(value) ? String(Math.max(0, value)) : '0';
@@ -31,7 +31,6 @@ const CARD_CLICK_BLOCKERS = [
   'details',
   '[data-ignore-card-metadata-open="true"]',
   '.manager-console-status-actions',
-  '.output-activity-title-actions',
   '.manager-user-settings-details',
   '.manager-user-settings-modal-backdrop'
 ].join(',');
