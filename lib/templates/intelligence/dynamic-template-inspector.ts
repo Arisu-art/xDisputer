@@ -15,22 +15,69 @@ function finding(input: Omit<DynamicTemplateFinding, 'id' | 'suggestedRuleKey'> 
 
 function canonicalGuess(token: string) {
   const lower = token.toLowerCase();
+  if (/account\s*name\s*[–—-]\s*account\s*(number|#)/i.test(token)) return 'accounts.lines';
+  if (lower.includes('account') && (lower.includes('number') || lower.includes('#'))) return 'account.number';
+  if (lower.includes('account') && (lower.includes('name') || lower.includes('creditor') || lower.includes('company'))) return 'account.name';
   if (lower.includes('name')) return 'consumer.full_name';
   if (lower.includes('address')) return 'consumer.address';
   if (lower.includes('creditor')) return 'account.creditor_name';
-  if (lower.includes('account')) return 'account.account_number';
+  if (lower.includes('account')) return 'accounts.lines';
   if (lower.includes('bureau')) return 'bureau.name';
   if (lower.includes('reason')) return 'dispute.reason';
   if (token.includes('.')) return token;
   return undefined;
 }
 
+function validationRecord(asset: DynamicTemplateAssetInput) {
+  return asset.validation_json && typeof asset.validation_json === 'object' ? asset.validation_json : {};
+}
+
+function contractRecord(asset: DynamicTemplateAssetInput) {
+  return asset.contract_json && typeof asset.contract_json === 'object' ? asset.contract_json : {};
+}
+
+function slotKind(asset: DynamicTemplateAssetInput) {
+  const validation = validationRecord(asset);
+  const slot = validation.slot && typeof validation.slot === 'object' ? validation.slot as Record<string, unknown> : {};
+  return String(slot.exhibitKind || slot.letterType || contractRecord(asset).kind || '').toUpperCase();
+}
+
+function hasAccountSignal(asset: DynamicTemplateAssetInput, variables: DynamicTemplateFinding[]) {
+  const validation = validationRecord(asset);
+  const fields = [
+    ...asStringArray(validation.requiredFields),
+    ...asStringArray(validation.fulfilledFields),
+    ...asStringArray(validation.missingFields),
+    ...asStringArray(validation.unknownRequiredFields),
+    ...variables.map((variable) => variable.sourceText)
+  ].join(' ').toLowerCase();
+  return fields.includes('account') || slotKind(asset) === 'AFFIDAVIT';
+}
+
+function detectInPlaceAnchors(asset: DynamicTemplateAssetInput, variables: DynamicTemplateFinding[]) {
+  if (!hasAccountSignal(asset, variables)) return [];
+  const filename = asset.original_filename || 'manager-template';
+  return [finding({
+    key: 'natural-anchor-account-name-account-number',
+    type: 'canonical-field-map',
+    scope: 'paragraph',
+    sourcePath: 'document.phrase.account-name-account-number',
+    sourceText: 'Account Name – Account number',
+    suggestedCanonicalField: 'accounts.lines',
+    suggestedOutputToken: '{{accounts.lines}}',
+    confidence: slotKind(asset) === 'AFFIDAVIT' ? 0.93 : 0.78,
+    preserve: false,
+    required: true,
+    reason: `${filename} contains or implies an account identity anchor. Fill account name and account number in-place at this wording; do not append or increment the account value in another section.`
+  })];
+}
+
 function detectVariablesFromValidation(asset: DynamicTemplateAssetInput) {
-  const validation = asset.validation_json || {};
+  const validation = validationRecord(asset);
   const required = asStringArray(validation.requiredFields);
   const fulfilled = asStringArray(validation.fulfilledFields);
   const missing = new Set([...asStringArray(validation.missingFields), ...asStringArray(validation.unknownRequiredFields)]);
-  const aliases = asStringArray(validation.aliasesUsed);
+  const aliases = asStringArray(validation.aliasesUsed).concat(asStringArray((validation.aliasesUsed as { alias?: string }[] | undefined)?.map?.((item) => item?.alias) || []));
   const merged = Array.from(new Set([...required, ...fulfilled, ...aliases, ...Array.from(missing)]));
   return merged.map((token, index) => finding({
     key: `variable-${index + 1}-${token}`,
@@ -43,7 +90,7 @@ function detectVariablesFromValidation(asset: DynamicTemplateAssetInput) {
     confidence: missing.has(token) ? 0.92 : 0.78,
     preserve: false,
     required: required.includes(token) || missing.has(token),
-    reason: missing.has(token) ? 'Required variable is not mapped or fulfilled.' : 'Variable can be replaced from canonical/client data.'
+    reason: missing.has(token) ? 'Required variable is not mapped or fulfilled.' : 'Variable can be replaced from canonical source data.'
   }));
 }
 
@@ -84,7 +131,7 @@ function detectStaticText(asset: DynamicTemplateAssetInput) {
 }
 
 function detectTables(asset: DynamicTemplateAssetInput, variables: DynamicTemplateFinding[]) {
-  const hasAccountFields = variables.some((variable) => variable.sourceText.toLowerCase().includes('account'));
+  const hasAccountFields = variables.some((variable) => variable.sourceText.toLowerCase().includes('account') || variable.suggestedCanonicalField?.startsWith('account') || variable.suggestedCanonicalField === 'accounts.lines');
   if (!hasAccountFields) return [];
   return [finding({
     key: 'table-account-summary-layout',
@@ -118,7 +165,7 @@ function detectRendererFindings(variables: DynamicTemplateFinding[], tables: Dyn
   const rendererVariables = variables.slice(0, 12).map((variable, index) => finding({
     key: `renderer-${variable.sourceText}`,
     type: 'renderer-directive',
-    scope: 'field',
+    scope: variable.scope,
     sourcePath: `renderer.bindings[${index}]`,
     sourceText: variable.suggestedOutputToken || variable.sourceText,
     suggestedCanonicalField: variable.suggestedCanonicalField,
@@ -126,32 +173,35 @@ function detectRendererFindings(variables: DynamicTemplateFinding[], tables: Dyn
     confidence: variable.suggestedCanonicalField ? 0.76 : 0.48,
     preserve: false,
     required: variable.required,
-    reason: variable.suggestedCanonicalField ? 'Renderer can bind token to canonical field.' : 'Renderer needs a canonical field before release.'
+    reason: variable.suggestedCanonicalField ? 'Renderer can bind token to canonical field in-place.' : 'Renderer needs a canonical field before release.'
   }));
   return [...rendererVariables, ...tables];
 }
 
 export function inspectDynamicTemplateFromAsset(asset: DynamicTemplateAssetInput): DynamicTemplateInspectionResult {
   const variables = detectVariablesFromValidation(asset);
+  const inPlaceAnchors = detectInPlaceAnchors(asset, variables);
+  const allVariables = [...inPlaceAnchors, ...variables];
   const staticTextBlocks = detectStaticText(asset);
-  const entities = detectEntitiesFromVariables(variables);
-  const tableLayouts = detectTables(asset, variables);
-  const parserFindings = detectParserFindings(variables);
-  const rendererFindings = detectRendererFindings(variables, tableLayouts);
-  const blockers = variables.filter((item) => item.type === 'blocker-rule' || (item.required && !item.suggestedCanonicalField)).map((item) => `Resolve ${item.sourceText}.`);
+  const entities = detectEntitiesFromVariables(allVariables);
+  const tableLayouts = detectTables(asset, allVariables);
+  const parserFindings = detectParserFindings(allVariables);
+  const rendererFindings = detectRendererFindings(allVariables, tableLayouts);
+  const blockers = allVariables.filter((item) => item.type === 'blocker-rule' || (item.required && !item.suggestedCanonicalField)).map((item) => `Resolve ${item.sourceText}.`);
   const warnings = [
+    ...inPlaceAnchors.map((item) => `Review in-place anchor: ${item.sourceText}.`),
     ...tableLayouts.map((item) => `Review table layout: ${item.sourceText}.`),
-    ...(variables.length ? [] : ['No dynamic variables were detected from the template contract.'])
+    ...(allVariables.length ? [] : ['No dynamic variables were detected from the template contract.'])
   ];
-  const mappedFields = variables.filter((item) => item.suggestedCanonicalField);
-  const suggestedRules = [...staticTextBlocks, ...variables, ...entities, ...tableLayouts, ...parserFindings, ...rendererFindings];
+  const mappedFields = allVariables.filter((item) => item.suggestedCanonicalField);
+  const suggestedRules = [...staticTextBlocks, ...allVariables, ...entities, ...tableLayouts, ...parserFindings, ...rendererFindings];
   return {
     templateAssetId: asset.id,
     managerUserId: asset.manager_user_id,
     roundLabel: asset.round_label || '1st Round',
     status: blockers.length ? 'blocked' : warnings.length ? 'warning' : 'ready',
     staticTextBlocks,
-    variables,
+    variables: allVariables,
     entities,
     mappedFields,
     tableLayouts,
