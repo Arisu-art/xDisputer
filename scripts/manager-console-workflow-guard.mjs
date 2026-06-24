@@ -36,7 +36,8 @@ mustNot(admin, 'function PayrollPanel', 'manager page must not expose PayrollPan
 mustNot(admin, "activePanel === 'payroll'", 'manager page must not render payroll panel id directly');
 must(admin, 'intent="clear_manager"', 'manager access must expose unlink action');
 must(admin, 'intent="suspend"', 'manager access must expose pause action');
-must(metadataEditor, 'manager-user-settings-form', 'manager access metadata editor must expose user metadata form');
+mustNot(admin, 'ManagerPayrollSettingsEditor', 'manager Access Control page must not mount the metadata modal opener');
+mustNot(admin, 'manager-user-settings-form', 'manager Access Control page must not render metadata modal form markup');
 must(admin, 'payrollAmount', 'manager output activity must compute from settings and output count');
 must(settings, 'manager_user_settings', 'manager user settings helper missing table contract');
 must(payrollRoute, 'manager_user_settings', 'payroll route must save manager metadata');
@@ -70,7 +71,7 @@ must(metadataEditor, 'role="dialog"', 'manager metadata modal must expose dialog
 must(metadataEditor, 'aria-modal="true"', 'manager metadata modal must be modal for assistive technology');
 must(metadataEditor, 'manager-user-settings-card-trigger-only', 'manager metadata editor must keep card-click behavior without visible tile');
 must(metadataEditor, 'METADATA_CARD_SELECTOR', 'manager metadata editor must use a shared card selector');
-must(metadataEditor, '.manager-console-user-card, .output-activity-row[data-metadata-profile-id]', 'manager metadata opener must cover access cards and output activity tiles');
+must(metadataEditor, '.manager-console-user-card, .output-activity-row[data-metadata-profile-id]', 'manager metadata opener must cover access-capable cards and output activity tiles');
 must(metadataEditor, '.output-activity-title-actions', 'manager metadata click blocker must ignore output activity action controls');
 must(metadataEditor, 'CARD_CLICK_BLOCKERS', 'manager metadata editor must keep a scoped blocker list');
 must(metadataEditor, 'shouldIgnoreCardOpen(event.target, card)', 'manager metadata card click must compare against the current card');
