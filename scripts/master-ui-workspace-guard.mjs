@@ -64,6 +64,10 @@ has('components/ClientOutputLimitBoundary.tsx', "table: 'manager_entitlement_lim
 has('app/api/client/output-entitlement/route.ts', 'managerDefaultOutputLimit', 'Disputer entitlement API must return the Master manager default output cap');
 has('app/api/client/output-entitlement/route.ts', 'managerDisputerLimit', 'Disputer entitlement API must return the Master manager Disputer seat cap');
 has('app/api/client/output-entitlement/route.ts', "source: managerDefaultLimit !== null ? 'master-manager-limit'", 'Disputer entitlement API must prefer manager limit source');
+has('app/api/generation-runs/route.ts', 'requireGenerationAllowance', 'generation save route must strictly check allowance before insert');
+has('app/api/generation-runs/route.ts', 'access_assert_client_can_generate_v1', 'generation save route must prefer strict allowance RPC');
+has('app/api/generation-runs/route.ts', 'Output allowance SQL is not synced. Generation is blocked', 'generation save route must block when allowance SQL is missing');
+has('app/api/generation-runs/route.ts', 'entitlement.outputLimit === null', 'generation save route must block missing Master manager output cap');
 has('src/features/manager-console/admin-page-presenters.ts', 'Manager cap not set', 'manager UI must not show Default when master cap is missing');
 has('supabase/migrations/20260624123000_master_authority_required_limits.sql', 'access_positive_limit_required_v1', 'latest entitlement migration must require positive manager limits');
 has('supabase/migrations/20260624123000_master_authority_required_limits.sql', 'Master must set this manager daily output limit', 'latest entitlement migration must block Disputer generation when master cap is missing');
@@ -73,6 +77,9 @@ has('supabase/migrations/20260624133000_entitlement_realtime_master_sync.sql', '
 has('supabase/migrations/20260624140000_manager_only_disputer_output_entitlement.sql', 'Manager-only Disputer output entitlement contract', 'latest migration must enforce manager-only Disputer allowance');
 has('supabase/migrations/20260624140000_manager_only_disputer_output_entitlement.sql', 'nullif(mel.default_client_output_limit, 0)', 'Disputer SQL entitlement must use manager default output limit');
 has('supabase/migrations/20260624140000_manager_only_disputer_output_entitlement.sql', 'Per-Disputer output overrides are retired', 'Disputer-specific output override RPC must be retired');
+has('supabase/migrations/20260624143000_strict_generation_allowance_compat.sql', 'access_generation_run_counts_as_output(output_status_input text)', 'strict allowance compatibility migration must define missing output-count helper');
+has('supabase/migrations/20260624143000_strict_generation_allowance_compat.sql', 'access_assert_client_can_generate_v1', 'strict allowance compatibility migration must define assert RPC');
+has('supabase/migrations/20260624143000_strict_generation_allowance_compat.sql', 'manager_id_value is not null and limit_value is not null and used_value < limit_value', 'strict allowance SQL must block when manager/cap is missing or reached');
 
 if (failures.length) {
   console.error('Master workspace retirement guard failed.');
