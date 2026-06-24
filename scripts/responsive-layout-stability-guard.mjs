@@ -44,18 +44,20 @@ must(supportCss, 'grid-template-areas: "documents page controls"', 'Supporting D
 must(supportCss, 'grid-template-areas: "documents" "page" "controls"', 'Supporting Documents CSS must stack on narrow screens');
 must(supportCss, 'overflow-x: clip', 'Supporting Documents CSS must prevent horizontal overflow');
 
-must(centerCanvasCss, 'middle canvas owns all remaining width', 'final center canvas CSS must declare edge-to-edge center ownership');
-must(centerCanvasCss, '--support-native-page-target: 100%', 'final center canvas CSS must remove fixed page cap and use all center width');
-must(centerCanvasCss, 'grid-template-columns: minmax(180px, var(--support-native-left)) minmax(0, 1fr) minmax(200px, var(--support-native-right))', 'final center canvas CSS must compact rails and prioritize center');
-must(centerCanvasCss, 'justify-items: stretch !important', 'final center frame must stretch canvas side to side');
-must(centerCanvasCss, 'width: 100% !important', 'final center canvas CSS must set the page and toolbar to full center width');
+must(centerCanvasCss, 'measured middle-canvas contract', 'final center canvas CSS must declare measured ownership');
+must(centerCanvasCss, 'width: var(--supporting-canvas-width, 100%) !important', 'final center canvas CSS must use measured canvas width variable');
+must(centerCanvasCss, 'height: var(--supporting-canvas-height, auto) !important', 'final center canvas CSS must use measured canvas height variable');
+must(centerCanvasCss, 'grid-template-columns: minmax(168px, var(--support-native-left)) minmax(0, 1fr) minmax(188px, var(--support-native-right))', 'final center canvas CSS must compact rails and prioritize center');
+must(centerCanvasCss, '[data-supporting-canvas-contract="measured-grid-center-width"]', 'final center canvas CSS must scope to the measured component contract');
 must(centerCanvasCss, '.word-rotate-actions', 'final center canvas CSS must control right rail button layout');
 
-must(supportEditor, 'measuredCanvasSize(frame: HTMLDivElement)', 'Supporting Documents editor must measure the real center frame width');
+must(supportEditor, 'useLayoutEffect', 'Supporting Documents editor must measure layout before paint');
+must(supportEditor, 'type CanvasMeasureTargets', 'Supporting Documents editor must measure grid, frame, and rails together');
+must(supportEditor, 'measuredCanvasSize({ grid, frame, leftRail, rightRail }', 'Supporting Documents editor must measure real center grid width, not only CSS width');
 must(supportEditor, 'ResizeObserver(update)', 'Supporting Documents editor must resize canvas when available space changes');
-must(supportEditor, 'data-supporting-canvas-contract="measured-center-width"', 'Supporting Documents editor must expose measured canvas contract marker');
-must(supportEditor, 'style={canvasStyle}', 'Supporting Documents page canvas must receive measured inline width and height');
-must(supportEditor, 'style={toolbarStyle}', 'Supporting Documents toolbar must match measured canvas width');
+must(supportEditor, 'data-supporting-canvas-contract="measured-grid-center-width"', 'Supporting Documents editor must expose measured grid canvas contract marker');
+must(supportEditor, "'--supporting-canvas-width'", 'Supporting Documents editor must pass measured width through CSS variable');
+must(supportEditor, "return { x: 0.04, y: 0.14, width: 0.92, height: 0.48 }", 'Supporting Documents single-file default slot must be large and side-to-side');
 
 must(entitlement, 'ENTITLEMENT_FETCH_TIMEOUT_MS = 8000', 'entitlement check must timeout cold fetches');
 must(entitlement, 'AbortController', 'entitlement check must abort stuck requests');
