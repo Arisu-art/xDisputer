@@ -16,9 +16,9 @@ export type EntitlementLimitRow = {
 
 export type EntitlementLimitMap = Record<string, EntitlementLimitRow>;
 
-type RawEntitlementRow = Partial<EntitlementLimitRow> & {
-  output_used_this_month?: number;
-  output_remaining_this_month?: number | null;
+type RawEntitlementRow = Partial<Record<keyof EntitlementLimitRow, unknown>> & {
+  output_used_this_month?: unknown;
+  output_remaining_this_month?: unknown;
   entitlement_notes?: string | null;
 };
 
@@ -28,26 +28,38 @@ function isMissingRpc(message: string) {
     || message.includes('schema cache');
 }
 
+function numericValue(value: unknown) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function positiveOrNull(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+  const parsed = numericValue(value);
+  return parsed !== null && parsed > 0 ? parsed : null;
 }
 
 function nonnegativeOrNull(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+  const parsed = numericValue(value);
+  return parsed !== null && parsed >= 0 ? parsed : null;
 }
 
 function normalizeRow(row: RawEntitlementRow): EntitlementLimitRow {
   const effectiveLimit = positiveOrNull(row.effective_output_limit);
+  const usedToday = nonnegativeOrNull(row.output_used_today ?? row.output_used_this_month) ?? 0;
   return {
     profile_id: String(row.profile_id || ''),
     max_clients: positiveOrNull(row.max_clients),
-    current_clients: Number(row.current_clients || 0),
+    current_clients: nonnegativeOrNull(row.current_clients) ?? 0,
     default_client_output_limit: positiveOrNull(row.default_client_output_limit),
     client_output_limit: positiveOrNull(row.client_output_limit),
     effective_output_limit: effectiveLimit,
-    output_used_today: Number(row.output_used_today ?? row.output_used_this_month ?? 0),
+    output_used_today: usedToday,
     output_remaining_today: effectiveLimit === null ? null : nonnegativeOrNull(row.output_remaining_today ?? row.output_remaining_this_month),
-    updated_at: row.updated_at || null
+    updated_at: typeof row.updated_at === 'string' ? row.updated_at : null
   };
 }
 
