@@ -20,7 +20,6 @@ function statusText(value?: string | null) {
   return value || 'Pending';
 }
 
-function numberText(value?: number | null) { return typeof value === 'number' && value > 0 ? String(value) : 'Default'; }
 function isManager(account: ManagedAccount) { return account.role === 'manager' || account.role === 'admin'; }
 function dayUsed(limit?: EntitlementLimitRow) { return limit?.output_used_today ?? 0; }
 function canEditLimits(account: ManagedAccount) { return isManager(account) || account.role === 'client'; }
@@ -29,11 +28,11 @@ function positiveValue(value?: number | null) { return typeof value === 'number'
 function agreementSummary(account: ManagedAccount, limit?: EntitlementLimitRow) {
   if (isManager(account)) {
     const maxClients = positiveValue(limit?.max_clients);
-    return maxClients === null ? `${limit?.current_clients || 0} active · Default limit` : `${limit?.current_clients || 0}/${maxClients} disputers`;
+    return maxClients === null ? `${limit?.current_clients || 0} active · Needs Master limit` : `${limit?.current_clients || 0}/${maxClients} disputers`;
   }
   if (account.role === 'client') {
     const effectiveLimit = positiveValue(limit?.effective_output_limit);
-    return effectiveLimit === null ? `${dayUsed(limit)} used · Default limit` : `${dayUsed(limit)}/${effectiveLimit} outputs today`;
+    return effectiveLimit === null ? `${dayUsed(limit)} used · Manager cap not set` : `${dayUsed(limit)}/${effectiveLimit} outputs today`;
   }
   return 'Protected';
 }
@@ -41,10 +40,11 @@ function agreementSummary(account: ManagedAccount, limit?: EntitlementLimitRow) 
 function flyoutMeter(account: ManagedAccount, limit?: EntitlementLimitRow) {
   if (isManager(account)) {
     const maxClients = positiveValue(limit?.max_clients);
-    return <div className="limit-meter"><strong>{limit?.current_clients || 0} active</strong><small>{maxClients === null ? 'Default disputer limit' : `${maxClients} disputer cap`}</small></div>;
+    const defaultOutput = positiveValue(limit?.default_client_output_limit);
+    return <div className="limit-meter"><strong>{limit?.current_clients || 0} active</strong><small>{maxClients === null || defaultOutput === null ? 'Master limits required' : `${maxClients} disputers · ${defaultOutput} outputs/day`}</small></div>;
   }
   const effectiveLimit = positiveValue(limit?.effective_output_limit);
-  return <div className="limit-meter"><strong>{dayUsed(limit)} used</strong><small>{effectiveLimit === null ? 'Default output limit' : `${effectiveLimit} outputs/day`}</small></div>;
+  return <div className="limit-meter"><strong>{dayUsed(limit)} used</strong><small>{effectiveLimit === null ? 'Manager output cap not set' : `${effectiveLimit} outputs/day`}</small></div>;
 }
 
 function roleLabel(account: ManagedAccount) {
@@ -67,8 +67,8 @@ function LinkBadge({ account }: { account: ManagedAccount }) {
 }
 
 function LimitForm({ account, limit, formId }: { account: ManagedAccount; limit?: EntitlementLimitRow; formId: string }) {
-  if (isManager(account)) return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="manager" /><input type="hidden" name="profileId" value={account.id} />{flyoutMeter(account, limit)}<label><span>Disputer limit</span><input name="maxClients" type="number" min="1" defaultValue={positiveValue(limit?.max_clients) ?? ''} placeholder="Default / unlimited" /></label><label><span>Default outputs per disputer/day</span><input name="defaultClientOutputLimit" type="number" min="1" defaultValue={positiveValue(limit?.default_client_output_limit) ?? ''} placeholder="Default / unlimited" /></label><p className="limit-editor-help">Leave blank, type 0, or clear the field to use Default. Use a positive whole number only when you want a hard cap.</p></form>;
-  if (account.role === 'client') return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="client" /><input type="hidden" name="profileId" value={account.id} />{flyoutMeter(account, limit)}<label><span>Daily output limit</span><input name="outputLimit" type="number" min="1" defaultValue={positiveValue(limit?.client_output_limit) ?? ''} placeholder="Blank uses manager default" /></label><p className="limit-editor-help">Leave blank or type 0 to inherit the manager default. Use a positive whole number only for a Disputer-specific cap.</p></form>;
+  if (isManager(account)) return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="manager" /><input type="hidden" name="profileId" value={account.id} />{flyoutMeter(account, limit)}<label><span>Disputer limit</span><input name="maxClients" type="number" min="1" required defaultValue={positiveValue(limit?.max_clients) ?? ''} placeholder="Required number" /></label><label><span>Default outputs per disputer/day</span><input name="defaultClientOutputLimit" type="number" min="1" required defaultValue={positiveValue(limit?.default_client_output_limit) ?? ''} placeholder="Required number" /></label><p className="limit-editor-help">Master must set both manager limits. Use positive whole numbers only. These caps are enforced for Manager and Disputer pages.</p></form>;
+  if (account.role === 'client') return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="client" /><input type="hidden" name="profileId" value={account.id} />{flyoutMeter(account, limit)}<label><span>Daily output override</span><input name="outputLimit" type="number" min="1" defaultValue={positiveValue(limit?.client_output_limit) ?? ''} placeholder="Blank inherits manager cap" /></label><p className="limit-editor-help">Blank means this Disputer follows the manager output cap set by Master. Positive number means a stricter Disputer-specific cap.</p></form>;
   return <p className="flyout-muted">Master account limits are protected.</p>;
 }
 
@@ -85,7 +85,7 @@ function ActionForms({ account, currentUserId }: { account: ManagedAccount; curr
 }
 
 function AccountTrigger({ account, limit }: { account: ManagedAccount; limit?: EntitlementLimitRow }) {
-  return <span className="account-control-trigger-grid master-account-trigger-v3"><span className="account-control-identity master-account-identity"><strong>{account.full_name || account.email || `Unnamed ${displayAccountRoleLower(account.role)}`}</strong><small>{account.email || `${displayAccountRole(account.role)} account`}</small></span><span className="master-account-status-cluster"><span className={`admin-role-badge ${account.role}`}>{roleLabel(account)}</span><span className={`admin-status-badge ${account.account_status || 'pending'}`}>{statusText(account.account_status)}</span><LinkBadge account={account} /></span><span className="account-control-agreement master-account-limit"><strong>{agreementSummary(account, limit)}</strong><small>{isManager(account) ? 'disputer control' : account.role === 'client' ? 'daily output' : 'protected'}</small></span><span className="master-account-open">Open controls</span><span className="account-control-meta"><small>Invite</small><strong>{isManager(account) ? account.manager_invite_code || 'Not created' : '—'}</strong></span><span className="account-control-meta"><small>Updated</small><strong>{dateText(account.updated_at)}</strong></span></span>;
+  return <span className="account-control-trigger-grid master-account-trigger-v3"><span className="account-control-identity master-account-identity"><strong>{account.full_name || account.email || `Unnamed ${displayAccountRoleLower(account.role)}`}</strong><small>{account.email || `${displayAccountRole(account.role)} account`}</small></span><span className="master-account-status-cluster"><span className={`admin-role-badge ${account.role}`}>{roleLabel(account)}</span><span className={`admin-status-badge ${account.account_status || 'pending'}`}>{statusText(account.account_status)}</span><LinkBadge account={account} /></span><span className="account-control-agreement master-account-limit"><strong>{agreementSummary(account, limit)}</strong><small>{isManager(account) ? 'master control' : account.role === 'client' ? 'daily output' : 'protected'}</small></span><span className="master-account-open">Open controls</span><span className="account-control-meta"><small>Invite</small><strong>{isManager(account) ? account.manager_invite_code || 'Not created' : '—'}</strong></span><span className="account-control-meta"><small>Updated</small><strong>{dateText(account.updated_at)}</strong></span></span>;
 }
 
 function AccountControlCard({ account, currentUserId, limit, bossOptions }: { account: ManagedAccount; currentUserId: string; limit?: EntitlementLimitRow; bossOptions: BossOption[] }) {
