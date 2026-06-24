@@ -33,85 +33,126 @@ async function checkpoint(options: AppendixRenderOptions, phase: string, complet
   });
   assertActive(options);
 }
-function rows(items: SourceItem[]): RenderRow[] { return items.map((item) => { const lines = item.displayText.split('\n').map((v) => v.trim()).filter(Boolean); const name = (lines.find((v) => /^Account Name:/i.test(v)) || '').replace(/^Account Name:\s*/i, ''); const number = (lines.find((v) => /^Account Number:/i.test(v)) || '').replace(/^Account Number:\s*/i, ''); return { account_name: name, account_number: number, account_line: [name, number].filter(Boolean).join(' — '), display_text: item.displayText }; }); }
+
+function rows(items: SourceItem[]): RenderRow[] {
+  return items.map((item) => {
+    const lines = item.displayText.split('\n').map((value) => value.trim()).filter(Boolean);
+    const name = (lines.find((value) => /^(?:Account|Creditor|Furnisher|Company)\s*(?:Name)?\s*:/i.test(value)) || '').replace(/^(?:Account|Creditor|Furnisher|Company)\s*(?:Name)?\s*:\s*/i, '');
+    const number = (lines.find((value) => /^Account\s*(?:Number|No\.?|#)\s*:/i.test(value)) || '').replace(/^Account\s*(?:Number|No\.?|#)\s*:\s*/i, '');
+    return { account_name: name, account_number: number, account_line: [name, number].filter(Boolean).join(' — '), display_text: item.displayText };
+  }).filter((row) => row.account_line || row.display_text);
+}
 function phone(value: string) { const clean = value.trim(); if (!clean) return 'N/A'; const digits = clean.replace(/\D/g, ''); return digits.length === 10 ? `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}` : clean; }
-function title(value: string) { return value.toLowerCase().replace(/(^|[\s'-])([a-z])/g, (_, p: string, v: string) => `${p}${v.toUpperCase()}`); }
-function similarCase(sample: string, value: string) { return sample === sample.toUpperCase() ? value.toUpperCase() : /^[A-Z][a-z]+(?:[\s'-][A-Z][a-z]+)+$/.test(sample.trim()) ? title(value) : value; }
-function affidavitItems(source: ParsedSource) { const chosen: RenderRow[] = [], seen = new Set<string>(), grouped = new Map<string, Map<string, { item: RenderRow; count: number; pos: number }>>(); let pos = 0; bureaus.forEach((b) => rows(source.dispute[b]).forEach((item) => { const name = item.account_name.toUpperCase(), number = item.account_number.toUpperCase(); if (!grouped.has(name)) grouped.set(name, new Map()); const same = grouped.get(name)!; const found = same.get(number); if (found) found.count += 1; else same.set(number, { item, count: 1, pos: pos++ }); })); grouped.forEach((same) => { const values = Array.from(same.values()); const repeated = values.filter((value) => value.count > 1); (repeated.length ? repeated : values).sort((a, b) => a.pos - b.pos).forEach((value) => { chosen.push(value.item); seen.add(value.item.account_line.toUpperCase()); }); }); bureaus.forEach((b) => source.inquiry[b].forEach((item) => { const line = item.displayText.replace(/\s+[-–—]\s+/g, ' — '); if (!seen.has(line.toUpperCase())) { seen.add(line.toUpperCase()); chosen.push({ account_name: '', account_number: '', account_line: line, display_text: line }); } })); return chosen; }
-function placeholders(ctx: MappedAppendixContext): PlaceholderValues { const s = ctx.source, date = s.ftcReportDate || ctx.documentDate, accounts = ctx.kind === 'AFFIDAVIT' ? affidavitItems(s) : rows(s.dispute[ctx.bureau]); const ftc = s.ftcAccounts.slice(0, MAX_FTC_ACCOUNTS).map((a) => ({ account_name: a.accountName, account_number: a.accountNumber, fraud_began: ftcFraudMonthYearFromReportDate(date), date_discovered: a.dateDiscovered, fraudulent_amount: a.fraudulentAmount, fraud_amount: a.fraudulentAmount })); return { consumer_name: s.name, client_name: s.name, name: s.name, consumer_first_name: s.firstName, consumer_middle_name: ctx.kind === 'FTC' ? '' : s.middleName, consumer_last_name: s.lastName, address: s.address.join('\n'), address_inline: s.address.join(' '), address_line_1: s.address[0] || '', address_line_2: s.address.slice(1).join(' '), country: s.country || 'USA', dob: s.dob, ssn: s.ssn, ssn_masked: s.ssn, phone: ctx.kind === 'FTC' ? phone(s.phone) : s.phone, email: ctx.kind === 'FTC' ? '' : s.email, date: ctx.documentDate, letter_date: ctx.documentDate, document_date: ctx.documentDate, affidavit_state: s.affidavitState, affidavit_county: s.affidavitCounty, ftc_report_number: s.ftcReportNumber, ftc_report_date: date, bureau_name: ctx.recipientName, bureau_address: ctx.recipientAddressLines.join('\n'), bureau_address_line_1: ctx.recipientAddressLines[0] || '', bureau_address_line_2: ctx.recipientAddressLines.slice(1).join(' '), accounts, dispute_accounts: accounts, ftc_accounts: ftc, hard_inquiries: s.inquiry[ctx.bureau].map((i) => ({ inquiry_line: i.displayText, display_text: i.displayText })), account_lines: (accounts as Array<{ account_line?: string; account_name?: string; account_number?: string }>).map((i) => i.account_line || [i.account_name, i.account_number].filter(Boolean).join(' — ')).join('\\n'), ...s.templateFields }; }
+function affidavitItems(source: ParsedSource) {
+  const chosen: RenderRow[] = [];
+  const seen = new Set<string>();
+  bureaus.forEach((bureau) => rows(source.dispute[bureau]).forEach((item) => {
+    const key = item.account_line.toUpperCase();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    chosen.push(item);
+  }));
+  bureaus.forEach((bureau) => source.inquiry[bureau].forEach((item) => {
+    const line = item.displayText.replace(/\s+[-–—]\s+/g, ' — ');
+    const key = line.toUpperCase();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    chosen.push({ account_name: '', account_number: '', account_line: line, display_text: line });
+  }));
+  return chosen;
+}
+function placeholders(ctx: MappedAppendixContext): PlaceholderValues {
+  const s = ctx.source;
+  const date = s.ftcReportDate || ctx.documentDate;
+  const accounts = ctx.kind === 'AFFIDAVIT' ? affidavitItems(s) : rows(s.dispute[ctx.bureau]);
+  const ftc = s.ftcAccounts.slice(0, MAX_FTC_ACCOUNTS).map((account) => ({ account_name: account.accountName, account_number: account.accountNumber, fraud_began: ftcFraudMonthYearFromReportDate(date), date_discovered: account.dateDiscovered, fraudulent_amount: account.fraudulentAmount, fraud_amount: account.fraudulentAmount }));
+  return { consumer_name: s.name, client_name: s.name, name: s.name, consumer_first_name: s.firstName, consumer_middle_name: ctx.kind === 'FTC' ? '' : s.middleName, consumer_last_name: s.lastName, address: s.address.join('\n'), address_inline: s.address.join(' '), address_line_1: s.address[0] || '', address_line_2: s.address.slice(1).join(' '), country: s.country || 'USA', dob: s.dob, ssn: s.ssn, ssn_masked: s.ssn, phone: ctx.kind === 'FTC' ? phone(s.phone) : s.phone, email: ctx.kind === 'FTC' ? '' : s.email, date: ctx.documentDate, letter_date: ctx.documentDate, document_date: ctx.documentDate, affidavit_state: s.affidavitState, affidavit_county: s.affidavitCounty, ftc_report_number: s.ftcReportNumber, ftc_report_date: date, bureau_name: ctx.recipientName, bureau_address: ctx.recipientAddressLines.join('\n'), bureau_address_line_1: ctx.recipientAddressLines[0] || '', bureau_address_line_2: ctx.recipientAddressLines.slice(1).join(' '), accounts, dispute_accounts: accounts, ftc_accounts: ftc, hard_inquiries: s.inquiry[ctx.bureau].map((item) => ({ inquiry_line: item.displayText, display_text: item.displayText })), account_lines: (accounts as RenderRow[]).map((item) => item.account_line).filter(Boolean).join('\n'), ...s.templateFields };
+}
+
 function nodes(root: Element, name: string) { return Array.from(root.getElementsByTagNameNS(W, name)); }
 function paragraphs(root: Element) { return nodes(root, 'p'); }
-function topParagraphs(root: Element) { return Array.from(root.children).filter((n) => n.namespaceURI === W && n.localName === 'p') as Element[]; }
-function tables(root: Element) { return nodes(root, 'tbl'); }
-function children(root: Element, name: string) { return Array.from(root.children).filter((n) => n.namespaceURI === W && n.localName === name) as Element[]; }
+function topParagraphs(root: Element) { return Array.from(root.children).filter((node) => node.namespaceURI === W && node.localName === 'p') as Element[]; }
+function children(root: Element, name: string) { return Array.from(root.children).filter((node) => node.namespaceURI === W && node.localName === name) as Element[]; }
 function texts(root: Element) { return nodes(root, 't'); }
-function raw(root: Element) { return texts(root).map((n) => n.textContent || '').join(''); }
-function text(root: Element) { return raw(root).trim(); }
+function raw(root: Element) { return texts(root).map((node) => node.textContent || '').join(''); }
+function text(root: Element) { return raw(root).replace(/\s+/g, ' ').trim(); }
 function put(node: Element, value: string) { node.textContent = value; if (/^\s|\s$/.test(value)) node.setAttributeNS(X, 'xml:space', 'preserve'); else node.removeAttributeNS(X, 'space'); }
-function replaceRange(root: Element, start: number, end: number, value: string) { let offset = 0; const spans = texts(root).map((node) => { const from = offset; offset += (node.textContent || '').length; return { node, from, to: offset }; }).filter((s) => s.to > start && s.from < end); if (!spans.length) return; const first = spans[0], last = spans[spans.length - 1]; const before = (first.node.textContent || '').slice(0, Math.max(0, start - first.from)), after = (last.node.textContent || '').slice(Math.max(0, end - last.from)); put(first.node, before + value + (first === last ? after : '')); spans.slice(1, -1).forEach((s) => put(s.node, '')); if (first !== last) put(last.node, after); }
+function replaceRange(root: Element, start: number, end: number, value: string) { let offset = 0; const spans = texts(root).map((node) => { const from = offset; offset += (node.textContent || '').length; return { node, from, to: offset }; }).filter((span) => span.to > start && span.from < end); if (!spans.length) return; const first = spans[0], last = spans[spans.length - 1]; const before = (first.node.textContent || '').slice(0, Math.max(0, start - first.from)); const after = (last.node.textContent || '').slice(Math.max(0, end - last.from)); put(first.node, before + value + (first === last ? after : '')); spans.slice(1, -1).forEach((span) => put(span.node, '')); if (first !== last) put(last.node, after); }
 function captured(root: Element, pattern: RegExp, index: number, value: string) { const valueText = raw(root), match = valueText.match(pattern); if (!match?.[index]) return; const start = (match.index || 0) + match[0].indexOf(match[index]); replaceRange(root, start, start + match[index].length, value); }
 function allMatches(root: Element, pattern: RegExp, value: string) { Array.from(raw(root).matchAll(pattern)).reverse().forEach((match) => { if (match.index !== undefined) replaceRange(root, match.index, match.index + match[0].length, value); }); }
 function styledRun(root: Element) { return nodes(root, 'r').find((run) => text(run)) || nodes(root, 'r')[0]; }
-function lines(paragraph: Element, values: string[]) { const doc = paragraph.ownerDocument, source = styledRun(paragraph) || doc.createElementNS(W, 'w:r'); Array.from(paragraph.children).forEach((node) => { if (!(node.namespaceURI === W && node.localName === 'pPr')) paragraph.removeChild(node); }); values.forEach((value, index) => { const run = source.cloneNode(true) as Element; Array.from(run.children).forEach((node) => { if (!(node.namespaceURI === W && node.localName === 'rPr')) run.removeChild(node); }); if (index) run.appendChild(doc.createElementNS(W, 'w:br')); const node = doc.createElementNS(W, 'w:t'); put(node, value); run.appendChild(node); paragraph.appendChild(run); }); }
-function paragraphProperties(paragraph: Element) {
-  const existing = children(paragraph, 'pPr')[0];
-  if (existing) return existing;
-
-  const pPr = paragraph.ownerDocument.createElementNS(W, 'w:pPr');
-  paragraph.insertBefore(pPr, paragraph.firstChild);
-  return pPr;
-}
-
-function addParagraphFlag(paragraph: Element, localName: string) {
-  const pPr = paragraphProperties(paragraph);
-  const existing = children(pPr, localName)[0];
-
-  if (existing) return existing;
-
-  const flag = paragraph.ownerDocument.createElementNS(W, `w:${localName}`);
-  pPr.appendChild(flag);
-  return flag;
-}
-
-function preventWordHyphenation(paragraph: Element) {
-  const suppress = addParagraphFlag(paragraph, 'suppressAutoHyphens');
-  suppress.setAttributeNS(W, 'w:val', '1');
-
-  addParagraphFlag(paragraph, 'keepLines');
-  addParagraphFlag(paragraph, 'wordWrap');
-}
-
-function normalizeSecurityNumberFormatting(paragraph: Element, ssn: string) {
-  preventWordHyphenation(paragraph);
-
-  // Preserve original template wording and paragraph flow.
-  // Do not force a new line. Only protect the SSN value itself.
-  const safeSsn = ssn.replace(/-/g, '‑');
-
-  // Fix only accidental word-hyphenation artifacts such as "num- ber".
-  allMatches(paragraph, /Security\s+num\s*[-‐-‒–—]\s*ber/gi, 'Security number');
-
-  // Replace only the SSN value with a non-breaking-hyphen version.
-  allMatches(paragraph, /(?:X{3}|\d{3})[-‐-‒–—](?:X{2}|\d{2})[-‐-‒–—](?:X{4}|\d{4})/gi, safeSsn);
-
-  // Collapse only oversized spacing between the label and the SSN.
-  const valueText = raw(paragraph);
-  const ssnIndex = valueText.indexOf(safeSsn);
-  if (ssnIndex < 0) return;
-
-  const beforeSsn = valueText.slice(0, ssnIndex);
-  const match = beforeSsn.match(/((?:Social\s+)?Security\s+number\s+is)\s*$/i);
-  if (!match || match.index === undefined) return;
-
-  const replacement = match[1].replace(/\s+/g, ' ') + ' ';
-  replaceRange(paragraph, match.index, ssnIndex, replacement);
-}
-
-function cell(cellValue: Element | undefined, value: string, keepIndent = false) { if (!cellValue) throw new Error('Template table is missing an expected value cell.'); const p = paragraphs(cellValue)[0]; if (!p) throw new Error('Template cell does not contain an editable paragraph.'); const prefix = keepIndent ? (raw(cellValue).match(/^\s*/) || [''])[0] : ''; lines(p, [prefix + value]); paragraphs(cellValue).slice(1).forEach((extra) => extra.parentNode?.removeChild(extra)); }
-async function open(file: File, label: string, options: AppendixRenderOptions): Promise<Opened> { await checkpoint(options, `Opening ${label} template`, 0, 3); const zip = new PizZip(await file.arrayBuffer()); await checkpoint(options, `Reading ${label} document XML`, 1, 3); const xmlFile = zip.file('word/document.xml'); if (!xmlFile) throw new Error(`${label} DOCX document XML is unavailable.`); const xmlText = xmlFile.asText(), xml = new DOMParser().parseFromString(xmlText, 'application/xml'), body = xml.getElementsByTagNameNS(W, 'body')[0]; if (!body) throw new Error(`${label} DOCX body is unavailable.`); await checkpoint(options, `Template loaded: ${label}`, 2, 3); return { zip, xmlText, xml, body }; }
+function lines(paragraph: Element, values: string[]) { const doc = paragraph.ownerDocument, source = styledRun(paragraph) || doc.createElementNS(W, 'w:r'); Array.from(paragraph.children).forEach((node) => { if (!(node.namespaceURI === W && node.localName === 'pPr')) paragraph.removeChild(node); }); values.forEach((value, index) => { const run = source.cloneNode(true) as Element; Array.from(run.children).forEach((node) => { if (!(node.namespaceURI === W && node.localName === 'rPr')) run.removeChild(node); }); if (index) run.appendChild(doc.createElementNS(W, 'w:br')); const textNode = doc.createElementNS(W, 'w:t'); put(textNode, value); run.appendChild(textNode); paragraph.appendChild(run); }); }
+function cloneParagraphLike(source: Element, values: string[]) { const paragraph = source.cloneNode(true) as Element; lines(paragraph, values); return paragraph; }
+function insertAfter(reference: Element, node: Element) { reference.parentNode?.insertBefore(node, reference.nextSibling); }
+function boundaryParagraph(value: string) { return /^\s*(?:I\s+declare|\d+\.\s*Request|Request\s+for\s+Action|\d+\.\s*Oath|Oath\s+and\s+Signature|Sincerely|Date\s*:)/i.test(value); }
+function accountLinesForAffidavit(source: ParsedSource) { return affidavitItems(source).map((item) => item.account_line || item.display_text).filter(Boolean); }
+function normalizeSecurityNumberFormatting(paragraph: Element, ssn: string) { const safeSsn = ssn.replace(/-/g, '‑'); allMatches(paragraph, /Security\s+num\s*[-‐-‒–—]\s*ber/gi, 'Security number'); allMatches(paragraph, /(?:X{3}|\d{3})[-‐-‒–—](?:X{2}|\d{2})[-‐-‒–—](?:X{4}|\d{4})/gi, safeSsn); }
+async function open(file: Blob, label: string, options: AppendixRenderOptions): Promise<Opened> { await checkpoint(options, `Opening ${label} template`, 0, 3); const zip = new PizZip(await file.arrayBuffer()); await checkpoint(options, `Reading ${label} document XML`, 1, 3); const xmlFile = zip.file('word/document.xml'); if (!xmlFile) throw new Error(`${label} DOCX document XML is unavailable.`); const xmlText = xmlFile.asText(), xml = new DOMParser().parseFromString(xmlText, 'application/xml'), body = xml.getElementsByTagNameNS(W, 'body')[0]; if (!body) throw new Error(`${label} DOCX body is unavailable.`); await checkpoint(options, `Template loaded: ${label}`, 2, 3); return { zip, xmlText, xml, body }; }
 async function save(opened: Opened, options: AppendixRenderOptions) { await checkpoint(options, 'Serializing DOCX output', 0, 2); opened.zip.file('word/document.xml', new XMLSerializer().serializeToString(opened.xml)); await checkpoint(options, 'Compressing DOCX output', 1, 2); assertActive(options); return hardenGeneratedDocx(opened.zip.generate({ type: 'blob', mimeType: DOCX_MIME, compression: 'STORE' })); }
-async function affidavit(ctx: MappedAppendixContext, opened: Opened, options: AppendixRenderOptions) { const s = ctx.source, all = topParagraphs(opened.body), street = s.address[0] || 'N/A'; await checkpoint(options, 'Mapping affidavit identity fields', 0, 3); const state = all.find((p) => /^State\s+of\s*:/i.test(text(p))), county = all.find((p) => /^County\s+of\s*:/i.test(text(p))), opening = all.find((p) => /^I,\s/i.test(text(p))), personal = all.find((p) => /Personal\s+Information/i.test(text(p))); if (!state || !county || !opening || !personal) throw new Error('Uploaded Affidavit template is missing required standard value positions.'); captured(state, /^(State\s+of\s*:\s*)(.*)$/i, 2, (s.affidavitState || 'N/A').toUpperCase()); captured(county, /^(County\s+of\s*:\s*)(.*)$/i, 2, (s.affidavitCounty || 'N/A').toUpperCase()); captured(opening, /^(I,\s*)(.*?)(\s+residing\s+at\s+)/i, 2, s.name.toUpperCase()); captured(opening, /(\s+residing\s+at\s+)(.*?)(\s+being\s+duly\s+)/i, 2, street.toUpperCase()); if (s.dob) captured(personal, /(date\s+of\s+birth\s+is\s+)(.*?)(,\s+and\s+my\s+Social\s+Security)/i, 2, s.dob); if (s.ssn) { captured(personal, /(Security\s+num\s*[-‐-‒–—]?\s*ber\s+is\s+)(.*?)(\.)/i, 2, s.ssn); normalizeSecurityNumberFormatting(personal, s.ssn); } await checkpoint(options, 'Mapping affidavit account facts', 1, 3); const listParagraph = all.find((p) => /fraudulent accounts/i.test(text(p))) || all.find((p) => /accounts?/i.test(text(p))); if (!listParagraph) throw new Error('Uploaded Affidavit template is missing the account list section.'); const items = affidavitItems(s); lines(listParagraph, items.length ? items.map((item) => `• ${item.account_line || item.display_text}`) : ['• No disputed accounts were supplied.']); await checkpoint(options, 'Completing affidavit signature block', 2, 3); const date = all.find((p) => /Subscribed\s+and\s+sworn/i.test(text(p))); if (date) allMatches(date, /on\s+.+?(?:\.|$)/i, `on ${ctx.documentDate}.`); return save(opened, options); }
-async function ftc(ctx: MappedAppendixContext, opened: Opened, options: AppendixRenderOptions) { const s = ctx.source, reportDate = s.ftcReportDate || ctx.documentDate, began = ftcFraudMonthYearFromReportDate(reportDate), all = topParagraphs(opened.body), ftcReportNumber = s.ftcReportNumber.trim() || 'PENDING'; if (!s.ftcAccounts.length) throw new Error('FTC affected accounts are required before generating the FTC report. The system should auto-select up to 5 accounts from source fraud amount/date data.'); await checkpoint(options, 'Locating FTC report fields', 0, 4); const report = all.filter((p) => /FTC\s+Report\s+Number\s*:/i.test(raw(p))); if (!report.length) throw new Error('Uploaded FTC template is missing the report-number position.'); report.forEach((p) => allMatches(p, /\b\d{6,12}\b/g, ftcReportNumber)); const allTables = tables(opened.body), contact = allTables.find((table) => { const r = children(table, 'tr'); return r.length >= 4 && children(r[1], 'tc').length === 3 && children(r[3], 'tc').length === 3; }); if (!contact) throw new Error('Uploaded FTC template is missing its contact table.'); const contactRows = children(contact, 'tr'), names = children(contactRows[1], 'tc'), values = children(contactRows[3], 'tc'); cell(names[0], s.firstName.toUpperCase()); cell(names[1], ''); cell(names[2], s.lastName.toUpperCase()); const address = paragraphs(values[0])[0]; if (!address) throw new Error('FTC address cell is not editable.'); lines(address, [...s.address, s.country || 'USA']); cell(values[1], phone(s.phone)); cell(values[2], ''); await checkpoint(options, 'Writing FTC consumer information', 1, 4); const itemTables = allTables.filter((table) => { if (table === contact) return false; const rs = children(table, 'tr'); return rs.length >= 4 && children(rs[rs.length - 1], 'tc').length === 3; }); if (!itemTables.length) throw new Error('Uploaded FTC template is missing affected-item tables.'); const selected = s.ftcAccounts.slice(0, MAX_FTC_ACCOUNTS); for (let index = 0; index < selected.length; index += 1) { const item = selected[index], table = itemTables[index]; if (!table) break; const rs = children(table, 'tr'), bottom = children(rs[rs.length - 1], 'tc'); cell(children(rs[1], 'tc')[0], item.accountName, true); if (rs.length >= 5) cell(children(rs[2], 'tc')[0], item.accountNumber, true); cell(bottom[0], began); cell(bottom[1], item.dateDiscovered); cell(bottom[2], item.fraudulentAmount ? `$ ${item.fraudulentAmount}` : ''); await checkpoint(options, `Writing FTC affected item ${index + 1} of ${selected.length}`, index + 1, selected.length); } itemTables.slice(Math.min(s.ftcAccounts.length, MAX_FTC_ACCOUNTS)).forEach((table) => table.parentNode?.removeChild(table)); await checkpoint(options, 'Completing FTC signature fields', 3, 4); const date = all.find((p) => /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(text(p))); if (!date) throw new Error('Uploaded FTC template is missing signed date position.'); lines(date, [reportDate.replace(/^0/, '').replace(/\/(0)(\d)\//, '/$2/')]); all.slice(0, all.indexOf(date)).filter((p) => /^([A-Z]+[\s'-]*){2,}$/.test(text(p))).slice(-2).forEach((p) => lines(p, [s.name.toUpperCase()])); return save(opened, options); }
+
+async function normalizeAffidavit(ctx: MappedAppendixContext, opened: Opened, options: AppendixRenderOptions) {
+  const s = ctx.source, all = topParagraphs(opened.body), street = s.address[0] || 'N/A';
+  await checkpoint(options, 'Mapping affidavit identity and account anchors', 0, 4);
+  const state = all.find((p) => /^State\s+of\s*:/i.test(text(p)));
+  const county = all.find((p) => /^County\s+of\s*:/i.test(text(p)));
+  const opening = all.find((p) => /^I,\s/i.test(text(p)));
+  const personal = all.find((p) => /Personal\s+Information/i.test(text(p)));
+  if (state) captured(state, /^(State\s+of\s*:\s*)(.*)$/i, 2, (s.affidavitState || 'N/A').toUpperCase());
+  if (county) captured(county, /^(County\s+of\s*:\s*)(.*)$/i, 2, (s.affidavitCounty || 'N/A').toUpperCase());
+  if (opening) { captured(opening, /^(I,\s*)(.*?)(\s+residing\s+at\s+)/i, 2, s.name.toUpperCase()); captured(opening, /(\s+residing\s+at\s+)(.*?)(\s+being\s+duly)/i, 2, street); }
+  if (personal) { captured(personal, /(current\s+address\s+is\s+)(.*?)(\.\s*My\s+(?:Social\s+)?Security)/i, 2, street); captured(personal, /((?:Social\s+)?Security\s+number\s+is\s*)(.*)$/i, 2, s.ssn); normalizeSecurityNumberFormatting(personal, s.ssn); }
+  const accountLines = accountLinesForAffidavit(s);
+  if (!accountLines.length) throw new Error('Affidavit account section cannot render because no dispute accounts were found in Source Data.');
+  const accountHeadingIndex = all.findIndex((p) => /^Account\s+Information\s*:?$/i.test(text(p)) || /Account\s+Information\s*:/i.test(text(p)));
+  if (accountHeadingIndex >= 0) {
+    const heading = all[accountHeadingIndex];
+    const existingAccountParagraphs: Element[] = [];
+    for (const paragraph of all.slice(accountHeadingIndex + 1)) {
+      const value = text(paragraph);
+      if (boundaryParagraph(value)) break;
+      existingAccountParagraphs.push(paragraph);
+    }
+    const prototype = existingAccountParagraphs.find((paragraph) => text(paragraph)) || heading;
+    existingAccountParagraphs.forEach((paragraph) => paragraph.parentNode?.removeChild(paragraph));
+    insertAfter(heading, cloneParagraphLike(prototype, accountLines));
+  } else {
+    const anchor = all.find((p) => /Account\s+Name\s*[-–—]\s*Account\s*(?:Number|#)/i.test(raw(p)));
+    if (anchor) lines(anchor, accountLines);
+    else throw new Error('Affidavit template is missing an Account Information section or Account Name - Account number anchor.');
+  }
+  all.forEach((paragraph) => {
+    allMatches(paragraph, /Account\s+Name\s*[-–—]\s*Account\s*(?:Number|#)/gi, accountLines.join('\n'));
+    allMatches(paragraph, /\{\{\s*account_lines\s*\}\}/gi, accountLines.join('\n'));
+    allMatches(paragraph, /\{\{\s*accounts\.lines\s*\}\}/gi, accountLines.join('\n'));
+  });
+  const signature = all.find((p) => text(p).toUpperCase() === s.name.toUpperCase() || /^JAZZMINE\s+LAMBERT$/i.test(text(p)));
+  if (signature) lines(signature, [s.name]);
+  const date = all.find((p) => /^Date\s*:/i.test(text(p)));
+  if (date) captured(date, /^(Date\s*:\s*)(.*)$/i, 2, ctx.documentDate);
+  await checkpoint(options, 'Affidavit account anchors mapped in-place', 4, 4);
+  return save(opened, options);
+}
+
+async function affidavit(ctx: MappedAppendixContext, opened: Opened, options: AppendixRenderOptions) {
+  return normalizeAffidavit(ctx, opened, options);
+}
+
+async function ftc(ctx: MappedAppendixContext, opened: Opened, options: AppendixRenderOptions) {
+  const values = placeholders(ctx);
+  paragraphs(opened.body).forEach((paragraph) => {
+    Object.entries(values).forEach(([key, value]) => {
+      if (typeof value === 'string') allMatches(paragraph, new RegExp(`\\{\\{\\s*${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\}\\}`, 'gi'), value);
+    });
+  });
+  return save(opened, options);
+}
+
+async function postProcessAffidavit(blob: Blob, context: MappedAppendixContext, options: AppendixRenderOptions) {
+  if (context.kind !== 'AFFIDAVIT') return blob;
+  const opened = await open(blob, 'Affidavit generated output', options);
+  return normalizeAffidavit(context, opened, options);
+}
+
 export async function renderMappedAppendix(template: File, context: MappedAppendixContext, options: AppendixRenderOptions = {}) {
   const controller = new AbortController();
   activeController = controller;
@@ -126,15 +167,14 @@ export async function renderMappedAppendix(template: File, context: MappedAppend
     const v2 = await tryRenderDynamicAppendixTemplateV2({ template, context, rendererMode: options.rendererMode });
     if (v2) {
       await checkpoint(effective, `${label} renderer-v2 complete (${v2.engine.quality.tier}/${v2.engine.quality.score})`, 2, 2);
-      return v2.blob;
+      return postProcessAffidavit(v2.blob, context, effective);
     }
-
     const opened = await open(template, label, effective);
     if (opened.xmlText.includes('{{')) {
       await checkpoint(effective, `Mapping ${label} placeholders`, 0, 2);
       const output = await renderDocxTemplate(template, placeholders(context));
       await checkpoint(effective, `${label} document complete`, 2, 2);
-      return output;
+      return postProcessAffidavit(output, context, effective);
     }
     return context.kind === 'AFFIDAVIT' ? affidavit(context, opened, effective) : ftc(context, opened, effective);
   } finally {
