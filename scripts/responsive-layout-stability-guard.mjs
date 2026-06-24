@@ -14,31 +14,40 @@ const canvas = read('docs/responsive-layout-stability-canvas.md');
 const layout = read('app/layout.tsx');
 const globalCss = read('app/responsive-layout-stability-system.css');
 const supportCss = read('app/supporting-documents-runtime-wide-fix.css');
+const centerCanvasCss = read('app/supporting-documents-center-canvas-contract.css');
 const entitlement = read('components/ClientOutputLimitBoundary.tsx');
 
 must(canvas, 'Code status', 'responsive canvas must show coded status');
 must(canvas, 'app/responsive-layout-stability-system.css', 'responsive canvas must name global CSS owner');
-must(canvas, 'app/supporting-documents-runtime-wide-fix.css', 'responsive canvas must name Supporting Documents final owner');
+must(canvas, 'app/supporting-documents-runtime-wide-fix.css', 'responsive canvas must name Supporting Documents runtime owner');
 must(canvas, 'scripts/website-stability-guard.mjs', 'responsive canvas must name stability guard');
 
 must(layout, "import './responsive-layout-stability-system.css';", 'root layout must load responsive stability CSS');
+must(layout, "import './supporting-documents-center-canvas-contract.css';", 'root layout must load final Supporting Documents center canvas contract');
 before(layout, './final-responsive-integrity.css', './responsive-layout-stability-system.css', 'responsive stability CSS must load after integrity baseline');
 before(layout, './responsive-layout-stability-system.css', './stable-ui-primitives.css', 'responsive stability CSS must load before stable final layers');
-before(layout, './supporting-documents-wide-stage.css', './supporting-documents-runtime-wide-fix.css', 'Supporting Documents runtime fix must load last for that feature');
+before(layout, './supporting-documents-wide-stage.css', './supporting-documents-runtime-wide-fix.css', 'Supporting Documents runtime fix must load after wide stage');
+before(layout, './console-debug-overlay.css', './supporting-documents-center-canvas-contract.css', 'Supporting Documents center canvas contract must load last');
 
 must(globalCss, '--responsive-layout-stability-system: coded', 'global responsive CSS must expose coded contract marker');
 must(globalCss, 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', 'global responsive CSS must implement auto-fit grids');
-must(globalCss, '.client-output-limit-checking', 'global responsive CSS must center/stabilize entitlement loading state');
+must(globalCss, '.client-output-limit-checking', 'global responsive CSS must center entitlement loading state');
 must(globalCss, "[role='dialog']", 'global responsive CSS must bound modal surfaces');
 must(globalCss, 'prefers-reduced-motion: reduce', 'global responsive CSS must respect reduced motion');
 must(globalCss, 'overflow-x: clip', 'global responsive CSS must prevent horizontal overflow');
 
-must(supportCss, 'Layout contract: side panels are secondary; the center document canvas gets the maximum safe space first', 'Supporting Documents CSS must document center priority');
-must(supportCss, '--support-runtime-canvas-target: clamp(430px, 56vw, var(--support-runtime-page-max))', 'Supporting Documents CSS must maximize center canvas target');
-must(supportCss, 'min-height: clamp(520px, calc(100dvh - 230px), 980px)', 'Supporting Documents CSS must reserve vertical stage space for a large page');
+must(supportCss, 'Layout contract: side panels are secondary; the center document canvas gets the maximum safe space first', 'Supporting Documents runtime CSS must document center priority');
+must(supportCss, '--support-runtime-canvas-target: clamp(430px, 56vw, var(--support-runtime-page-max))', 'Supporting Documents runtime CSS must keep prior center target');
+must(supportCss, 'min-height: clamp(520px, calc(100dvh - 230px), 980px)', 'Supporting Documents runtime CSS must reserve vertical stage space');
 must(supportCss, 'grid-template-areas: "documents page controls"', 'Supporting Documents CSS must use wide three-area grid');
 must(supportCss, 'grid-template-areas: "documents" "page" "controls"', 'Supporting Documents CSS must stack on narrow screens');
 must(supportCss, 'overflow-x: clip', 'Supporting Documents CSS must prevent horizontal overflow');
+
+must(centerCanvasCss, 'final layout owner for the Supporting Documents layout editor', 'final center canvas CSS must declare ownership');
+must(centerCanvasCss, '--support-center-page-target: clamp(520px, 68vw, var(--support-center-page-max))', 'final center canvas CSS must make the page materially larger');
+must(centerCanvasCss, 'minmax(112px, var(--support-center-left-rail)) minmax(0, 1fr) minmax(132px, var(--support-center-right-rail))', 'final center canvas CSS must compact side rails and prioritize center');
+must(centerCanvasCss, 'width: min(100%, var(--support-center-page-target)) !important', 'final center canvas CSS must set page and toolbar to the center target');
+must(centerCanvasCss, '.word-rotate-actions', 'final center canvas CSS must control right rail button layout');
 
 must(entitlement, 'ENTITLEMENT_FETCH_TIMEOUT_MS = 8000', 'entitlement check must timeout cold fetches');
 must(entitlement, 'AbortController', 'entitlement check must abort stuck requests');
