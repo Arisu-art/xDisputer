@@ -2,13 +2,16 @@ import DynamicTemplateRuleControlPanel from './DynamicTemplateRuleControlPanel';
 import TemplateReadinessCard from './TemplateReadinessCard';
 import TemplateRegistrationConsole from './TemplateRegistrationConsole';
 import TemplateRuleEditor from './TemplateRuleEditor';
+import TemplateWorkflowFrameworkPanel from './TemplateWorkflowFrameworkPanel';
 import type { DynamicTemplateInspectionResult, DynamicTemplateRule } from '../../../lib/templates/intelligence';
 import type { TemplateLibraryContext } from '../../../lib/templates/workspace/template-library-service';
 import type { TemplateStructureInspection } from '../../../lib/templates/workspace/template-studio-service';
+import type { TemplateWorkflowFramework } from '../../../lib/templates/workspace/template-workflow-framework';
 
-export default function TemplateStudioHub({ context, inspection, intelligence, intelligenceRules }: { context: TemplateLibraryContext; inspection: TemplateStructureInspection; intelligence: DynamicTemplateInspectionResult; intelligenceRules: DynamicTemplateRule[] }) {
-  return <section className="template-workspace-hub template-studio-minimal-hub" data-template-workspace-hub="studio" data-template-process="template-authoring-rules" data-template-studio-ui="minimal-registration-first">
+export default function TemplateStudioHub({ context, inspection, intelligence, intelligenceRules, workflowFramework }: { context: TemplateLibraryContext; inspection: TemplateStructureInspection; intelligence: DynamicTemplateInspectionResult; intelligenceRules: DynamicTemplateRule[]; workflowFramework: TemplateWorkflowFramework }) {
+  return <section className="template-workspace-hub template-studio-minimal-hub" data-template-workspace-hub="studio" data-template-process="template-authoring-rules" data-template-studio-ui="workflow-framework-first">
     <TemplateReadinessCard contract={context.contract} summary="Register the active template once, then let Studio keep mapping, preservation, and table rules available under Advanced analysis." action={context.nextAction} />
+    <TemplateWorkflowFrameworkPanel framework={workflowFramework} />
     <TemplateRegistrationConsole context={context} intelligence={intelligence} rules={intelligenceRules} />
     <details className="template-studio-advanced-panel">
       <summary><span>Advanced analysis</span><small>Open only when you need parser rules, raw mapping counts, or boundary diagnostics.</small></summary>
@@ -24,9 +27,9 @@ export default function TemplateStudioHub({ context, inspection, intelligence, i
           <div className="admin-monitor-card-header"><div><p>Rule boundaries</p><h2>What Studio owns</h2></div><span className="template-workspace-pill ready">wired</span></div>
           <div className="template-rule-list">
             <article className="template-rule-row valid"><div><strong>Preserve static legal text</strong><span>Legal copy and declarations remain stable unless explicitly overridden by a manager rule.</span></div><small>preserve</small></article>
-            <article className="template-rule-row valid"><div><strong>Map variables to canonical fields</strong><span>Variables must resolve through the canonical layer before release.</span></div><small>mapping</small></article>
+            <article className="template-rule-row valid"><div><strong>Map variables to canonical fields</strong><span>Variables must resolve through the canonical layer.</span></div><small>mapping</small></article>
             <article className="template-rule-row valid"><div><strong>Protect table layouts</strong><span>Tables preserve structure while rows can be generated from source data.</span></div><small>tables</small></article>
-            <article className="template-rule-row warning"><div><strong>Route unresolved fields</strong><span>Unmapped required fields are routed to Studio, not hidden in the generation engine.</span></div><small>if/else</small></article>
+            <article className="template-rule-row warning"><div><strong>Route unresolved fields</strong><span>Unmapped required fields are routed to Studio.</span></div><small>if/else</small></article>
           </div>
         </section>
       </section>
