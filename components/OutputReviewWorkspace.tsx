@@ -63,7 +63,11 @@ export default function OutputReviewWorkspace({
   onEvidenceChanged,
   onMessage,
   onZip,
-  onReplace
+  onReplace,
+  finalizing,
+  finalZipName,
+  onFinalZip,
+  onFinalize
 }: OutputReviewWorkspaceProps) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [reviewedPaths, setReviewedPaths] = useState<string[]>([]);
@@ -89,8 +93,14 @@ export default function OutputReviewWorkspace({
           </div>
           <div className="output-download-command">
             <span>{review.reviewedPackets}/{review.totalPackets} reviewed</span>
-            <button type="button" className="action-button" disabled={!zipName || !review.readyToDownload} onClick={onZip}>
-              Download final package
+            <button type="button" className="secondary-button" disabled={!zipName || !review.readyToDownload} onClick={onZip}>
+              Download editable DOCX package
+            </button>
+            <button type="button" className="action-button" disabled={!review.readyToDownload || finalizing || !onFinalize} onClick={() => void onFinalize?.()}>
+              {finalizing ? 'Building merged PDF...' : 'Generate merged PDF'}
+            </button>
+            <button type="button" className="action-button" disabled={!finalZipName || !onFinalZip} onClick={onFinalZip}>
+              Download merged PDF
             </button>
           </div>
         </header>
