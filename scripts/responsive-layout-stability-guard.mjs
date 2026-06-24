@@ -15,6 +15,7 @@ const layout = read('app/layout.tsx');
 const globalCss = read('app/responsive-layout-stability-system.css');
 const supportCss = read('app/supporting-documents-runtime-wide-fix.css');
 const centerCanvasCss = read('app/supporting-documents-center-canvas-contract.css');
+const supportEditor = read('components/SupportingDocumentsLayoutEditor.tsx');
 const entitlement = read('components/ClientOutputLimitBoundary.tsx');
 
 must(canvas, 'Code status', 'responsive canvas must show coded status');
@@ -49,6 +50,12 @@ must(centerCanvasCss, 'grid-template-columns: minmax(180px, var(--support-native
 must(centerCanvasCss, 'justify-items: stretch !important', 'final center frame must stretch canvas side to side');
 must(centerCanvasCss, 'width: 100% !important', 'final center canvas CSS must set the page and toolbar to full center width');
 must(centerCanvasCss, '.word-rotate-actions', 'final center canvas CSS must control right rail button layout');
+
+must(supportEditor, 'measuredCanvasSize(frame: HTMLDivElement)', 'Supporting Documents editor must measure the real center frame width');
+must(supportEditor, 'ResizeObserver(update)', 'Supporting Documents editor must resize canvas when available space changes');
+must(supportEditor, 'data-supporting-canvas-contract="measured-center-width"', 'Supporting Documents editor must expose measured canvas contract marker');
+must(supportEditor, 'style={canvasStyle}', 'Supporting Documents page canvas must receive measured inline width and height');
+must(supportEditor, 'style={toolbarStyle}', 'Supporting Documents toolbar must match measured canvas width');
 
 must(entitlement, 'ENTITLEMENT_FETCH_TIMEOUT_MS = 8000', 'entitlement check must timeout cold fetches');
 must(entitlement, 'AbortController', 'entitlement check must abort stuck requests');
