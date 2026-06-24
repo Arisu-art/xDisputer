@@ -8,6 +8,8 @@ import { PageStateBoundary, StableCard, StableEmptyState } from './stability';
 type EntitlementPayload = { outputLimit: number | null; outputUsedToday: number; outputRemainingToday: number | null; resetAt: string | null; resetSeconds: number | null; allowed: boolean; message: string | null; source?: string | null; serverTime?: string | null };
 type EntitlementState = 'checking' | 'allowed' | 'paused' | 'unavailable';
 
+const ENTITLEMENT_FETCH_TIMEOUT_MS = 8000;
+
 function formatDuration(seconds: number | null) {
   if (seconds === null) return 'Calculating';
   const safe = Math.max(0, seconds);
@@ -50,14 +52,17 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
   }, []);
 
   const load = useCallback(async () => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), ENTITLEMENT_FETCH_TIMEOUT_MS);
     try {
-      const response = await fetch(`/api/client/output-entitlement?t=${Date.now()}`, { cache: 'no-store', headers: { accept: 'application/json', 'cache-control': 'no-store' } });
+      const response = await fetch(`/api/client/output-entitlement?t=${Date.now()}`, { cache: 'no-store', signal: controller.signal, headers: { accept: 'application/json', 'cache-control': 'no-store' } });
       if (!response.ok) { markUnavailableIfCold(); return; }
       const payload = await response.json();
       const next = payload.entitlement as EntitlementPayload | undefined;
       if (!next) { markUnavailableIfCold(); return; }
       applyEntitlement(next);
     } catch { markUnavailableIfCold(); }
+    finally { window.clearTimeout(timeout); }
   }, [applyEntitlement, markUnavailableIfCold]);
 
   const scheduleRefresh = useCallback((delay = 150) => {
