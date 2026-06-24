@@ -1,7 +1,8 @@
-/* Manager Template Library upload layout
+/* Manager Template Library native selection upload layout
    Final owner for /manager-workspace Template Library upload UX.
-   Contract: upload must be visible, round selection compact, slots responsive, and no hidden raw multipart-only workflow. */
+   Contract: select round, select template slot, then upload one focused template. */
 
+.template-library-selection-workspace,
 .template-library-upload-workspace {
   display: grid !important;
   gap: clamp(1rem, 1.5vw, 1.45rem) !important;
@@ -48,6 +49,14 @@
   font-weight: 800 !important;
 }
 
+.template-library-selection-grid {
+  display: grid !important;
+  grid-template-columns: minmax(220px, .27fr) minmax(250px, .33fr) minmax(0, 1fr) !important;
+  gap: clamp(.85rem, 1.35vw, 1.25rem) !important;
+  align-items: start !important;
+  min-width: 0 !important;
+}
+
 .template-library-layout-grid {
   display: grid !important;
   grid-template-columns: minmax(230px, .35fr) minmax(0, 1fr) !important;
@@ -57,7 +66,10 @@
 }
 
 .template-library-round-panel,
+.template-library-slot-panel,
+.template-selected-upload-panel,
 .template-library-upload-panel,
+.template-selected-upload-card,
 .template-upload-slot-card {
   min-width: 0 !important;
   border: 1px solid rgba(15, 23, 42, .09) !important;
@@ -66,7 +78,8 @@
   box-shadow: 0 10px 26px rgba(15, 23, 42, .055) !important;
 }
 
-.template-library-round-panel {
+.template-library-round-panel,
+.template-library-slot-panel {
   position: sticky !important;
   top: 86px !important;
   display: grid !important;
@@ -74,25 +87,112 @@
   padding: 1rem !important;
 }
 
-.template-library-round-panel > strong {
+.template-library-round-panel > strong,
+.template-library-slot-panel > strong {
   color: #081429 !important;
   font-size: .95rem !important;
 }
 
-.template-round-selection-grid.compact {
+.template-round-selection-grid.compact,
+.template-slot-selection-list {
   display: grid !important;
   grid-template-columns: 1fr !important;
   gap: .55rem !important;
 }
 
-.template-round-selection-grid.compact .template-round-choice {
+.template-round-selection-grid.compact .template-round-choice,
+.template-slot-choice {
   min-height: 58px !important;
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: .65rem !important;
   padding: .68rem .75rem !important;
+  border: 1px solid rgba(203, 213, 225, .92) !important;
   border-radius: 16px !important;
+  background: #fff !important;
+  text-align: left !important;
+  box-shadow: none !important;
 }
 
-.template-round-selection-grid.compact .template-choice-arrow {
-  display: none !important;
+.template-round-selection-grid.compact .template-round-choice.current,
+.template-slot-choice.current {
+  border-color: rgba(37, 99, 235, .72) !important;
+  background: linear-gradient(180deg, #eff6ff, #ffffff) !important;
+  box-shadow: inset 4px 0 0 #2563eb !important;
+}
+
+.template-slot-choice.ready:not(.current) {
+  box-shadow: inset 4px 0 0 #10b981 !important;
+}
+
+.template-slot-choice.missing:not(.current) {
+  box-shadow: inset 4px 0 0 #f59e0b !important;
+}
+
+.template-choice-number,
+.template-slot-index {
+  width: 42px !important;
+  height: 42px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 14px !important;
+  color: #0f172a !important;
+  background: #e2e8f0 !important;
+  font-size: .82rem !important;
+  font-weight: 900 !important;
+}
+
+.template-choice-copy,
+.template-slot-copy {
+  min-width: 0 !important;
+  display: grid !important;
+  gap: .16rem !important;
+}
+
+.template-choice-copy strong,
+.template-slot-copy strong {
+  color: #081429 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.template-choice-copy small,
+.template-slot-copy small,
+.template-library-storage-note small,
+.template-upload-active-state small,
+.template-upload-active-state em,
+.template-selected-upload-header p {
+  color: #64748b !important;
+  font-size: .8rem !important;
+  font-style: normal !important;
+  line-height: 1.4 !important;
+}
+
+.template-slot-state {
+  min-width: 64px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  padding: .32rem .55rem !important;
+  border-radius: 999px !important;
+  background: #f8fafc !important;
+  color: #475569 !important;
+  font-size: .66rem !important;
+  font-weight: 950 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+
+.template-slot-choice.ready .template-slot-state {
+  color: #047857 !important;
+  background: #ecfdf5 !important;
+}
+
+.template-slot-choice.missing .template-slot-state {
+  color: #92400e !important;
+  background: #fffbeb !important;
 }
 
 .template-library-storage-note {
@@ -105,6 +205,7 @@
 }
 
 .template-library-storage-note span,
+.template-selected-upload-header span,
 .template-upload-slot-copy span {
   color: #2563eb !important;
   font-size: .68rem !important;
@@ -118,11 +219,7 @@
   font-size: .86rem !important;
 }
 
-.template-library-storage-note small {
-  color: #475569 !important;
-  line-height: 1.4 !important;
-}
-
+.template-selected-upload-panel,
 .template-library-upload-panel {
   display: grid !important;
   gap: .9rem !important;
@@ -158,38 +255,43 @@
   background: #fef2f2 !important;
 }
 
-.template-upload-slot-grid {
+.template-selected-upload-card {
   display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: clamp(.75rem, 1.05vw, 1rem) !important;
-  min-width: 0 !important;
+  gap: clamp(.9rem, 1.3vw, 1.15rem) !important;
+  padding: clamp(1rem, 1.45vw, 1.35rem) !important;
+  border-left-width: 6px !important;
 }
 
-.template-upload-slot-card {
-  display: grid !important;
-  grid-template-rows: auto auto 1fr !important;
-  gap: .85rem !important;
-  padding: clamp(.85rem, 1.05vw, 1rem) !important;
-  border-left-width: 5px !important;
-}
-
-.template-upload-slot-card.ready {
+.template-selected-upload-card.ready {
   border-left-color: #10b981 !important;
 }
 
-.template-upload-slot-card.missing {
+.template-selected-upload-card.missing {
   border-left-color: #f59e0b !important;
 }
 
-.template-upload-slot-copy,
-.template-upload-active-state,
-.template-upload-form {
+.template-selected-upload-header {
+  display: grid !important;
+  gap: .35rem !important;
+}
+
+.template-selected-upload-header h3 {
+  margin: 0 !important;
+  color: #081429 !important;
+  font-size: clamp(1.35rem, 1.7vw, 1.9rem) !important;
+  letter-spacing: -.04em !important;
+}
+
+.template-upload-active-state {
   display: grid !important;
   gap: .35rem !important;
   min-width: 0 !important;
+  padding: .85rem .95rem !important;
+  border: 1px solid rgba(203, 213, 225, .82) !important;
+  border-radius: 16px !important;
+  background: #f8fafc !important;
 }
 
-.template-upload-slot-copy strong,
 .template-upload-active-state strong {
   color: #081429 !important;
   overflow: hidden !important;
@@ -197,20 +299,10 @@
   white-space: nowrap !important;
 }
 
-.template-upload-slot-copy small,
-.template-upload-active-state small,
-.template-upload-active-state em {
-  color: #64748b !important;
-  font-size: .8rem !important;
-  font-style: normal !important;
-  line-height: 1.4 !important;
-}
-
-.template-upload-active-state {
-  padding: .74rem .8rem !important;
-  border: 1px solid rgba(203, 213, 225, .82) !important;
-  border-radius: 15px !important;
-  background: #f8fafc !important;
+.template-upload-form {
+  display: grid !important;
+  gap: .8rem !important;
+  min-width: 0 !important;
 }
 
 .template-upload-form label {
@@ -227,7 +319,7 @@
 .template-upload-form input[type='file'] {
   width: 100% !important;
   min-width: 0 !important;
-  padding: .62rem !important;
+  padding: .72rem !important;
   border: 1px dashed rgba(37, 99, 235, .35) !important;
   border-radius: 14px !important;
   background: #f8fafc !important;
@@ -242,37 +334,43 @@
 }
 
 .template-upload-actions .admin-action-button {
-  min-height: 38px !important;
+  min-height: 40px !important;
   white-space: nowrap !important;
 }
 
-@media (max-width: 1180px) {
-  .template-library-layout-grid,
-  .template-upload-slot-grid {
-    grid-template-columns: 1fr !important;
+@media (max-width: 1320px) {
+  .template-library-selection-grid {
+    grid-template-columns: minmax(220px, .32fr) minmax(0, 1fr) !important;
   }
 
-  .template-library-round-panel {
+  .template-selected-upload-panel {
+    grid-column: 1 / -1 !important;
+  }
+
+  .template-library-round-panel,
+  .template-library-slot-panel {
     position: static !important;
-  }
-
-  .template-round-selection-grid.compact {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 
-@media (max-width: 680px) {
-  .template-library-command-card {
+@media (max-width: 880px) {
+  .template-library-selection-grid,
+  .template-library-layout-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .template-round-selection-grid.compact,
+  .template-slot-selection-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .template-library-command-card,
+  .template-upload-actions {
     grid-template-columns: 1fr !important;
   }
 
   .template-library-status-stack {
     justify-items: start !important;
     text-align: left !important;
-  }
-
-  .template-round-selection-grid.compact,
-  .template-upload-actions {
-    grid-template-columns: 1fr !important;
   }
 }
