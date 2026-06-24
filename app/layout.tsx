@@ -9,6 +9,7 @@ import './final-console-account-rail.css';
 import './client-account-popover-ratio.css';
 import './account-popover-compact-retirement.css';
 import './template-workspace-hubs.css';
+import './manager-template-library-upload.css';
 import './client-template-runtime.css';
 import './dynamic-template-intelligence.css';
 import './final-responsive-integrity.css';
