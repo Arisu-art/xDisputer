@@ -1,4 +1,4 @@
-:root { --manager-report-workflow-contract: date-range-dropdown-excel-export; }
+:root { --manager-report-workflow-contract: monday-ph-auto-submit-merged-salary-output-export; }
 
 .manager-report-workspace { display: grid !important; gap: 16px !important; padding: clamp(18px, 2vw, 26px) !important; }
 .manager-report-header { align-items: flex-start !important; margin-bottom: 0 !important; }
@@ -7,6 +7,7 @@
 .manager-report-controls label { display: grid !important; gap: 6px !important; min-width: 0 !important; }
 .manager-report-controls span, .manager-report-table th { font-size: 11px !important; font-weight: 950 !important; letter-spacing: .08em !important; text-transform: uppercase !important; }
 .manager-report-controls input, .manager-report-controls select { min-height: 42px !important; border: 1px solid rgba(203, 213, 225, .95) !important; border-radius: 14px !important; padding: 0 12px !important; background: #fff !important; color: #0f172a !important; font-weight: 800 !important; }
+.manager-report-export-button { min-height: 42px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; border-radius: 14px !important; white-space: nowrap !important; text-decoration: none !important; }
 .manager-report-kpis { display: grid !important; grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 10px !important; margin-bottom: 0 !important; }
 .manager-report-kpis span { display: grid !important; gap: 6px !important; border: 1px solid rgba(226, 232, 240, .92) !important; border-radius: 16px !important; background: #f8fafc !important; padding: 12px 14px !important; }
 .manager-report-kpis small { color: #64748b !important; font-size: 11px !important; font-weight: 950 !important; letter-spacing: .08em !important; text-transform: uppercase !important; }
