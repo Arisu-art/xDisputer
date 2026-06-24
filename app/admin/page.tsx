@@ -1,6 +1,5 @@
 import ConsoleNavLink from '../../components/ConsoleNavLink';
 import ManagerConsoleShell from '../../components/ManagerConsoleShell';
-import ManagerPayrollSettingsEditor from '../../components/manager/ManagerPayrollSettingsEditor';
 import ManagerConsoleRealtimeRefreshMount from '../../components/manager/ManagerConsoleRealtimeRefreshMount';
 import ManagerKpiGrid from '../../src/features/manager-console/components/ManagerKpiGrid';
 import {
@@ -22,7 +21,6 @@ import {
 } from '../../lib/saas/account-directory';
 import { listEntitlementLimits, type EntitlementLimitMap } from '../../lib/saas/entitlement-limits';
 import {
-  listManagerUserSettings,
   payrollAmount,
   type ManagerUserSetting,
   type ManagerUserSettingMap
@@ -63,7 +61,7 @@ function accountsForPanel(activePanel: ManagerOperationsPanel, pending: AccountD
 }
 
 function managerPanelHeader(activePanel: ManagerOperationsPanel, fallbackLabel?: string) {
-  if (activePanel === 'access') return { title: 'Access Control', description: 'Manage Disputer account status, approval, and compact metadata from one focused view.' };
+  if (activePanel === 'access') return { title: 'Access Control', description: 'Manage Disputer account status and approval from one focused stable view.' };
   if (activePanel === 'output_activity') return { title: 'Output Activity', description: 'Confirm generated output before it affects payday pay.' };
   if (activePanel === 'requests') return { title: 'Request', description: 'Review pending confirmations and invite requests.' };
   if (activePanel === 'reports') return { title: 'Report', description: 'Generate a clean operational report.' };
@@ -85,7 +83,6 @@ function ManagerAccountCard({ account, entitlements, settings }: { account: Acco
   return <article className="manager-console-user-card" data-compact-account-record="true" data-output-used-today={entitlement?.output_used_today || 0} data-output-limit={entitlement?.effective_output_limit ?? 'default'}>
     <header className="manager-console-user-header-v2"><div><strong>{account.full_name || account.email || 'Unnamed Disputer'}</strong><span>{account.email || 'No email'} • Updated {formatDate(account.updated_at)}</span></div><div className="manager-console-status-actions"><AccountStatusActions account={account} /><span className={`admin-status-badge ${account.account_status || 'pending'}`}>{statusText(account.account_status)}</span></div></header>
     <div className="manager-console-user-metrics"><span>{outputUsage(entitlements, account.id)}</span><span>{employmentTypeLabel(setting)}</span><span>{employmentTypeFor(setting) === 'full_time' ? `Fixed salary ${money(outputActivityPay)}` : `Output estimate ${money(outputActivityPay)}`}</span></div>
-    <ManagerPayrollSettingsEditor profileId={account.id} initialEmploymentType={employmentTypeFor(setting)} initialBaseSalary={setting?.base_salary || setting?.salary || 0} initialPerOutputRate={setting?.per_output_rate || setting?.rate || 0} initialNotes={setting?.notes || ''} />
   </article>;
 }
 
@@ -118,7 +115,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   const panelAccounts = accountsForPanel(activePanel, pendingResult, activeResult, blockedResult, allResult);
   const entitlementIds = accountIds(panelAccounts);
   const needsUserSettings = activePanel === 'access' || activePanel === 'output_activity' || activePanel === 'requests';
-  const [entitlementResult, settingsResult] = await Promise.all([listEntitlementLimits(supabase, [user.id, ...entitlementIds]), needsUserSettings ? listManagerUserSettings(supabase, user.id, entitlementIds) : Promise.resolve(emptySettings())]);
+  const [entitlementResult, settingsResult] = await Promise.all([listEntitlementLimits(supabase, [user.id, ...entitlementIds]), needsUserSettings ? Promise.resolve(emptySettings()) : Promise.resolve(emptySettings())]);
   const summary = summaryResult.summary;
   const queryError = summaryResult.errorMessage || pendingResult.errorMessage || activeResult.errorMessage || blockedResult.errorMessage || allResult.errorMessage || entitlementResult.errorMessage || settingsResult.errorMessage;
   const activeDefinition = managerOperationsNavItems(activePanel).find((item) => 'active' in item && item.active === true);
