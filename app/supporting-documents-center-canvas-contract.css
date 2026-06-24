@@ -1,0 +1,211 @@
+/* Supporting Documents center canvas contract.
+   Loaded after every global/debug stylesheet. This is the final layout owner for the Supporting Documents layout editor.
+   Root cause fixed: older files capped .support-page-frame/.support-page-canvas near 520-620px and side rails won too much width.
+   Contract: compact rails, no horizontal rail overflow, maximum practical center page canvas. */
+
+:root {
+  --support-center-left-rail: clamp(128px, 10vw, 172px);
+  --support-center-right-rail: clamp(148px, 11vw, 194px);
+  --support-center-gap: clamp(6px, .65vw, 12px);
+  --support-center-page-max: 1120px;
+  --support-center-page-target: clamp(520px, 68vw, var(--support-center-page-max));
+  --support-center-stage-min: clamp(620px, calc(100dvh - 168px), 1120px);
+}
+
+html body .progressive-supporting,
+html body .source-supporting-panel,
+html body .source-supporting-embedded,
+html body .required-supporting-embedded,
+html body .required-evidence-stage {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  overflow-x: clip !important;
+}
+
+html body .progressive-supporting .progressive-content,
+html body .source-supporting-panel .progressive-content,
+html body .source-supporting-embedded .progressive-content,
+html body .required-supporting-embedded .progressive-content,
+html body .required-evidence-stage .progressive-content {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  padding-inline: 0 !important;
+  overflow-x: clip !important;
+}
+
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor > .support-layout-grid.word-crop-grid,
+html body .support-layout-grid.word-crop-grid {
+  display: grid !important;
+  grid-template-columns: minmax(112px, var(--support-center-left-rail)) minmax(0, 1fr) minmax(132px, var(--support-center-right-rail)) !important;
+  grid-template-areas: "documents page controls" !important;
+  gap: var(--support-center-gap) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  overflow: visible !important;
+}
+
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-left-evidence-manager {
+  grid-area: documents !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  align-self: stretch !important;
+  max-height: none !important;
+  min-height: var(--support-center-stage-min) !important;
+  padding: clamp(8px, .75vw, 12px) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  position: relative !important;
+  top: auto !important;
+}
+
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-page-frame {
+  grid-area: page !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: var(--support-center-stage-min) !important;
+  padding: clamp(8px, 1vw, 16px) !important;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  gap: clamp(10px, 1vw, 16px) !important;
+  place-items: start center !important;
+  justify-self: stretch !important;
+  align-self: stretch !important;
+  overflow: visible !important;
+}
+
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-canvas-caption.evidence-preview-toolbar-header,
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .evidence-preview-toolbar-header {
+  width: min(100%, var(--support-center-page-target)) !important;
+  max-width: var(--support-center-page-max) !important;
+  min-width: 0 !important;
+  margin-inline: auto !important;
+}
+
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-page-canvas {
+  width: min(100%, var(--support-center-page-target)) !important;
+  max-width: var(--support-center-page-max) !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 auto !important;
+  aspect-ratio: 8.5 / 11 !important;
+  border-radius: 4px !important;
+  transform: none !important;
+  transform-origin: top center !important;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .16) !important;
+}
+
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-layout-controls.word-crop-controls,
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-crop-controls {
+  grid-area: controls !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  align-self: stretch !important;
+  max-height: none !important;
+  min-height: var(--support-center-stage-min) !important;
+  padding: clamp(8px, .75vw, 12px) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  position: relative !important;
+  top: auto !important;
+}
+
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-crop-controls *,
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-left-evidence-manager * {
+  min-width: 0 !important;
+}
+
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-crop-actions,
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-resize-actions,
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-rotate-actions,
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-position-actions,
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .supporting-document-actions-v2,
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .evidence-actions-v2 {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 6px !important;
+}
+
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor button,
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor select,
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor input {
+  max-width: 100% !important;
+}
+
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-image-strip button {
+  min-width: clamp(96px, 12vw, 132px) !important;
+  max-width: 150px !important;
+}
+
+@media (min-width: 1540px) {
+  :root {
+    --support-center-left-rail: clamp(140px, 9vw, 190px);
+    --support-center-right-rail: clamp(156px, 10vw, 210px);
+    --support-center-page-max: 1280px;
+    --support-center-page-target: clamp(680px, 70vw, var(--support-center-page-max));
+  }
+}
+
+@media (max-width: 1180px) {
+  :root {
+    --support-center-left-rail: clamp(116px, 10vw, 148px);
+    --support-center-right-rail: clamp(126px, 11vw, 158px);
+    --support-center-page-target: clamp(430px, 66vw, 900px);
+    --support-center-stage-min: clamp(560px, calc(100dvh - 150px), 980px);
+  }
+
+  html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-left-evidence-manager,
+  html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-crop-controls {
+    font-size: .92em !important;
+  }
+}
+
+@media (max-width: 980px) {
+  :root {
+    --support-center-page-target: min(100%, 920px);
+    --support-center-stage-min: auto;
+  }
+
+  html body .support-layout-editor.professional-evidence-editor.word-crop-editor > .support-layout-grid.word-crop-grid,
+  html body .support-layout-grid.word-crop-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: "documents" "page" "controls" !important;
+    gap: 12px !important;
+  }
+
+  html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-left-evidence-manager,
+  html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-page-frame,
+  html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-layout-controls.word-crop-controls,
+  html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-crop-controls {
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: 920px !important;
+    justify-self: center !important;
+  }
+}
+
+@media (max-width: 640px) {
+  :root { --support-center-page-target: 100%; }
+
+  html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-page-frame {
+    padding-inline: 0 !important;
+  }
+}
