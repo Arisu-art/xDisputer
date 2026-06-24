@@ -1,16 +1,15 @@
-/* Supporting Documents native ratio layout contract.
+/* Supporting Documents maximized middle-canvas contract.
    Loaded last from app/layout.tsx. This file is the final owner of the Supporting Documents layout editor.
-   Root cause: older CSS used fixed 520px page caps, space-between side rails, and competing rail widths.
-   Contract: use the full editor width with practical 20/60/20 rail-center-rail ratio, compact controls, and a large readable letter canvas. */
+   Root cause: older CSS capped the letter page around 520-760px and allowed side rails to starve the middle.
+   Contract: compact rails, middle canvas owns all remaining width, page reaches the edge of the center work area, responsive stack below tablet width. */
 
 :root {
-  --support-native-gap: clamp(10px, 1.05vw, 18px);
-  --support-native-left: clamp(210px, 20vw, 320px);
-  --support-native-right: clamp(230px, 21vw, 340px);
-  --support-native-page-max: 760px;
-  --support-native-page-target: clamp(560px, 52vw, var(--support-native-page-max));
-  --support-native-stage-min: clamp(680px, calc(100dvh - 160px), 1120px);
-  --support-native-rail-pad: clamp(12px, 1vw, 18px);
+  --support-native-gap: clamp(8px, .85vw, 14px);
+  --support-native-left: clamp(190px, 18vw, 280px);
+  --support-native-right: clamp(210px, 19vw, 300px);
+  --support-native-page-target: 100%;
+  --support-native-stage-min: clamp(700px, calc(100dvh - 150px), 1180px);
+  --support-native-rail-pad: clamp(10px, .85vw, 14px);
 }
 
 html body .progressive-supporting,
@@ -48,7 +47,7 @@ html body .support-layout-editor.professional-evidence-editor.word-crop-editor {
 html body .support-layout-editor.professional-evidence-editor.word-crop-editor > .support-layout-grid.word-crop-grid,
 html body .support-layout-grid.word-crop-grid {
   display: grid !important;
-  grid-template-columns: minmax(190px, var(--support-native-left)) minmax(0, 1fr) minmax(210px, var(--support-native-right)) !important;
+  grid-template-columns: minmax(180px, var(--support-native-left)) minmax(0, 1fr) minmax(200px, var(--support-native-right)) !important;
   grid-template-areas: "documents page controls" !important;
   gap: var(--support-native-gap) !important;
   width: 100% !important;
@@ -97,11 +96,11 @@ html body .support-layout-editor.professional-evidence-editor.word-crop-editor .
   max-width: none !important;
   min-width: 0 !important;
   min-height: var(--support-native-stage-min) !important;
-  padding: clamp(14px, 1.4vw, 24px) !important;
+  padding: clamp(8px, .75vw, 12px) !important;
   display: grid !important;
   grid-template-rows: auto 1fr !important;
-  gap: clamp(14px, 1.2vw, 20px) !important;
-  justify-items: center !important;
+  gap: clamp(12px, 1vw, 18px) !important;
+  justify-items: stretch !important;
   align-items: start !important;
   justify-self: stretch !important;
   align-self: stretch !important;
@@ -110,24 +109,26 @@ html body .support-layout-editor.professional-evidence-editor.word-crop-editor .
 
 html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-canvas-caption.evidence-preview-toolbar-header,
 html body .support-layout-editor.professional-evidence-editor.word-crop-editor .evidence-preview-toolbar-header {
-  width: min(100%, var(--support-native-page-target)) !important;
-  max-width: var(--support-native-page-max) !important;
+  width: 100% !important;
+  max-width: none !important;
   min-width: 0 !important;
-  margin-inline: auto !important;
+  margin-inline: 0 !important;
+  justify-self: stretch !important;
 }
 
 html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-page-canvas {
-  width: min(100%, var(--support-native-page-target)) !important;
-  max-width: var(--support-native-page-max) !important;
-  min-width: min(100%, 520px) !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
   height: auto !important;
   min-height: 0 !important;
-  margin: 0 auto !important;
+  margin: 0 !important;
+  justify-self: stretch !important;
   aspect-ratio: 8.5 / 11 !important;
   border-radius: 4px !important;
   transform: none !important;
   transform-origin: top center !important;
-  box-shadow: 0 26px 80px rgba(15, 23, 42, .18) !important;
+  box-shadow: 0 28px 84px rgba(15, 23, 42, .18) !important;
 }
 
 html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-layout-controls.word-crop-controls,
@@ -193,28 +194,24 @@ html body .support-layout-editor.professional-evidence-editor.word-crop-editor .
 
 @media (min-width: 1500px) {
   :root {
-    --support-native-left: clamp(240px, 20vw, 360px);
-    --support-native-right: clamp(260px, 21vw, 380px);
-    --support-native-page-max: 880px;
-    --support-native-page-target: clamp(700px, 54vw, var(--support-native-page-max));
+    --support-native-left: clamp(210px, 17vw, 300px);
+    --support-native-right: clamp(230px, 18vw, 320px);
+    --support-native-stage-min: clamp(760px, calc(100dvh - 150px), 1240px);
   }
 }
 
 @media (max-width: 1280px) {
   :root {
-    --support-native-left: clamp(170px, 17vw, 230px);
-    --support-native-right: clamp(190px, 19vw, 260px);
-    --support-native-page-max: 720px;
-    --support-native-page-target: clamp(520px, 50vw, var(--support-native-page-max));
+    --support-native-left: clamp(160px, 15vw, 210px);
+    --support-native-right: clamp(176px, 17vw, 230px);
   }
 }
 
 @media (max-width: 1080px) {
   :root {
-    --support-native-left: clamp(150px, 16vw, 190px);
-    --support-native-right: clamp(160px, 17vw, 210px);
-    --support-native-page-target: clamp(460px, 52vw, 640px);
-    --support-native-stage-min: clamp(580px, calc(100dvh - 150px), 960px);
+    --support-native-left: clamp(136px, 14vw, 174px);
+    --support-native-right: clamp(148px, 15vw, 190px);
+    --support-native-stage-min: clamp(600px, calc(100dvh - 150px), 980px);
   }
 
   html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-left-evidence-manager,
@@ -225,7 +222,6 @@ html body .support-layout-editor.professional-evidence-editor.word-crop-editor .
 
 @media (max-width: 900px) {
   :root {
-    --support-native-page-target: min(100%, 720px);
     --support-native-stage-min: auto;
   }
 
@@ -242,18 +238,20 @@ html body .support-layout-editor.professional-evidence-editor.word-crop-editor .
   html body .support-layout-editor.professional-evidence-editor.word-crop-editor .word-crop-controls {
     min-height: 0 !important;
     width: 100% !important;
-    max-width: 720px !important;
+    max-width: 760px !important;
     justify-self: center !important;
   }
 
-  html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-page-canvas {
+  html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-page-canvas,
+  html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-canvas-caption.evidence-preview-toolbar-header,
+  html body .support-layout-editor.professional-evidence-editor.word-crop-editor .evidence-preview-toolbar-header {
+    width: 100% !important;
     min-width: 0 !important;
+    max-width: 760px !important;
   }
 }
 
 @media (max-width: 640px) {
-  :root { --support-native-page-target: 100%; }
-
   html body .support-layout-editor.professional-evidence-editor.word-crop-editor .support-page-frame {
     padding-inline: 0 !important;
   }
