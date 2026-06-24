@@ -28,16 +28,23 @@ not('app/master/accounts/page.tsx', "'/master/workspaces'", 'master accounts pag
 not('app/master/accounts/page.tsx', 'UI workspace', 'master accounts copy must not mention UI workspace');
 not('app/master/accounts/page.tsx', 'Workspaces', 'master accounts copy must not mention Workspaces');
 
-has('app/master/MasterAccountTableV2.tsx', 'positiveValue(limit?.max_clients)', 'master account table must treat nonpositive manager caps as Default');
-has('app/master/MasterAccountTableV2.tsx', 'positiveValue(limit?.default_client_output_limit)', 'master account table must treat nonpositive default output caps as Default');
-has('app/master/MasterAccountTableV2.tsx', 'min="1"', 'master account limit inputs must reserve 0 for Default');
-has('app/master/MasterAccountTableV2.tsx', 'Leave blank, type 0, or clear the field to use Default', 'master account limit form must explain Default behavior');
+has('app/master/MasterAccountTableV2.tsx', 'Needs Master limit', 'master account table must show missing manager limits as needing Master setup');
+has('app/master/MasterAccountTableV2.tsx', 'Manager cap not set', 'master account table must show missing output caps as not configured');
+has('app/master/MasterAccountTableV2.tsx', 'required defaultValue={positiveValue(limit?.max_clients)', 'manager Disputer limit input must be required');
+has('app/master/MasterAccountTableV2.tsx', 'required defaultValue={positiveValue(limit?.default_client_output_limit)', 'manager default output input must be required');
+has('app/master/MasterAccountTableV2.tsx', 'Master must set both manager limits', 'master account limit form must explain required Master authority');
+not('app/master/MasterAccountTableV2.tsx', 'unlimited', 'master account table must not advertise unlimited limits');
 has('app/master-account-directory-polish.css', 'grid-template-areas:', 'master account rows must use named grid areas to prevent overlap');
 has('app/master-account-directory-polish.css', 'grid-area: invite', 'master account row invite chip must have a dedicated area');
 has('app/master-account-directory-polish.css', 'grid-area: updated', 'master account row updated chip must have a dedicated area');
-has('app/api/master/entitlements/route.ts', 'if (parsed <= 0) return null;', 'master entitlement route must treat 0 as Default');
-has('lib/saas/entitlement-limits.ts', 'positiveOrNull(row.effective_output_limit)', 'entitlement reader must normalize nonpositive caps as Default');
-has('supabase/migrations/20260624120000_entitlement_default_zero_repair.sql', 'limit_input is null or limit_input <= 0', 'latest entitlement migration must repair 0 caps to Default');
+has('app/api/master/entitlements/route.ts', 'parsePositiveLimit(cleanValue(formData, \'maxClients\')', 'master entitlement route must require manager Disputer limit');
+has('app/api/master/entitlements/route.ts', 'parsePositiveLimit(cleanValue(formData, \'defaultClientOutputLimit\')', 'master entitlement route must require manager output limit');
+has('app/api/master/entitlements/route.ts', 'parseOptionalOverrideLimit', 'master entitlement route must allow optional Disputer-specific override only');
+not('app/api/master/entitlements/route.ts', 'return null;\n  const parsed', 'master entitlement route must not treat manager blank as Default');
+has('lib/saas/entitlement-limits.ts', 'const effectiveLimit = positiveOrNull(row.effective_output_limit)', 'entitlement reader must expose missing caps as not configured');
+has('supabase/migrations/20260624123000_master_authority_required_limits.sql', 'access_positive_limit_required_v1', 'latest entitlement migration must require positive manager limits');
+has('supabase/migrations/20260624123000_master_authority_required_limits.sql', 'Master must set this manager daily output limit', 'latest entitlement migration must block Disputer generation when master cap is missing');
+has('supabase/migrations/20260624123000_master_authority_required_limits.sql', 'Master must set this manager Disputer limit', 'latest entitlement migration must block manager assignments when master seat limit is missing');
 
 if (failures.length) {
   console.error('Master workspace retirement guard failed.');
