@@ -28,6 +28,17 @@ not('app/master/accounts/page.tsx', "'/master/workspaces'", 'master accounts pag
 not('app/master/accounts/page.tsx', 'UI workspace', 'master accounts copy must not mention UI workspace');
 not('app/master/accounts/page.tsx', 'Workspaces', 'master accounts copy must not mention Workspaces');
 
+has('app/master/MasterAccountTableV2.tsx', 'positiveValue(limit?.max_clients)', 'master account table must treat nonpositive manager caps as Default');
+has('app/master/MasterAccountTableV2.tsx', 'positiveValue(limit?.default_client_output_limit)', 'master account table must treat nonpositive default output caps as Default');
+has('app/master/MasterAccountTableV2.tsx', 'min="1"', 'master account limit inputs must reserve 0 for Default');
+has('app/master/MasterAccountTableV2.tsx', 'Leave blank, type 0, or clear the field to use Default', 'master account limit form must explain Default behavior');
+has('app/master-account-directory-polish.css', 'grid-template-areas:', 'master account rows must use named grid areas to prevent overlap');
+has('app/master-account-directory-polish.css', 'grid-area: invite', 'master account row invite chip must have a dedicated area');
+has('app/master-account-directory-polish.css', 'grid-area: updated', 'master account row updated chip must have a dedicated area');
+has('app/api/master/entitlements/route.ts', 'if (parsed <= 0) return null;', 'master entitlement route must treat 0 as Default');
+has('lib/saas/entitlement-limits.ts', 'positiveOrNull(row.effective_output_limit)', 'entitlement reader must normalize nonpositive caps as Default');
+has('supabase/migrations/20260624120000_entitlement_default_zero_repair.sql', 'limit_input is null or limit_input <= 0', 'latest entitlement migration must repair 0 caps to Default');
+
 if (failures.length) {
   console.error('Master workspace retirement guard failed.');
   for (const failure of failures) console.error(`- ${failure}`);
