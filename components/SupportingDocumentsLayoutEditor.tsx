@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from 'react';
-import { loadPacketFile, saveSupportingPlacement, resetSupportingPlacements, standardSupportingPlacement, type PacketAsset, type PacketAssets, type SupportingPlacement, type SupportingRotation } from '../lib/packet-assets';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
+import { loadPacketFile, saveSupportingPlacement, resetSupportingPlacements, type PacketAsset, type PacketAssets, type SupportingPlacement, type SupportingRotation } from '../lib/packet-assets';
 
 type EvidenceManagerRenderer = (selectedId: string | null, selectEvidence: (id: string) => void) => ReactNode;
 
@@ -11,38 +11,47 @@ type ToolMode = 'POSITION' | 'CROP';
 type CropHandle = 'top-left' | 'top' | 'top-right' | 'right' | 'bottom-right' | 'bottom' | 'bottom-left' | 'left';
 type Drag = { id: string; pointerId: number; x: number; y: number; placement: SupportingPlacement; mode: 'MOVE' | 'PAN' | 'HANDLE'; handle?: CropHandle; moved: boolean } | null;
 type CanvasSize = { width: number; height: number };
+type CanvasMeasureTargets = { grid: HTMLDivElement | null; frame: HTMLDivElement; leftRail: HTMLElement | null; rightRail: HTMLElement | null };
+
+type SupportingCanvasStyle = CSSProperties & {
+  '--supporting-canvas-width'?: string;
+  '--supporting-canvas-height'?: string;
+};
+
 const PAGE_RATIO = 8.5 / 11;
 const MIN = 0.08;
 const MIN_CROP = 0.1;
-const CANVAS_EDGE_GUTTER = 16;
-const MIN_CANVAS_WIDTH = 360;
+const CANVAS_EDGE_GUTTER = 10;
+const MIN_CANVAS_WIDTH = 420;
+
 function clamp(value: number, low: number, high: number) { return Math.max(low, Math.min(high, value)); }
+function px(value: string | null | undefined) { const parsed = Number.parseFloat(value || '0'); return Number.isFinite(parsed) ? parsed : 0; }
 function supportSlot(index: number, total: number): Pick<SupportingPlacement, 'x' | 'y' | 'width' | 'height'> {
   const count = Math.max(1, Math.min(total || 1, 12));
 
   if (count === 1) {
-    return { x: 0.14, y: 0.36, width: 0.72, height: 0.28 };
+    return { x: 0.04, y: 0.14, width: 0.92, height: 0.48 };
   }
 
   if (count === 2) {
-    const height = 0.265;
-    const top = 0.235;
-    return { x: 0.14, y: top + index * height, width: 0.72, height };
+    const height = 0.4;
+    const top = 0.08;
+    return { x: 0.04, y: top + index * 0.44, width: 0.92, height };
   }
 
   if (count === 3) {
-    const height = 0.285;
-    const top = 0.08;
-    return { x: 0.08, y: top + index * height, width: 0.84, height };
+    const height = 0.28;
+    const top = 0.06;
+    return { x: 0.04, y: top + index * 0.3, width: 0.92, height };
   }
 
-  const usableTop = 0.06;
-  const usableHeight = 0.88;
+  const usableTop = 0.04;
+  const usableHeight = 0.92;
   const height = usableHeight / count;
   return {
-    x: 0.08,
+    x: 0.04,
     y: usableTop + index * height,
-    width: 0.84,
+    width: 0.92,
     height,
   };
 }
@@ -62,7 +71,22 @@ function auto(index: number, total: number): SupportingPlacement {
     fit: 'contain',
   };
 }
-function placement(asset: PacketAsset, index: number, count: number) { return { rotation: 0 as SupportingRotation, ...(asset.placement || auto(index, count)) }; }
+function upgradedPlacement(asset: PacketAsset, index: number, count: number): SupportingPlacement {
+  const existing = asset.placement;
+  if (!existing) return auto(index, count);
+  if (count === 1 && (existing.width < 0.86 || existing.height < 0.38)) {
+    return sanitize({
+      ...existing,
+      x: 0.04,
+      y: clamp(existing.y, 0.08, 0.28),
+      width: 0.92,
+      height: Math.max(existing.height, 0.48),
+      fit: existing.fit || 'contain'
+    });
+  }
+  return existing;
+}
+function placement(asset: PacketAsset, index: number, count: number) { return { rotation: 0 as SupportingRotation, ...upgradedPlacement(asset, index, count) }; }
 function pct(value: number) { return `${Math.round(value * 10000) / 100}%`; }
 function safeRotation(value: number): SupportingRotation { return (((value % 360) + 360) % 360) as SupportingRotation; }
 function sanitize(next: SupportingPlacement): SupportingPlacement {
@@ -126,8 +150,8 @@ function PreviewCanvas({ url, box, label }: { url?: string; box: SupportingPlace
       rotated.height = swap ? image.naturalWidth : image.naturalHeight;
       const sourceContext = rotated.getContext('2d');
       const output = canvas.current;
-      const outputWidth = Math.max(1, Math.round(box.width * 1500));
-      const outputHeight = Math.max(1, Math.round(box.height * 2100));
+      const outputWidth = Math.max(1, Math.round(box.width * 1800));
+      const outputHeight = Math.max(1, Math.round(box.height * 2400));
       output.width = outputWidth;
       output.height = outputHeight;
       const context = output.getContext('2d');
@@ -159,11 +183,18 @@ function PreviewCanvas({ url, box, label }: { url?: string; box: SupportingPlace
   return url ? <canvas ref={canvas} className="support-cropped-preview" role="img" aria-label={label} /> : null;
 }
 
-function measuredCanvasSize(frame: HTMLDivElement): CanvasSize {
-  const bounds = frame.getBoundingClientRect();
-  const computed = window.getComputedStyle(frame);
-  const paddingX = Number.parseFloat(computed.paddingLeft || '0') + Number.parseFloat(computed.paddingRight || '0');
-  const availableWidth = Math.max(MIN_CANVAS_WIDTH, Math.floor(bounds.width - paddingX - CANVAS_EDGE_GUTTER));
+function measuredCanvasSize({ grid, frame, leftRail, rightRail }: CanvasMeasureTargets): CanvasSize {
+  const frameBounds = frame.getBoundingClientRect();
+  const frameStyle = window.getComputedStyle(frame);
+  const framePaddingX = px(frameStyle.paddingLeft) + px(frameStyle.paddingRight);
+  const gridBounds = grid?.getBoundingClientRect();
+  const gridStyle = grid ? window.getComputedStyle(grid) : null;
+  const gap = gridStyle ? px(gridStyle.columnGap || gridStyle.gap) : 0;
+  const leftWidth = leftRail?.getBoundingClientRect().width || 0;
+  const rightWidth = rightRail?.getBoundingClientRect().width || 0;
+  const gridAvailable = gridBounds ? gridBounds.width - leftWidth - rightWidth - gap * 2 - framePaddingX - CANVAS_EDGE_GUTTER : 0;
+  const frameAvailable = frameBounds.width - framePaddingX - CANVAS_EDGE_GUTTER;
+  const availableWidth = Math.max(MIN_CANVAS_WIDTH, Math.floor(Math.max(gridAvailable, frameAvailable)));
   return { width: availableWidth, height: Math.round(availableWidth / PAGE_RATIO) };
 }
 
@@ -175,32 +206,38 @@ export default function SupportingDocumentsLayoutEditor({ storageKey, assets, ma
   const [drag, setDrag] = useState<Drag>(null);
   const [canvasSize, setCanvasSize] = useState<CanvasSize | null>(null);
   const latestAssets = useRef<PacketAssets>(assets);
+  const grid = useRef<HTMLDivElement>(null);
+  const leftRail = useRef<HTMLElement>(null);
   const frame = useRef<HTMLDivElement>(null);
   const page = useRef<HTMLDivElement>(null);
+  const controls = useRef<HTMLElement>(null);
   useEffect(() => { setWorkingAssets(assets); latestAssets.current = assets; }, [assets]);
   useEffect(() => { let live = true; const urls: string[] = []; void Promise.all(workingAssets.supporting.map(async (asset) => { const file = await loadPacketFile(storageKey, asset.id); if (!file) return null; const url = URL.createObjectURL(file); urls.push(url); return { id: asset.id, url }; })).then((next) => { if (live) setPreviews(next.filter(Boolean) as Preview[]); }); return () => { live = false; urls.forEach((url) => URL.revokeObjectURL(url)); }; }, [storageKey, workingAssets.supporting.length]);
   useEffect(() => { if (!workingAssets.supporting.some((asset) => asset.id === selectedId)) setSelectedId(workingAssets.supporting[0]?.id || null); }, [workingAssets.supporting, selectedId]);
-  useEffect(() => {
-    const element = frame.current;
-    if (!element) return;
+  useLayoutEffect(() => {
+    const frameElement = frame.current;
+    if (!frameElement) return;
     let raf = 0;
     const update = () => {
       window.cancelAnimationFrame(raf);
       raf = window.requestAnimationFrame(() => {
-        const next = measuredCanvasSize(element);
+        const next = measuredCanvasSize({ grid: grid.current, frame: frameElement, leftRail: leftRail.current, rightRail: controls.current });
         setCanvasSize((current) => current && Math.abs(current.width - next.width) < 2 ? current : next);
       });
     };
     update();
-    const observer = new ResizeObserver(update);
-    observer.observe(element);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
+    observer?.observe(frameElement);
+    if (grid.current) observer?.observe(grid.current);
+    if (leftRail.current) observer?.observe(leftRail.current);
+    if (controls.current) observer?.observe(controls.current);
     window.addEventListener('resize', update);
     return () => {
       window.cancelAnimationFrame(raf);
-      observer.disconnect();
+      observer?.disconnect();
       window.removeEventListener('resize', update);
     };
-  }, []);
+  }, [managerPanel]);
   const selectedIndex = workingAssets.supporting.findIndex((asset) => asset.id === selectedId);
   const selected = selectedIndex < 0 ? null : workingAssets.supporting[selectedIndex];
   const current = selected ? placement(selected, selectedIndex, workingAssets.supporting.length) : null;
@@ -288,8 +325,8 @@ export default function SupportingDocumentsLayoutEditor({ storageKey, assets, ma
 
   function fitSelectedToWidth() {
     if (!selected || !current) return;
-    persist(selected.id, sanitize({ ...current, x: 0.12, width: 0.76, fit: current.fit || 'contain' }));
-    onMessage('Selected image fit to a clean readable width.');
+    persist(selected.id, sanitize({ ...current, x: 0.04, width: 0.92, fit: current.fit || 'contain' }));
+    onMessage('Selected image fit to the maximum readable width.');
   }
 
   function centerSelected() {
@@ -343,12 +380,11 @@ export default function SupportingDocumentsLayoutEditor({ storageKey, assets, ma
     else if (drag.mode === 'MOVE') onMessage('Evidence position saved for packet position 02.');
     else if (drag.mode === 'PAN') onMessage('Crop position saved.');
   }
-  function resetPage() { const updated = resetSupportingPlacements(storageKey); latestAssets.current = updated; setWorkingAssets(updated); onChanged(updated); setTool('POSITION'); onMessage('Evidence page returned to automatic alignment.'); }
+  function resetPage() { const updated = resetSupportingPlacements(storageKey); latestAssets.current = updated; setWorkingAssets(updated); onChanged(updated); setTool('POSITION'); onMessage('Evidence page returned to maximum-width alignment.'); }
   if (!workingAssets.supporting.length) return null;
-  const canvasStyle = canvasSize ? { aspectRatio: String(PAGE_RATIO), width: `${canvasSize.width}px`, height: `${canvasSize.height}px` } : { aspectRatio: String(PAGE_RATIO) };
-  const toolbarStyle = canvasSize ? { width: `${canvasSize.width}px` } : undefined;
+  const canvasVars: SupportingCanvasStyle | undefined = canvasSize ? { '--supporting-canvas-width': `${canvasSize.width}px`, '--supporting-canvas-height': `${canvasSize.height}px` } : undefined;
   const toolbar: ReactNode = <div className="evidence-header-tools"><nav className="support-image-strip" aria-label="Evidence images">{workingAssets.supporting.map((asset, index) => <button type="button" key={asset.id} className={asset.id === selectedId ? 'selected' : ''} onClick={() => choose(asset.id)}><span>{images.get(asset.id) && <img src={images.get(asset.id)} alt="" />}</span><strong>{String(index + 1).padStart(2, '0')}</strong><small>{asset.name}</small></button>)}</nav><span className="evidence-toolbar-separator controls-divider" aria-hidden="true" /><button type="button" className="evidence-auto-align" onClick={resetPage}>Reset page</button></div>;
-  return <section className="support-layout-editor professional-evidence-editor word-crop-editor" data-supporting-canvas-contract="measured-center-width">
-    <div className="support-layout-grid word-crop-grid">{managerPanel ? <aside className="word-left-evidence-manager"><div className="word-side-evidence-heading"><p>Evidence files</p><span>Position 02</span></div>{typeof managerPanel === 'function' ? (managerPanel as EvidenceManagerRenderer)(selectedId, (id: string) => { setSelectedId(id); setTool('POSITION'); }) : managerPanel}</aside> : null}<div ref={frame} className="support-page-frame"><div className="support-canvas-caption evidence-preview-header evidence-preview-toolbar-header" style={toolbarStyle}>{toolbar}</div><div ref={page} className={`support-page-canvas tool-${tool.toLowerCase()}`} style={canvasStyle}>{workingAssets.supporting.map((asset, index) => { const box = placement(asset, index, workingAssets.supporting.length); const selectedItem = asset.id === selectedId; return <div key={asset.id} className={`support-canvas-item ${selectedItem ? 'selected' : ''} ${selectedItem && tool === 'CROP' ? 'cropping word-cropping' : ''}`} style={{ left: pct(box.x), top: pct(box.y), width: pct(box.width), height: pct(box.height) }} onPointerDown={(event) => startImage(event, asset, index)} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish}><PreviewCanvas url={images.get(asset.id)} box={box} label={asset.name} />{selectedItem && tool === 'CROP' && <>{(['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'] as CropHandle[]).map((handle) => <i key={handle} className={`crop-handle ${handle}`} onPointerDown={(event) => startHandle(event, handle)} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} />)}</>}<span>{index + 1}</span></div>; })}</div></div>{selected && current && <aside className="support-layout-controls word-crop-controls"><header><div><p className="eyebrow">Selected image</p><strong>{selected.name}</strong></div><span>{String(selectedIndex + 1).padStart(2, '0')}</span></header><div className="word-crop-actions">{tool === 'CROP' ? <button type="button" className="action-button" onClick={doneCrop}>Done cropping</button> : <button type="button" className="action-button crop-command" onClick={beginCrop}>Crop image</button>}</div><div className="word-control-section"><p>Image fit</p><div className="word-fit-actions" aria-label="Image fit mode"><label><span>Fit mode</span><select value={current.fit || 'contain'} onChange={(event) => edit({ fit: event.target.value as SupportingPlacement['fit'] })}><option value="contain">Contain — no stretch</option><option value="cover">Cover frame</option><option value="stretch">Stretch/manual</option></select></label></div></div><div className="word-control-section"><p>Resize frame</p><div className="word-resize-actions"><button type="button" onClick={() => resizeSelected(0.92)}>− Smaller</button><button type="button" onClick={() => resizeSelected(1.08)}>+ Larger</button><button type="button" onClick={() => void tightenSelectedFrame()}>Tighten frame</button><button type="button" onClick={fitSelectedToWidth}>Fit width</button><button type="button" onClick={centerSelected}>Center</button></div></div><div className="word-control-section"><p>Orientation</p><div className="word-rotate-actions"><button type="button" onClick={() => rotate(-90)} aria-label="Rotate image left 90 degrees">↶ Rotate left</button><button type="button" onClick={() => rotate(90)} aria-label="Rotate image right 90 degrees">Rotate right ↷</button></div></div><div className="word-control-section"><p>Reset</p><div className="word-position-actions"><button type="button" onClick={() => persist(selected.id, auto(selectedIndex, workingAssets.supporting.length))}>Reset slot</button><button type="button" onClick={resetCrop}>Reset crop</button></div></div></aside>}</div>
+  return <section className="support-layout-editor professional-evidence-editor word-crop-editor" data-supporting-canvas-contract="measured-grid-center-width" style={canvasVars}>
+    <div ref={grid} className="support-layout-grid word-crop-grid">{managerPanel ? <aside ref={leftRail} className="word-left-evidence-manager"><div className="word-side-evidence-heading"><p>Evidence files</p><span>Position 02</span></div>{typeof managerPanel === 'function' ? (managerPanel as EvidenceManagerRenderer)(selectedId, (id: string) => { setSelectedId(id); setTool('POSITION'); }) : managerPanel}</aside> : null}<div ref={frame} className="support-page-frame"><div className="support-canvas-caption evidence-preview-header evidence-preview-toolbar-header">{toolbar}</div><div ref={page} className={`support-page-canvas tool-${tool.toLowerCase()}`}>{workingAssets.supporting.map((asset, index) => { const box = placement(asset, index, workingAssets.supporting.length); const selectedItem = asset.id === selectedId; return <div key={asset.id} className={`support-canvas-item ${selectedItem ? 'selected' : ''} ${selectedItem && tool === 'CROP' ? 'cropping word-cropping' : ''}`} style={{ left: pct(box.x), top: pct(box.y), width: pct(box.width), height: pct(box.height) }} onPointerDown={(event) => startImage(event, asset, index)} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish}><PreviewCanvas url={images.get(asset.id)} box={box} label={asset.name} />{selectedItem && tool === 'CROP' && <>{(['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'] as CropHandle[]).map((handle) => <i key={handle} className={`crop-handle ${handle}`} onPointerDown={(event) => startHandle(event, handle)} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} />)}</>}<span>{index + 1}</span></div>; })}</div></div>{selected && current && <aside ref={controls} className="support-layout-controls word-crop-controls"><header><div><p className="eyebrow">Selected image</p><strong>{selected.name}</strong></div><span>{String(selectedIndex + 1).padStart(2, '0')}</span></header><div className="word-crop-actions">{tool === 'CROP' ? <button type="button" className="action-button" onClick={doneCrop}>Done cropping</button> : <button type="button" className="action-button crop-command" onClick={beginCrop}>Crop image</button>}</div><div className="word-control-section"><p>Image fit</p><div className="word-fit-actions" aria-label="Image fit mode"><label><span>Fit mode</span><select value={current.fit || 'contain'} onChange={(event) => edit({ fit: event.target.value as SupportingPlacement['fit'] })}><option value="contain">Contain — no stretch</option><option value="cover">Cover frame</option><option value="stretch">Stretch/manual</option></select></label></div></div><div className="word-control-section"><p>Resize frame</p><div className="word-resize-actions"><button type="button" onClick={() => resizeSelected(0.92)}>− Smaller</button><button type="button" onClick={() => resizeSelected(1.08)}>+ Larger</button><button type="button" onClick={() => void tightenSelectedFrame()}>Tighten frame</button><button type="button" onClick={fitSelectedToWidth}>Fit width</button><button type="button" onClick={centerSelected}>Center</button></div></div><div className="word-control-section"><p>Orientation</p><div className="word-rotate-actions"><button type="button" onClick={() => rotate(-90)} aria-label="Rotate image left 90 degrees">↶ Rotate left</button><button type="button" onClick={() => rotate(90)} aria-label="Rotate image right 90 degrees">Rotate right ↷</button></div></div><div className="word-control-section"><p>Reset</p><div className="word-position-actions"><button type="button" onClick={() => persist(selected.id, auto(selectedIndex, workingAssets.supporting.length))}>Reset slot</button><button type="button" onClick={resetCrop}>Reset crop</button></div></div></aside>}</div>
   </section>;
 }
