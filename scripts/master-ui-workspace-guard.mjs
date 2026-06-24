@@ -28,6 +28,8 @@ not('app/master/accounts/page.tsx', "'/master/workspaces'", 'master accounts pag
 not('app/master/accounts/page.tsx', 'UI workspace', 'master accounts copy must not mention UI workspace');
 not('app/master/accounts/page.tsx', 'Workspaces', 'master accounts copy must not mention Workspaces');
 
+has('app/master/accounts/page.tsx', 'Limit saved', 'master accounts page must show entitlement save feedback');
+has('app/master/accounts/page.tsx', 'controlStatus', 'master accounts page must read control status from entitlement redirects');
 has('app/master/MasterAccountTableV2.tsx', 'Needs Master limit', 'master account table must show missing manager limits as needing Master setup');
 has('app/master/MasterAccountTableV2.tsx', 'Manager cap not set', 'master account table must show missing output caps as not configured');
 has('app/master/MasterAccountTableV2.tsx', 'required defaultValue={positiveValue(limit?.max_clients)', 'manager Disputer limit input must be required');
@@ -40,11 +42,21 @@ has('app/master-account-directory-polish.css', 'grid-area: updated', 'master acc
 has('app/api/master/entitlements/route.ts', 'parsePositiveLimit(cleanValue(formData, \'maxClients\')', 'master entitlement route must require manager Disputer limit');
 has('app/api/master/entitlements/route.ts', 'parsePositiveLimit(cleanValue(formData, \'defaultClientOutputLimit\')', 'master entitlement route must require manager output limit');
 has('app/api/master/entitlements/route.ts', 'parseOptionalOverrideLimit', 'master entitlement route must allow optional Disputer-specific override only');
+has('app/api/master/entitlements/route.ts', "revalidatePath('/workspace')", 'master entitlement route must revalidate Disputer workspace');
+has('app/api/master/entitlements/route.ts', 'entitlementsSyncedAt', 'master entitlement redirect must force a fresh URL state');
 not('app/api/master/entitlements/route.ts', 'return null;\n  const parsed', 'master entitlement route must not treat manager blank as Default');
 has('lib/saas/entitlement-limits.ts', 'const effectiveLimit = positiveOrNull(row.effective_output_limit)', 'entitlement reader must expose missing caps as not configured');
+has('components/manager/ManagerConsoleRealtimeRefreshMount.tsx', "table: 'manager_entitlement_limits'", 'manager console must refresh when master updates manager entitlement limits');
+has('components/ClientOutputLimitBoundary.tsx', 'managerId?: string | null', 'Disputer entitlement payload must carry manager id for master cap realtime sync');
+has('components/ClientOutputLimitBoundary.tsx', "table: 'manager_entitlement_limits'", 'Disputer workspace must refresh when master updates manager output cap');
+has('app/api/client/output-entitlement/route.ts', 'managerId', 'Disputer entitlement API must return manager id');
+has('app/api/client/output-entitlement/route.ts', 'rowAllowed', 'Disputer entitlement API must respect server blocked entitlement state');
+has('src/features/manager-console/admin-page-presenters.ts', 'Manager cap not set', 'manager UI must not show Default when master cap is missing');
 has('supabase/migrations/20260624123000_master_authority_required_limits.sql', 'access_positive_limit_required_v1', 'latest entitlement migration must require positive manager limits');
 has('supabase/migrations/20260624123000_master_authority_required_limits.sql', 'Master must set this manager daily output limit', 'latest entitlement migration must block Disputer generation when master cap is missing');
 has('supabase/migrations/20260624123000_master_authority_required_limits.sql', 'Master must set this manager Disputer limit', 'latest entitlement migration must block manager assignments when master seat limit is missing');
+has('supabase/migrations/20260624133000_entitlement_realtime_master_sync.sql', 'manager_entitlement_limits_select_sync_v1', 'latest realtime migration must allow safe manager entitlement select/realtime visibility');
+has('supabase/migrations/20260624133000_entitlement_realtime_master_sync.sql', 'client_entitlement_limits_select_sync_v1', 'latest realtime migration must allow safe client entitlement select/realtime visibility');
 
 if (failures.length) {
   console.error('Master workspace retirement guard failed.');
