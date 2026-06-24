@@ -8,6 +8,7 @@ const mustNot = (source, text, label) => { if (source.includes(text)) failures.p
 const mustNotMatch = (source, pattern, label) => { if (pattern.test(source)) failures.push(label); };
 
 const admin = read('app/admin/page.tsx');
+const outputActivityPage = read('app/admin/output-activity-v2/page.tsx');
 const panels = read('lib/manager-console/manager-operations-panels.ts');
 const css = read('app/manager-console-workflow.css');
 const layout = read('app/layout.tsx');
@@ -68,9 +69,14 @@ must(metadataEditor, 'createPortal(modal, document.body)', 'manager metadata mod
 must(metadataEditor, 'role="dialog"', 'manager metadata modal must expose dialog semantics');
 must(metadataEditor, 'aria-modal="true"', 'manager metadata modal must be modal for assistive technology');
 must(metadataEditor, 'manager-user-settings-card-trigger-only', 'manager metadata editor must keep card-click behavior without visible tile');
+must(metadataEditor, 'METADATA_CARD_SELECTOR', 'manager metadata editor must use a shared card selector');
+must(metadataEditor, '.manager-console-user-card, .output-activity-row[data-metadata-profile-id]', 'manager metadata opener must cover access cards and output activity tiles');
+must(metadataEditor, '.output-activity-title-actions', 'manager metadata click blocker must ignore output activity action controls');
 must(metadataEditor, 'CARD_CLICK_BLOCKERS', 'manager metadata editor must keep a scoped blocker list');
 must(metadataEditor, 'shouldIgnoreCardOpen(event.target, card)', 'manager metadata card click must compare against the current card');
 must(metadataEditor, 'nestedButtonRole && nestedButtonRole !== card', 'manager metadata card must not block itself when role="button" is applied');
+must(outputActivityPage, 'ManagerPayrollSettingsEditor', 'output activity rows must mount the metadata opener');
+must(outputActivityPage, 'data-metadata-profile-id={row.disputer_id || \'\'}', 'output activity rows must expose the metadata profile id selector hook');
 mustNot(metadataEditor, 'metadata-tile-copy', 'manager metadata editor must not render the retired visible metadata tile copy');
 mustNot(metadataEditor, 'metadata-tile-plus', 'manager metadata editor must not render the retired visible metadata plus button');
 must(payrollModalCss, '--manager-payroll-modal-contract: portal-card-click-no-visible-tile;', 'manager metadata CSS contract must document no-visible-tile portal behavior');
