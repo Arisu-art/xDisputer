@@ -20,15 +20,31 @@ function statusText(value?: string | null) {
   return value || 'Pending';
 }
 
-function numberText(value?: number | null) { return typeof value === 'number' ? String(value) : 'Default'; }
+function numberText(value?: number | null) { return typeof value === 'number' && value > 0 ? String(value) : 'Default'; }
 function isManager(account: ManagedAccount) { return account.role === 'manager' || account.role === 'admin'; }
 function dayUsed(limit?: EntitlementLimitRow) { return limit?.output_used_today ?? 0; }
 function canEditLimits(account: ManagedAccount) { return isManager(account) || account.role === 'client'; }
+function positiveValue(value?: number | null) { return typeof value === 'number' && value > 0 ? value : null; }
 
 function agreementSummary(account: ManagedAccount, limit?: EntitlementLimitRow) {
-  if (isManager(account)) return `${limit?.current_clients || 0}/${numberText(limit?.max_clients)} disputers`;
-  if (account.role === 'client') return `${dayUsed(limit)}/${numberText(limit?.effective_output_limit)} outputs today`;
+  if (isManager(account)) {
+    const maxClients = positiveValue(limit?.max_clients);
+    return maxClients === null ? `${limit?.current_clients || 0} active · Default limit` : `${limit?.current_clients || 0}/${maxClients} disputers`;
+  }
+  if (account.role === 'client') {
+    const effectiveLimit = positiveValue(limit?.effective_output_limit);
+    return effectiveLimit === null ? `${dayUsed(limit)} used · Default limit` : `${dayUsed(limit)}/${effectiveLimit} outputs today`;
+  }
   return 'Protected';
+}
+
+function flyoutMeter(account: ManagedAccount, limit?: EntitlementLimitRow) {
+  if (isManager(account)) {
+    const maxClients = positiveValue(limit?.max_clients);
+    return <div className="limit-meter"><strong>{limit?.current_clients || 0} active</strong><small>{maxClients === null ? 'Default disputer limit' : `${maxClients} disputer cap`}</small></div>;
+  }
+  const effectiveLimit = positiveValue(limit?.effective_output_limit);
+  return <div className="limit-meter"><strong>{dayUsed(limit)} used</strong><small>{effectiveLimit === null ? 'Default output limit' : `${effectiveLimit} outputs/day`}</small></div>;
 }
 
 function roleLabel(account: ManagedAccount) {
@@ -51,8 +67,8 @@ function LinkBadge({ account }: { account: ManagedAccount }) {
 }
 
 function LimitForm({ account, limit, formId }: { account: ManagedAccount; limit?: EntitlementLimitRow; formId: string }) {
-  if (isManager(account)) return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="manager" /><input type="hidden" name="profileId" value={account.id} /><div className="limit-meter"><strong>{limit?.current_clients || 0}/{numberText(limit?.max_clients)}</strong><small>active disputers</small></div><label><span>Disputer limit</span><input name="maxClients" type="number" min="0" defaultValue={limit?.max_clients ?? ''} placeholder="Default" /></label><label><span>Default outputs per disputer/day</span><input name="defaultClientOutputLimit" type="number" min="0" defaultValue={limit?.default_client_output_limit ?? ''} placeholder="Default" /></label></form>;
-  if (account.role === 'client') return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="client" /><input type="hidden" name="profileId" value={account.id} /><div className="limit-meter"><strong>{dayUsed(limit)}/{numberText(limit?.effective_output_limit)}</strong><small>outputs today</small></div><label><span>Daily output limit</span><input name="outputLimit" type="number" min="0" defaultValue={limit?.client_output_limit ?? ''} placeholder="Blank uses manager default" /></label></form>;
+  if (isManager(account)) return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="manager" /><input type="hidden" name="profileId" value={account.id} />{flyoutMeter(account, limit)}<label><span>Disputer limit</span><input name="maxClients" type="number" min="1" defaultValue={positiveValue(limit?.max_clients) ?? ''} placeholder="Default / unlimited" /></label><label><span>Default outputs per disputer/day</span><input name="defaultClientOutputLimit" type="number" min="1" defaultValue={positiveValue(limit?.default_client_output_limit) ?? ''} placeholder="Default / unlimited" /></label><p className="limit-editor-help">Leave blank, type 0, or clear the field to use Default. Use a positive whole number only when you want a hard cap.</p></form>;
+  if (account.role === 'client') return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="client" /><input type="hidden" name="profileId" value={account.id} />{flyoutMeter(account, limit)}<label><span>Daily output limit</span><input name="outputLimit" type="number" min="1" defaultValue={positiveValue(limit?.client_output_limit) ?? ''} placeholder="Blank uses manager default" /></label><p className="limit-editor-help">Leave blank or type 0 to inherit the manager default. Use a positive whole number only for a Disputer-specific cap.</p></form>;
   return <p className="flyout-muted">Master account limits are protected.</p>;
 }
 
