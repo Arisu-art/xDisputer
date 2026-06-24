@@ -5,7 +5,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { createSupabaseBrowserClient } from '../lib/supabase/browser';
 import { PageStateBoundary, StableCard, StableEmptyState } from './stability';
 
-type EntitlementPayload = { outputLimit: number | null; outputUsedToday: number; outputRemainingToday: number | null; resetAt: string | null; resetSeconds: number | null; allowed: boolean; message: string | null; managerId?: string | null; source?: string | null; serverTime?: string | null };
+type EntitlementPayload = { outputLimit: number | null; managerDefaultOutputLimit?: number | null; managerDisputerLimit?: number | null; managerLimitUpdatedAt?: string | null; outputUsedToday: number; outputRemainingToday: number | null; resetAt: string | null; resetSeconds: number | null; allowed: boolean; message: string | null; managerId?: string | null; source?: string | null; serverTime?: string | null };
 type EntitlementState = 'checking' | 'allowed' | 'paused' | 'unavailable';
 
 const ENTITLEMENT_FETCH_TIMEOUT_MS = 8000;
@@ -25,6 +25,12 @@ function formatResetAt(value: string | null) {
   if (!value) return '12:00 AM US ET';
   try { return `${new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }).format(new Date(value))} US ET`; }
   catch { return '12:00 AM US ET'; }
+}
+
+function formatSyncTime(value: string | null | undefined) {
+  if (!value) return null;
+  try { return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value)); }
+  catch { return null; }
 }
 
 function isEntitlementPayload(value: unknown): value is EntitlementPayload { return Boolean(value && typeof value === 'object' && 'outputUsedToday' in value); }
@@ -129,9 +135,12 @@ export default function ClientOutputLimitBoundary({ children }: { children: Reac
   const paused = state === 'paused';
   useEffect(() => { if (!paused || typeof secondsLeft !== 'number') return; const step = countdownStep(secondsLeft); const timer = window.setTimeout(() => setSecondsLeft((value) => typeof value === 'number' ? Math.max(0, value - step.decrement) : value), step.delay); return () => window.clearTimeout(timer); }, [paused, secondsLeft]);
   useEffect(() => { if (secondsLeft === 0) scheduleRefresh(0); }, [secondsLeft, scheduleRefresh]);
-  const usageLabel = useMemo(() => { if (!entitlement) return 'Checking daily output limit'; if (entitlement.outputLimit === null) return entitlement.allowed === false ? 'Manager output cap is not set' : 'No daily output limit configured'; return `${entitlement.outputUsedToday}/${entitlement.outputLimit} Daily Outputs Used`; }, [entitlement]);
+  const usageLabel = useMemo(() => { if (!entitlement) return 'Checking daily output limit'; if (entitlement.outputLimit === null) return entitlement.managerId ? 'Manager output cap is not set' : 'Boss manager is not assigned'; return `${entitlement.outputUsedToday}/${entitlement.outputLimit} Daily Outputs Used`; }, [entitlement]);
+  const managerLimitLabel = useMemo(() => { if (!entitlement) return 'Checking Master limit'; if (!entitlement.managerId) return 'No boss manager assigned'; if (entitlement.managerDefaultOutputLimit) return `Master-set manager cap: ${entitlement.managerDefaultOutputLimit} outputs/day`; return 'Master-set manager cap is missing'; }, [entitlement]);
+  const managerSeatLabel = useMemo(() => { if (!entitlement?.managerDisputerLimit) return null; return `${entitlement.managerDisputerLimit} Disputer seats allowed for this manager`; }, [entitlement?.managerDisputerLimit]);
+  const syncLabel = formatSyncTime(entitlement?.managerLimitUpdatedAt);
   if (state === 'checking') return <main className="client-output-limit-checking" aria-label="Checking Disputer output allowance" data-output-entitlement-state="checking"><PageStateBoundary state="loading" loading={<StableCard eyebrow="Workspace access" title="Checking daily output allowance" description="Preparing this Disputer workspace without showing unstable controls early." state="loading"><StableEmptyState tone="info" title="Loading entitlement" description="The workspace opens automatically after allowance is confirmed." /></StableCard>}>{children}</PageStateBoundary></main>;
   if (state === 'unavailable') return <main className="client-output-limit-checking" aria-label="Disputer output allowance unavailable" data-output-entitlement-state="unavailable"><StableCard tone="warning" eyebrow="Workspace access" title="Output allowance could not be verified" description="Generation controls stay hidden until the current allowance is confirmed." actions={<button type="button" className="action-button" onClick={() => scheduleRefresh(0)}>Check again</button>}><StableEmptyState tone="warning" title="Entitlement check unavailable" description="Reconnect or refresh before generating output." /></StableCard></main>;
   if (state === 'allowed') return <>{children}</>;
-  return <main className="client-output-limit-pause" aria-label="Daily output limit reached" data-output-entitlement-sync="realtime-no-store" data-output-entitlement-state="paused"><section className="client-output-limit-pause-card"><p className="eyebrow">Daily allowance reached</p><h1>Workspace pauses until reset</h1><p>Daily output allowance is reached for this Disputer. The workspace opens again automatically after reset or after the master updates the limit.</p><div className="client-output-limit-pause-grid"><article><span>Usage today</span><strong>{usageLabel}</strong><small>{disputerMessage(entitlement?.message)}</small></article><article><span>Opens in</span><strong>{formatDuration(secondsLeft)}</strong><small>Reset at {formatResetAt(entitlement?.resetAt || null)}</small></article></div><button type="button" className="action-button" onClick={() => scheduleRefresh(0)}>Check again</button></section></main>;
+  return <main className="client-output-limit-pause" aria-label="Daily output limit reached" data-output-entitlement-sync="realtime-no-store" data-output-entitlement-state="paused"><section className="client-output-limit-pause-card"><p className="eyebrow">Daily allowance reached</p><h1>Workspace pauses until reset</h1><p>Daily output allowance follows the Master limit set on the assigned manager. The workspace opens again automatically after reset or after Master updates the manager default output cap.</p><div className="client-output-limit-pause-grid"><article><span>Usage today</span><strong>{usageLabel}</strong><small>{disputerMessage(entitlement?.message)}</small></article><article><span>Master manager limit</span><strong>{managerLimitLabel}</strong><small>{managerSeatLabel}{managerSeatLabel && syncLabel ? ' · ' : ''}{syncLabel ? `Synced ${syncLabel}` : ''}</small></article><article><span>Opens in</span><strong>{formatDuration(secondsLeft)}</strong><small>Reset at {formatResetAt(entitlement?.resetAt || null)}</small></article></div><button type="button" className="action-button" onClick={() => scheduleRefresh(0)}>Check again</button></section></main>;
 }
