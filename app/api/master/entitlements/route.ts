@@ -8,9 +8,11 @@ function cleanValue(formData: FormData, key: string) {
 }
 
 function cleanLimit(value: string) {
-  if (!value) return null;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) throw new Error('Limit must be a whole number of 0 or greater.');
+  const normalized = value.trim().toLowerCase();
+  if (!normalized || normalized === 'default' || normalized === 'unlimited') return null;
+  const parsed = Number(normalized);
+  if (!Number.isInteger(parsed)) throw new Error('Limit must be blank/default or a positive whole number.');
+  if (parsed <= 0) return null;
   return parsed;
 }
 
@@ -18,6 +20,7 @@ function revalidateEntitlementViews() {
   revalidatePath('/master/accounts');
   revalidatePath('/admin');
   revalidatePath('/admin/access');
+  revalidatePath('/admin/output-activity-v2');
   revalidatePath('/app');
 }
 
@@ -70,7 +73,7 @@ export async function POST(request: NextRequest) {
 
       if (error) return redirectBack(request, 'error', error.message);
       revalidateEntitlementViews();
-      return redirectBack(request, 'ok', 'Manager limits updated.');
+      return redirectBack(request, 'ok', maxClients === null && defaultOutputLimit === null ? 'Manager limits reset to Default.' : 'Manager limits updated.');
     }
 
     const outputLimit = cleanLimit(cleanValue(formData, 'outputLimit'));
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     if (error) return redirectBack(request, 'error', error.message);
     revalidateEntitlementViews();
-    return redirectBack(request, 'ok', 'Client daily output limit updated.');
+    return redirectBack(request, 'ok', outputLimit === null ? 'Client daily output limit now uses manager default.' : 'Client daily output limit updated.');
   } catch (error) {
     return redirectBack(request, 'error', error instanceof Error ? error.message : 'Entitlement update failed.');
   }
