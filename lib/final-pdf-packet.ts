@@ -25,12 +25,6 @@ export type PdfAssemblyOptions = {
 
 type PacketFonts = { regular: PDFFont; bold: PDFFont };
 
-/**
- * Weak caches release their entries automatically after the corresponding uploaded
- * document blobs are discarded. The same Affidavit, FTC report and static PDFs
- * are reused across bureau packets, so rendering them once prevents repeated
- * browser-side DOCX rasterization and repeated binary reads on large jobs.
- */
 const renderedDocxPdfCache = new WeakMap<Blob, Promise<Blob>>();
 const blobBufferCache = new WeakMap<Blob, Promise<ArrayBuffer>>();
 const packetFontCache = new WeakMap<PDFDocument, Promise<PacketFonts>>();
@@ -83,7 +77,6 @@ async function addNonePage(target: PDFDocument, label: string) {
   return 1;
 }
 
-/** Used only for non-final previews where a missing position must remain visible. */
 export async function createBlankPdf(label = 'Packet component') {
   const document = await PDFDocument.create();
   await addNonePage(document, label);
@@ -177,4 +170,20 @@ export async function assembleFinalPdfWithRanges(parts: PdfPacketPart[], options
 
 export async function assembleFinalPdf(parts: PdfPacketPart[], options: PdfAssemblyOptions = {}) {
   return (await assembleFinalPdfWithRanges(parts, options)).blob;
+}
+
+export async function mergePdfBlobs(input: Array<{ label: string; blob: Blob }>) {
+  const output = await PDFDocument.create();
+  const ranges: PacketPageRange[] = [];
+  let page = 1;
+  for (const item of input) {
+    const source = await PDFDocument.load(await readBlobBuffer(item.blob));
+    const copied = await output.copyPages(source, source.getPageIndices());
+    if (!copied.length) continue;
+    copied.forEach((copiedPage) => output.addPage(copiedPage));
+    ranges.push({ label: item.label, startPage: page, endPage: page + copied.length - 1 });
+    page += copied.length;
+  }
+  if (!ranges.length) throw new Error('No PDF pages were available to merge.');
+  return { blob: toPdfBlob(await output.save()), ranges };
 }
