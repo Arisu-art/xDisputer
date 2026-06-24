@@ -43,10 +43,12 @@ must(supportCss, 'grid-template-areas: "documents page controls"', 'Supporting D
 must(supportCss, 'grid-template-areas: "documents" "page" "controls"', 'Supporting Documents CSS must stack on narrow screens');
 must(supportCss, 'overflow-x: clip', 'Supporting Documents CSS must prevent horizontal overflow');
 
-must(centerCanvasCss, 'final layout owner for the Supporting Documents layout editor', 'final center canvas CSS must declare ownership');
-must(centerCanvasCss, '--support-center-page-target: clamp(520px, 68vw, var(--support-center-page-max))', 'final center canvas CSS must make the page materially larger');
-must(centerCanvasCss, 'minmax(112px, var(--support-center-left-rail)) minmax(0, 1fr) minmax(132px, var(--support-center-right-rail))', 'final center canvas CSS must compact side rails and prioritize center');
-must(centerCanvasCss, 'width: min(100%, var(--support-center-page-target)) !important', 'final center canvas CSS must set page and toolbar to the center target');
+must(centerCanvasCss, 'final owner of the Supporting Documents layout editor', 'final center canvas CSS must declare ownership');
+must(centerCanvasCss, 'practical 20/60/20 rail-center-rail ratio', 'final center canvas CSS must document native ratio layout');
+must(centerCanvasCss, '--support-native-page-target: clamp(560px, 52vw, var(--support-native-page-max))', 'final center canvas CSS must make the page materially larger');
+must(centerCanvasCss, 'grid-template-columns: minmax(190px, var(--support-native-left)) minmax(0, 1fr) minmax(210px, var(--support-native-right))', 'final center canvas CSS must compact rails and prioritize center');
+must(centerCanvasCss, 'justify-content: flex-start !important', 'final left rail CSS must remove old space-between vertical gap');
+must(centerCanvasCss, 'width: min(100%, var(--support-native-page-target)) !important', 'final center canvas CSS must set page and toolbar to the native target');
 must(centerCanvasCss, '.word-rotate-actions', 'final center canvas CSS must control right rail button layout');
 
 must(entitlement, 'ENTITLEMENT_FETCH_TIMEOUT_MS = 8000', 'entitlement check must timeout cold fetches');
