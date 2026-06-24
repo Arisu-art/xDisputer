@@ -12,6 +12,17 @@ Make xDisputer responsive and stable on narrow phones, normal laptops, Codespace
 4. Stack complex panels on narrow screens.
 5. Add guards so the same regressions do not return.
 
+## Code status
+
+This canvas is now coded into the repository.
+
+| Contract | Code owner |
+| --- | --- |
+| Global responsive baseline | `app/responsive-layout-stability-system.css` |
+| Supporting Documents final center-priority layout | `app/supporting-documents-runtime-wide-fix.css` |
+| Cold entitlement timeout | `components/ClientOutputLimitBoundary.tsx` |
+| Regression guard | `scripts/website-stability-guard.mjs` |
+
 ## Root causes
 
 ### Competing layout ownership
@@ -44,6 +55,8 @@ Use flexible grids:
 }
 ```
 
+Implemented globally in `app/responsive-layout-stability-system.css` for admin stats, power grids, report KPIs, console cards, template grids, and manager report grids.
+
 ### Three-panel editors
 
 Use compact side columns and a flexible center:
@@ -63,13 +76,19 @@ Use compact side columns and a flexible center:
 }
 ```
 
+Implemented for Supporting Documents in `app/supporting-documents-runtime-wide-fix.css`.
+
 ### Text safety
 
 Every grid or flex row with names, emails, filenames, or client labels must use `min-width: 0` and controlled overflow. Compact chips should use ellipsis. Long IDs should use `overflow-wrap: anywhere`.
 
+Implemented globally in `app/responsive-layout-stability-system.css` for cards, badges, account rows, report tables, and common shell containers.
+
 ### Modal safety
 
 Modals should mount to `document.body`, use `position: fixed`, and avoid transformed ancestors.
+
+Global modal bounds are implemented in `app/responsive-layout-stability-system.css`; feature-specific modal portal behavior remains guarded by the manager console workflow guard.
 
 ## Flicker prevention contract
 
@@ -86,6 +105,8 @@ try {
   window.clearTimeout(timeout);
 }
 ```
+
+Implemented in `components/ClientOutputLimitBoundary.tsx` with `ENTITLEMENT_FETCH_TIMEOUT_MS`.
 
 ## Supporting Documents contract
 
@@ -109,30 +130,32 @@ try {
 
 ## Implemented markers
 
+- `app/responsive-layout-stability-system.css` is the global responsive baseline owner.
 - `app/supporting-documents-runtime-wide-fix.css` is the final Supporting Documents layout owner.
 - It uses `--support-runtime-page-max` for maximum page size.
 - It keeps `grid-template-areas: "documents page controls"` on wide screens.
 - It stacks to `"documents" "page" "controls"` on narrow screens.
 - It disables animation and blur in the editor to reduce preview flicker.
 - `components/ClientOutputLimitBoundary.tsx` uses `ENTITLEMENT_FETCH_TIMEOUT_MS` to avoid an infinite cold loading card.
+- `scripts/website-stability-guard.mjs` validates the coded contracts.
 
 ## Roadmap
 
 ### Phase 1
 
-Stabilize refresh owners, add timeouts, and preserve last known data.
+Stabilize refresh owners, add timeouts, and preserve last known data. Status: coded and guarded.
 
 ### Phase 2
 
-Make one CSS owner per major feature and move final overrides into that owner.
+Make one CSS owner per major feature and move final overrides into that owner. Status: coded for global baseline and Supporting Documents.
 
 ### Phase 3
 
-Replace fixed desktop grids with responsive contracts.
+Replace fixed desktop grids with responsive contracts. Status: coded for common grids, cards, rows, reports, forms, modals, and tables.
 
 ### Phase 4
 
-Add guards for center-priority Supporting Documents, entitlement timeout, no permanent refresh loops, and safe Supabase channel cleanup.
+Add guards for center-priority Supporting Documents, entitlement timeout, no permanent refresh loops, and safe Supabase channel cleanup. Status: coded in `scripts/website-stability-guard.mjs`.
 
 ## Acceptance checklist
 
