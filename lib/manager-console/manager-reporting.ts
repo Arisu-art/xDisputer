@@ -5,7 +5,7 @@ import { listManagerUserSettings, type ManagerUserSetting, type ManagerUserSetti
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
-export type ManagerReportType = 'summary' | 'salary' | 'users' | 'outputs';
+export type ManagerReportType = 'summary' | 'salary_outputs' | 'users';
 export type ManagerReportRange = { fromDate: string; toDate: string; startIso: string; endIso: string };
 export type ManagerReportInput = { type: ManagerReportType; range: ManagerReportRange };
 
@@ -16,34 +16,43 @@ export type ManagerReportData = { input: ManagerReportInput; accounts: AccountDi
 
 type RawOutputApproval = { id: string; disputer_id: string; generation_run_id: string | null; output_label: string | null; output_count: number | null; rate_amount: number | null; status: string | null; notes: string | null; round_label: string | null; letter_route: string | null; client_name: string | null; is_per_output: boolean | null; approved_at: string | null; rejected_at: string | null; created_at: string | null };
 
-const REPORT_TYPES = new Set<ManagerReportType>(['summary', 'salary', 'users', 'outputs']);
+const REPORT_TYPES = new Set<ManagerReportType>(['summary', 'salary_outputs', 'users']);
 const OUTPUT_COLUMNS = 'id,disputer_id,generation_run_id,output_label,output_count,rate_amount,status,notes,round_label,letter_route,client_name,is_per_output,approved_at,rejected_at,created_at';
+const PH_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 function dateOnly(date: Date) { return date.toISOString().slice(0, 10); }
 function addDays(date: Date, days: number) { const next = new Date(date); next.setUTCDate(next.getUTCDate() + days); return next; }
-function safeDate(value: string | null | undefined) { if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null; const date = new Date(`${value}T00:00:00.000Z`); return Number.isNaN(date.getTime()) ? null : date; }
+function dateFromPhParts(year: number, monthIndex: number, day: number) { return new Date(Date.UTC(year, monthIndex, day) - PH_OFFSET_MS); }
+function phDateOnlyFromUtc(utcDate: Date) { return dateOnly(new Date(utcDate.getTime() + PH_OFFSET_MS)); }
+function safePhDate(value: string | null | undefined) { if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null; const [year, month, day] = value.split('-').map(Number); const date = dateFromPhParts(year, month - 1, day); return Number.isNaN(date.getTime()) ? null : date; }
 function positiveMoney(value: unknown) { const number = Number(value || 0); return Number.isFinite(number) ? Math.max(0, number) : 0; }
 function accountName(account?: AccountDirectoryRow) { return account?.full_name || account?.email || 'Disputer'; }
 function accountStatus(account?: AccountDirectoryRow) { return account?.account_status || 'unknown'; }
 function employmentType(setting?: ManagerUserSetting) { return setting?.employment_type === 'output_based' || setting?.is_regular === false ? 'Per-output' : 'Full-time'; }
+function normalizeReportType(value: string | undefined): ManagerReportType { if (value === 'salary' || value === 'outputs') return 'salary_outputs'; return value && REPORT_TYPES.has(value as ManagerReportType) ? value as ManagerReportType : 'summary'; }
 
 export function moneyText(value: number) { return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(value || 0); }
+export function formatReportDate(value: string) { if (!value) return '—'; try { return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(value)); } catch { return '—'; } }
+export function formatReportDateRange(range: ManagerReportRange) { return `${formatReportDate(range.startIso)} to ${formatReportDate(addDays(new Date(range.endIso), -1).toISOString())}`; }
 
 export function defaultManagerReportRange(now = new Date()): ManagerReportRange {
-  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const from = addDays(today, -6);
-  return { fromDate: dateOnly(from), toDate: dateOnly(today), startIso: from.toISOString(), endIso: addDays(today, 1).toISOString() };
+  const phNow = new Date(now.getTime() + PH_OFFSET_MS);
+  const phDay = phNow.getUTCDay();
+  const mondayDelta = (phDay + 6) % 7;
+  const mondayUtc = dateFromPhParts(phNow.getUTCFullYear(), phNow.getUTCMonth(), phNow.getUTCDate() - mondayDelta);
+  const sundayUtc = addDays(mondayUtc, 6);
+  const endExclusiveUtc = addDays(mondayUtc, 7);
+  return { fromDate: phDateOnlyFromUtc(mondayUtc), toDate: phDateOnlyFromUtc(sundayUtc), startIso: mondayUtc.toISOString(), endIso: endExclusiveUtc.toISOString() };
 }
 
 export function parseManagerReportInput(search: { reportType?: string | string[]; from?: string | string[]; to?: string | string[] }): ManagerReportInput {
   const first = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
-  const reportType = first(search.reportType) as ManagerReportType | undefined;
-  const type = reportType && REPORT_TYPES.has(reportType) ? reportType : 'summary';
+  const type = normalizeReportType(first(search.reportType));
   const fallback = defaultManagerReportRange();
-  const fromDate = safeDate(first(search.from));
-  const toDate = safeDate(first(search.to));
+  const fromDate = safePhDate(first(search.from));
+  const toDate = safePhDate(first(search.to));
   if (!fromDate || !toDate || fromDate > toDate) return { type, range: fallback };
-  return { type, range: { fromDate: dateOnly(fromDate), toDate: dateOnly(toDate), startIso: fromDate.toISOString(), endIso: addDays(toDate, 1).toISOString() } };
+  return { type, range: { fromDate: phDateOnlyFromUtc(fromDate), toDate: phDateOnlyFromUtc(toDate), startIso: fromDate.toISOString(), endIso: addDays(toDate, 1).toISOString() } };
 }
 
 function rowPay(row: RawOutputApproval, setting?: ManagerUserSetting) {
