@@ -26,10 +26,13 @@ function parseOptionalOverrideLimit(value: string) {
 }
 
 function revalidateEntitlementViews() {
+  revalidatePath('/master');
   revalidatePath('/master/accounts');
   revalidatePath('/admin');
   revalidatePath('/admin/access');
   revalidatePath('/admin/output-activity-v2');
+  revalidatePath('/admin/output-queue');
+  revalidatePath('/workspace');
   revalidatePath('/app');
 }
 
@@ -39,6 +42,7 @@ function redirectBack(request: NextRequest, status: 'ok' | 'error', message?: st
   const target = referer ? new URL(referer) : fallback;
 
   target.searchParams.set('control', status);
+  target.searchParams.set('entitlementsSyncedAt', String(Date.now()));
   if (message) target.searchParams.set('message', message.slice(0, 180));
 
   return NextResponse.redirect(target, 303);
@@ -82,7 +86,7 @@ export async function POST(request: NextRequest) {
 
       if (error) return redirectBack(request, 'error', error.message);
       revalidateEntitlementViews();
-      return redirectBack(request, 'ok', 'Master-set manager limits synced.');
+      return redirectBack(request, 'ok', `Manager limits synced: ${maxClients} Disputers, ${defaultOutputLimit} outputs/day.`);
     }
 
     const outputLimit = parseOptionalOverrideLimit(cleanValue(formData, 'outputLimit'));
@@ -94,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     if (error) return redirectBack(request, 'error', error.message);
     revalidateEntitlementViews();
-    return redirectBack(request, 'ok', outputLimit === null ? 'Disputer now inherits the manager output cap.' : 'Disputer output override synced.');
+    return redirectBack(request, 'ok', outputLimit === null ? 'Disputer now inherits the manager output cap.' : `Disputer output override synced: ${outputLimit} outputs/day.`);
   } catch (error) {
     return redirectBack(request, 'error', error instanceof Error ? error.message : 'Entitlement update failed.');
   }
