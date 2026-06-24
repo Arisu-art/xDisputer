@@ -4,16 +4,24 @@ import { createSupabaseServerClient } from '../../../../lib/supabase/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
 type EntitlementRow = {
   allowed?: boolean;
-  output_limit?: number | null;
-  output_used_today?: number | null;
-  output_remaining_today?: number | null;
-  output_used_this_month?: number | null;
-  output_remaining_this_month?: number | null;
+  output_limit?: number | string | null;
+  output_used_today?: number | string | null;
+  output_remaining_today?: number | string | null;
+  output_used_this_month?: number | string | null;
+  output_remaining_this_month?: number | string | null;
   reset_at?: string | null;
-  reset_seconds?: number | null;
+  reset_seconds?: number | string | null;
   message?: string | null;
+};
+
+type ManagerLimitRow = {
+  max_clients?: number | string | null;
+  default_client_output_limit?: number | string | null;
+  updated_at?: string | null;
 };
 
 function noStoreJson(body: unknown, init?: ResponseInit) {
@@ -30,6 +38,25 @@ function isMissingRpc(message: string | undefined) {
     message.includes('does not exist') ||
     message.includes('schema cache')
   ));
+}
+
+function numericValue(value: unknown) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function positiveOrNull(value: unknown) {
+  const parsed = numericValue(value);
+  return parsed !== null && parsed > 0 ? parsed : null;
+}
+
+function nonnegativeOrNull(value: unknown) {
+  const parsed = numericValue(value);
+  return parsed !== null && parsed >= 0 ? parsed : null;
 }
 
 function easternParts(now: Date) {
@@ -83,26 +110,52 @@ function normalizeManagerId(value: unknown) {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
-function normalizeEntitlement(row: EntitlementRow | null, source: 'daily' | 'fallback' | 'none', managerId: string | null) {
+async function currentManagerId(supabase: SupabaseServerClient, userId: string) {
+  const result = await supabase.rpc('access_current_client_manager_id_v1', { client_id_input: userId });
+  if (!result.error) return normalizeManagerId(result.data);
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('manager_id')
+    .eq('id', userId)
+    .maybeSingle();
+  return normalizeManagerId((data as { manager_id?: unknown } | null)?.manager_id);
+}
+
+async function readManagerLimit(supabase: SupabaseServerClient, managerId: string | null) {
+  if (!managerId) return { maxClients: null as number | null, defaultOutputLimit: null as number | null, updatedAt: null as string | null };
+  const { data } = await supabase
+    .from('manager_entitlement_limits')
+    .select('max_clients,default_client_output_limit,updated_at')
+    .eq('manager_id', managerId)
+    .maybeSingle();
+  const row = data as ManagerLimitRow | null;
+  return {
+    maxClients: positiveOrNull(row?.max_clients),
+    defaultOutputLimit: positiveOrNull(row?.default_client_output_limit),
+    updatedAt: row?.updated_at || null
+  };
+}
+
+function normalizeEntitlement(row: EntitlementRow | null, source: 'daily' | 'fallback' | 'none', managerId: string | null, managerLimit: { maxClients: number | null; defaultOutputLimit: number | null; updatedAt: string | null }) {
   const reset = nextUsEasternReset();
-  const outputLimit = typeof row?.output_limit === 'number' && row.output_limit > 0 ? row.output_limit : null;
-  const used = Number(row?.output_used_today ?? row?.output_used_this_month ?? 0);
-  const remaining = typeof row?.output_remaining_today === 'number'
-    ? row.output_remaining_today
-    : typeof row?.output_remaining_this_month === 'number'
-      ? row.output_remaining_this_month
-      : outputLimit === null
-        ? null
-        : Math.max(outputLimit - used, 0);
+  const managerDefaultLimit = managerLimit.defaultOutputLimit;
+  const outputLimit = managerDefaultLimit ?? positiveOrNull(row?.output_limit);
+  const used = nonnegativeOrNull(row?.output_used_today ?? row?.output_used_this_month) ?? 0;
+  const remainingFromRow = nonnegativeOrNull(row?.output_remaining_today ?? row?.output_remaining_this_month);
+  const remaining = outputLimit === null ? null : remainingFromRow ?? Math.max(outputLimit - used, 0);
   const rowAllowed = typeof row?.allowed === 'boolean' ? row.allowed : outputLimit !== null && remaining !== 0;
   const allowed = outputLimit !== null && rowAllowed && remaining !== 0;
 
   return {
     outputLimit,
+    managerDefaultOutputLimit: managerDefaultLimit,
+    managerDisputerLimit: managerLimit.maxClients,
+    managerLimitUpdatedAt: managerLimit.updatedAt,
     outputUsedToday: used,
     outputRemainingToday: remaining,
     resetAt: row?.reset_at || reset.resetAt,
-    resetSeconds: typeof row?.reset_seconds === 'number' ? row.reset_seconds : reset.resetSeconds,
+    resetSeconds: nonnegativeOrNull(row?.reset_seconds) ?? reset.resetSeconds,
     allowed,
     message: allowed
       ? row?.message || null
@@ -110,15 +163,9 @@ function normalizeEntitlement(row: EntitlementRow | null, source: 'daily' | 'fal
         ? 'Master must set this manager daily output limit before this Disputer can generate output.'
         : 'Daily output limit reached. Your workspace unlocks when the limit is increased or at the next reset.'),
     managerId,
-    source,
+    source: managerDefaultLimit !== null ? 'master-manager-limit' : source,
     serverTime: new Date().toISOString()
   };
-}
-
-async function currentManagerId(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, userId: string) {
-  const result = await supabase.rpc('access_current_client_manager_id_v1', { client_id_input: userId });
-  if (result.error) return null;
-  return normalizeManagerId(result.data);
 }
 
 export async function GET() {
@@ -130,13 +177,14 @@ export async function GET() {
   }
 
   const managerId = await currentManagerId(supabase, userResult.user.id);
+  const managerLimit = await readManagerLimit(supabase, managerId);
   const daily = await supabase.rpc('access_client_daily_output_entitlement_v1', {
     owner_id_input: userResult.user.id
   });
 
   if (!daily.error) {
     const row = Array.isArray(daily.data) ? daily.data[0] : null;
-    return noStoreJson({ entitlement: normalizeEntitlement(row, 'daily', managerId) });
+    return noStoreJson({ entitlement: normalizeEntitlement(row, 'daily', managerId, managerLimit) });
   }
 
   if (!isMissingRpc(daily.error.message)) {
@@ -149,12 +197,12 @@ export async function GET() {
 
   if (!fallback.error) {
     const row = Array.isArray(fallback.data) ? fallback.data[0] : null;
-    return noStoreJson({ entitlement: normalizeEntitlement(row, 'fallback', managerId) });
+    return noStoreJson({ entitlement: normalizeEntitlement(row, 'fallback', managerId, managerLimit) });
   }
 
   if (!isMissingRpc(fallback.error.message)) {
     return noStoreJson({ error: fallback.error.message }, { status: 500 });
   }
 
-  return noStoreJson({ entitlement: normalizeEntitlement(null, 'none', managerId) });
+  return noStoreJson({ entitlement: normalizeEntitlement(null, 'none', managerId, managerLimit) });
 }
