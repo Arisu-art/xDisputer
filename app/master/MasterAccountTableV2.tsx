@@ -23,11 +23,12 @@ function statusText(value?: string | null) {
 function isManager(account: ManagedAccount) { return account.role === 'manager' || account.role === 'admin'; }
 function canEditLimits(account: ManagedAccount) { return isManager(account); }
 function positiveValue(value?: number | string | null) { const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN; return Number.isFinite(parsed) && parsed > 0 ? parsed : null; }
+function savedManagerLimits(limit?: EntitlementLimitRow) { return { maxClients: positiveValue(limit?.max_clients), defaultOutput: positiveValue(limit?.default_client_output_limit), active: limit?.current_clients || 0 }; }
 
 function agreementSummary(account: ManagedAccount, limit?: EntitlementLimitRow) {
   if (isManager(account)) {
-    const maxClients = positiveValue(limit?.max_clients);
-    return maxClients === null ? `${limit?.current_clients || 0} active · Needs Master limit` : `${limit?.current_clients || 0}/${maxClients} disputers`;
+    const saved = savedManagerLimits(limit);
+    return saved.maxClients === null || saved.defaultOutput === null ? `${saved.active} active · Needs Master limit` : `${saved.active}/${saved.maxClients} disputers · ${saved.defaultOutput} outputs/day`;
   }
   if (account.role === 'client') return account.manager_id ? 'Boss assigned' : 'Needs boss assignment';
   return 'Protected';
@@ -52,9 +53,16 @@ function LinkBadge({ account }: { account: ManagedAccount }) {
   return <span className="admin-relation-badge owner">Owner</span>;
 }
 
+function ManagerLimitSnapshot({ limit }: { limit?: EntitlementLimitRow }) {
+  const saved = savedManagerLimits(limit);
+  if (saved.maxClients === null || saved.defaultOutput === null) return <div className="limit-editor-help">No saved manager limits found yet. Enter both numbers and save once.</div>;
+  return <div className="limit-editor-help"><strong>Saved limits:</strong> {saved.maxClients} Disputer seats · {saved.defaultOutput} default outputs per Disputer/day · {saved.active} active now.</div>;
+}
+
 function LimitForm({ account, limit, formId }: { account: ManagedAccount; limit?: EntitlementLimitRow; formId: string }) {
   if (!isManager(account)) return null;
-  return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="manager" /><input type="hidden" name="profileId" value={account.id} /><label><span>Disputer limit</span><input name="maxClients" type="number" min="1" required defaultValue={positiveValue(limit?.max_clients) ?? ''} placeholder="Required number" /></label><label><span>Default outputs per disputer/day</span><input name="defaultClientOutputLimit" type="number" min="1" required defaultValue={positiveValue(limit?.default_client_output_limit) ?? ''} placeholder="Required number" /></label><p className="limit-editor-help">Master sets this manager's total Disputer seats and the default daily output cap for every Disputer under this manager.</p></form>;
+  const saved = savedManagerLimits(limit);
+  return <form id={formId} action="/api/master/entitlements" method="post" className="limit-editor-form flyout-form"><input type="hidden" name="mode" value="manager" /><input type="hidden" name="profileId" value={account.id} /><ManagerLimitSnapshot limit={limit} /><label><span>Disputer limit</span><input name="maxClients" type="number" min="1" required defaultValue={saved.maxClients ?? ''} placeholder="Required number" /></label><label><span>Default outputs per disputer/day</span><input name="defaultClientOutputLimit" type="number" min="1" required defaultValue={saved.defaultOutput ?? ''} placeholder="Required number" /></label><p className="limit-editor-help">Master sets this manager's total Disputer seats and the default daily output cap for every Disputer under this manager.</p></form>;
 }
 
 function BossAssignmentForm({ account, bossOptions }: { account: ManagedAccount; bossOptions: BossOption[] }) {
@@ -76,7 +84,7 @@ function AccountTrigger({ account, limit }: { account: ManagedAccount; limit?: E
 function AccountControlCard({ account, currentUserId, limit, bossOptions }: { account: ManagedAccount; currentUserId: string; limit?: EntitlementLimitRow; bossOptions: BossOption[] }) {
   const formId = `limit-form-${account.id}`;
   const managerAccount = isManager(account);
-  const saveAction = managerAccount ? <button key={`save-limits-${account.id}`} type="submit" form={formId} className="admin-action-button primary flyout-save-button">Save limits</button> : null;
+  const saveAction = canEditLimits(account) ? <button key={`save-limits-${account.id}`} type="submit" form={formId} className="admin-action-button primary flyout-save-button">Save limits</button> : null;
 
   return <TableFlyout eyebrow="Account controls" title={account.full_name || account.email || 'Account'} summary={agreementSummary(account, limit)} actionLabel="Open" triggerClassName="account-control-row-trigger master-account-row-v3" trigger={<AccountTrigger account={account} limit={limit} />} headerAction={saveAction}>
     <div className="account-control-flyout-content" data-account-control-flyout-content="key-safe-wrapper">
