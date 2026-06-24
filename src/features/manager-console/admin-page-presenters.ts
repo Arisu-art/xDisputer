@@ -44,8 +44,9 @@ export function statusText(value: string | null | undefined) {
 
 export function outputUsage(entitlements: EntitlementLimitMap, accountId: string) {
   const row = entitlements[accountId];
-  const effective = typeof row?.effective_output_limit === 'number' ? row.effective_output_limit : 'Default';
-  return String(row?.output_used_today || 0) + '/' + effective + ' outputs today';
+  const used = row?.output_used_today || 0;
+  const effective = typeof row?.effective_output_limit === 'number' && row.effective_output_limit > 0 ? row.effective_output_limit : null;
+  return effective === null ? `${used} used · Manager cap not set` : `${used}/${effective} outputs today`;
 }
 
 export function uniqueAccounts(...groups: AccountDirectoryRow[][]) {
