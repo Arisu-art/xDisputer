@@ -41,6 +41,10 @@ function annotationMode(value: string) {
   return value === 'strict' || value === 'adaptive' ? value : 'safe';
 }
 
+function policyValue(value: string, allowed: string[], fallback: string) {
+  return allowed.includes(value) ? value : fallback;
+}
+
 function mutationClient(sessionSupabase: Awaited<ReturnType<typeof getSessionContext>>['supabase']) {
   try { return createSupabaseAdminClient() as typeof sessionSupabase; }
   catch { return sessionSupabase; }
@@ -58,6 +62,12 @@ export async function POST(request: NextRequest) {
     const managerIntent = clean(formData.get('managerIntent'), 'precision-output');
     const managerNotes = clean(formData.get('managerNotes')) || null;
     const mode = annotationMode(clean(formData.get('annotationMode'), 'safe'));
+    const workflowPolicy = {
+      inPlaceAnchor: clean(formData.get('inPlaceAnchor'), 'Account Name – Account number'),
+      renderPolicy: policyValue(clean(formData.get('renderPolicy'), 'replace-in-place'), ['replace-in-place', 'block-if-missing', 'manager-review'], 'replace-in-place'),
+      preservationPolicy: policyValue(clean(formData.get('preservationPolicy'), 'preserve-surrounding-copy'), ['preserve-surrounding-copy', 'preserve-table-layout', 'preserve-paragraph-layout'], 'preserve-surrounding-copy'),
+      updatedAt: new Date().toISOString()
+    };
     const supabase = mutationClient(session.supabase);
     const assetResult = await supabase
       .from('template_assets')
@@ -87,12 +97,20 @@ export async function POST(request: NextRequest) {
       registrationSummary: profile.summary,
       registrationUpdatedAt: profile.registeredAt,
       registrationMode: mode,
+      workflowPolicy,
+      workflowAnchorPolicy: {
+        phrase: workflowPolicy.inPlaceAnchor,
+        canonicalTarget: 'accounts.lines + account.name + account.number',
+        renderAction: workflowPolicy.renderPolicy,
+        preservation: workflowPolicy.preservationPolicy
+      },
       registrationSource: 'manager-workspace-template-registration-console'
     };
     const update = await supabase.from('template_assets').update({ rule_json: ruleJson, updated_at: new Date().toISOString() }).eq('manager_user_id', scope.managerUserId).eq('id', asset.id);
     if (update.error) return redirectBack(request, 'error', update.error.message);
     revalidatePath('/manager-workspace');
     revalidatePath('/manager-workspace/studio');
+    revalidatePath('/manager-workspace/test');
     revalidatePath('/manager-workspace/engine');
     return redirectBack(request, 'ok', `Template registered with ${profile.summary.annotations} annotation(s), ${profile.summary.map} mapped field(s), and ${profile.summary.blockers} blocker(s).`);
   } catch (error) {
