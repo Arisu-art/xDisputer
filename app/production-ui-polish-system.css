@@ -1,0 +1,253 @@
+/* xDisputer Production UI Polish System
+   Final visual owner loaded after feature-specific CSS.
+   Goals:
+   - lightweight production UI
+   - remove duplicated visual header feeling
+   - maximize usable content area
+   - compact manager/master account layouts
+   - reduce blur/shadow/animation cost
+   - keep responsive behavior stable
+*/
+
+:root {
+  --prod-ui-page-max: 1680px;
+  --prod-ui-content-pad: clamp(12px, 1.45vw, 24px);
+  --prod-ui-radius-lg: 18px;
+  --prod-ui-radius-md: 12px;
+  --prod-ui-border: rgba(15, 23, 42, .10);
+  --prod-ui-surface: rgba(255, 255, 255, .94);
+  --prod-ui-soft: rgba(248, 250, 252, .92);
+  --prod-ui-text: #0f172a;
+  --prod-ui-muted: #64748b;
+  --prod-ui-shadow-soft: 0 12px 30px rgba(15, 23, 42, .07);
+}
+
+/* Page shell: more usable width, less wasted card nesting */
+html body main,
+html body .console-shell,
+html body .console-page,
+html body .manager-console-page,
+html body .master-console-page,
+html body .admin-console-page,
+html body .workspace-page {
+  min-width: 0 !important;
+  overflow-x: clip !important;
+}
+
+html body .console-shell,
+html body .console-page,
+html body .manager-console-page,
+html body .master-console-page,
+html body .admin-console-page {
+  max-width: var(--prod-ui-page-max) !important;
+  margin-inline: auto !important;
+  padding-inline: var(--prod-ui-content-pad) !important;
+}
+
+/* Remove duplicated header feeling: keep the first command/header strong and flatten nested headers */
+html body .compact-command-header,
+html body .stable-command-header,
+html body .manager-command-header,
+html body .master-command-header,
+html body .console-command-header {
+  border: 1px solid var(--prod-ui-border) !important;
+  border-radius: var(--prod-ui-radius-lg) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(248,250,252,.94)) !important;
+  box-shadow: var(--prod-ui-shadow-soft) !important;
+  padding: clamp(14px, 1.4vw, 22px) !important;
+  margin-bottom: clamp(12px, 1.2vw, 18px) !important;
+}
+
+/* Any page header directly under an already-headered workspace becomes a compact subheader, not another hero */
+html body .compact-command-header + .compact-command-header,
+html body .stable-command-header + .stable-command-header,
+html body .manager-command-header + .manager-command-header,
+html body .master-command-header + .master-command-header,
+html body .console-command-header + .console-command-header,
+html body .admin-monitor-card .compact-command-header,
+html body .admin-monitor-card .stable-command-header,
+html body .table-flyout-section .compact-command-header,
+html body .table-flyout-section .stable-command-header {
+  box-shadow: none !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 0 10px !important;
+}
+
+/* Manager/Master account tables: compact, readable, responsive */
+html body .master-account-list-v3,
+html body .account-control-list,
+html body .admin-monitor-list,
+html body .manager-output-list {
+  display: grid !important;
+  gap: clamp(8px, .8vw, 12px) !important;
+  min-width: 0 !important;
+}
+
+html body .master-account-row-v3,
+html body .account-control-row-trigger,
+html body .admin-monitor-card,
+html body .stable-card,
+html body .manager-report-card,
+html body .output-activity-card {
+  border: 1px solid var(--prod-ui-border) !important;
+  border-radius: var(--prod-ui-radius-md) !important;
+  background: var(--prod-ui-surface) !important;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, .055) !important;
+  min-width: 0 !important;
+}
+
+html body .master-account-row-v3,
+html body .account-control-row-trigger {
+  padding: clamp(10px, .95vw, 14px) !important;
+  align-items: center !important;
+}
+
+/* Prevent text collisions and improve account record density */
+html body .master-account-trigger-v3,
+html body .account-control-trigger-grid {
+  min-width: 0 !important;
+  gap: clamp(8px, .8vw, 14px) !important;
+}
+
+html body .master-account-identity strong,
+html body .account-control-identity strong,
+html body .supporting-document-meta-v2 strong,
+html body .evidence-meta-v2 strong {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+
+html body .master-account-identity small,
+html body .account-control-identity small,
+html body .supporting-document-meta-v2 small,
+html body .evidence-meta-v2 small {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  color: var(--prod-ui-muted) !important;
+}
+
+/* Flyouts/modals: one clean production panel */
+html body [role='dialog'],
+html body .table-flyout-panel,
+html body .manager-account-popover,
+html body .client-menu-popover {
+  border: 1px solid var(--prod-ui-border) !important;
+  border-radius: var(--prod-ui-radius-lg) !important;
+  background: rgba(255, 255, 255, .98) !important;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .16) !important;
+  max-width: min(96vw, 920px) !important;
+  overflow: hidden !important;
+}
+
+html body .table-flyout-section,
+html body .manager-account-function-panel,
+html body .manager-account-session-panel {
+  border-radius: var(--prod-ui-radius-md) !important;
+  background: var(--prod-ui-soft) !important;
+  border: 1px solid rgba(15, 23, 42, .07) !important;
+}
+
+/* Buttons: simple, production, no noisy mixed shadows */
+html body button,
+html body .admin-action-button,
+html body .action-button,
+html body .evidence-auto-align {
+  transition: background-color .16s ease, border-color .16s ease, transform .16s ease !important;
+}
+
+html body .admin-action-button,
+html body .action-button,
+html body .evidence-auto-align {
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+}
+
+html body button:hover,
+html body .admin-action-button:hover,
+html body .action-button:hover {
+  transform: translateY(-1px);
+}
+
+/* Performance: reduce expensive UI effects where they were stacked repeatedly */
+html body .admin-monitor-card,
+html body .stable-card,
+html body .master-account-row-v3,
+html body .account-control-row-trigger,
+html body .word-left-evidence-manager,
+html body .word-crop-controls,
+html body .support-page-frame,
+html body .support-page-canvas {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html body .master-account-list-v3,
+html body .account-control-list,
+html body .admin-monitor-list,
+html body .manager-output-list,
+html body .output-activity-list {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 720px;
+}
+
+/* Supporting Documents: keep current measured canvas, but make the whole editor feel clean */
+html body .support-layout-editor.professional-evidence-editor.word-crop-editor {
+  border-radius: var(--prod-ui-radius-lg) !important;
+}
+
+html body .support-layout-grid.word-crop-grid {
+  align-items: stretch !important;
+}
+
+html body .support-page-canvas {
+  background: #ffffff !important;
+}
+
+/* Navigation/sidebar: compact and consistent */
+html body nav a,
+html body .console-nav a,
+html body .sidebar-nav a {
+  border-radius: 12px !important;
+}
+
+/* Responsive tightening */
+@media (max-width: 980px) {
+  html body .console-shell,
+  html body .console-page,
+  html body .manager-console-page,
+  html body .master-console-page,
+  html body .admin-console-page {
+    padding-inline: 10px !important;
+  }
+
+  html body .master-account-row-v3,
+  html body .account-control-row-trigger {
+    grid-template-columns: 1fr !important;
+  }
+
+  html body .compact-command-header,
+  html body .stable-command-header,
+  html body .manager-command-header,
+  html body .master-command-header,
+  html body .console-command-header {
+    padding: 14px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html body *,
+  html body *::before,
+  html body *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .001ms !important;
+  }
+}
