@@ -13,6 +13,8 @@ type Props = {
   initialNotes?: string | null;
 };
 
+const METADATA_CARD_SELECTOR = '.manager-console-user-card, .output-activity-row[data-metadata-profile-id]';
+
 function moneyInput(value: number) {
   return Number.isFinite(value) ? String(Math.max(0, value)) : '0';
 }
@@ -29,6 +31,7 @@ const CARD_CLICK_BLOCKERS = [
   'details',
   '[data-ignore-card-metadata-open="true"]',
   '.manager-console-status-actions',
+  '.output-activity-title-actions',
   '.manager-user-settings-details',
   '.manager-user-settings-modal-backdrop'
 ].join(',');
@@ -53,7 +56,7 @@ export default function ManagerPayrollSettingsEditor({ profileId, initialEmploym
 
   useEffect(() => {
     const root = rootRef.current;
-    const card = root?.closest<HTMLElement>('.manager-console-user-card');
+    const card = root?.closest<HTMLElement>(METADATA_CARD_SELECTOR);
     if (!card) return undefined;
 
     const previousTabIndex = card.getAttribute('tabindex');
