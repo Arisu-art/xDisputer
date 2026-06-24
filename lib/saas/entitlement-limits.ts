@@ -28,18 +28,22 @@ function isMissingRpc(message: string) {
     || message.includes('schema cache');
 }
 
+function positiveOrNull(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+}
+
 function normalizeRow(row: RawEntitlementRow): EntitlementLimitRow {
   return {
     profile_id: String(row.profile_id || ''),
-    max_clients: typeof row.max_clients === 'number' ? row.max_clients : null,
+    max_clients: positiveOrNull(row.max_clients),
     current_clients: Number(row.current_clients || 0),
-    default_client_output_limit: typeof row.default_client_output_limit === 'number' ? row.default_client_output_limit : null,
-    client_output_limit: typeof row.client_output_limit === 'number' ? row.client_output_limit : null,
-    effective_output_limit: typeof row.effective_output_limit === 'number' ? row.effective_output_limit : null,
+    default_client_output_limit: positiveOrNull(row.default_client_output_limit),
+    client_output_limit: positiveOrNull(row.client_output_limit),
+    effective_output_limit: positiveOrNull(row.effective_output_limit),
     output_used_today: Number(row.output_used_today ?? row.output_used_this_month ?? 0),
-    output_remaining_today: typeof row.output_remaining_today === 'number'
+    output_remaining_today: typeof row.output_remaining_today === 'number' && row.output_remaining_today > 0
       ? row.output_remaining_today
-      : typeof row.output_remaining_this_month === 'number'
+      : typeof row.output_remaining_this_month === 'number' && row.output_remaining_this_month > 0
         ? row.output_remaining_this_month
         : null,
     updated_at: row.updated_at || null
