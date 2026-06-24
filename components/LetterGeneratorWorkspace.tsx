@@ -6,7 +6,7 @@ import OutputReviewWorkspace, { type ReviewOutput } from './OutputReviewWorkspac
 import type { FinalPdfPacket } from './PdfPacketPreview';
 import SupportingDocumentsSetup from './SupportingDocumentsSetup';
 import TemplatePacketConfigurator from './TemplatePacketConfigurator';
-import { assembleFinalPdf, type PdfPacketPart } from '../lib/final-pdf-packet';
+import { assembleFinalPdf, mergePdfBlobs, type PdfPacketPart } from '../lib/final-pdf-packet';
 import { isDocx, renderReferenceDisputeDocx } from '../lib/docx-renderer';
 import { renderLatePaymentReference } from '../lib/late-reference-renderer';
 import { bureauInfo, bureaus, createNormalizedSourceCopy, detectRoutes, parseSource, recommendedSourceFormat, type Bureau, type LetterRoute, type LetterType } from '../lib/letter-engine';
@@ -23,12 +23,9 @@ const panels: Panel[] = ['Dashboard', 'Templates', 'Source Data', 'Generate', 'O
 const steps: Panel[] = ['Templates', 'Source Data', 'Generate', 'Outputs'];
 const typeLabel: Record<LetterType, string> = { DISPUTE: 'Dispute Letter', LATE_PAYMENT: 'Late Payment Letter' };
 
-// Dynamically build dispute requirements based on FTC feature flag
 function getDisputeRequirements(): ExhibitKind[] {
   const requirements: ExhibitKind[] = ['FCRA', 'AFFIDAVIT', 'ATTACHMENT'];
-  if (isFtcEnabled()) {
-    requirements.push('FTC');
-  }
+  if (isFtcEnabled()) requirements.push('FTC');
   return requirements;
 }
 
@@ -39,15 +36,10 @@ function clean(value: string) { return (value || 'CLIENT').replace(/[\\/:*?"<>|]
 function fileBase(value: string) { return clean(value).replace(/[^A-Z0-9]+/g, '_'); }
 function deliver(name: string, blob: Blob) { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); }
 
-// Dynamically build sequence based on FTC feature flag
 function sequence(type: LetterType) {
-  if (type === 'LATE_PAYMENT') {
-    return ['01 Late Payment Letter', '02 Supporting Documents'];
-  }
+  if (type === 'LATE_PAYMENT') return ['01 Late Payment Letter', '02 Supporting Documents'];
   const seq = ['01 Dispute Letter', '02 Supporting Documents', '03 FCRA', '04 Affidavit', '05 Attachment'];
-  if (isFtcEnabled()) {
-    seq.push('06 FTC');
-  }
+  if (isFtcEnabled()) seq.push('06 FTC');
   return seq;
 }
 
@@ -79,48 +71,31 @@ export default function LetterGeneratorWorkspace() {
   useEffect(() => saveReferenceMeta(references), [references]);
   useEffect(() => {
     let cancelled = false;
-
-    void recoverReferenceMetaFromFiles()
-      .then((next) => { if (!cancelled) setReferences(next); })
-      .catch(() => { if (!cancelled) setReferences(loadReferenceMeta()); });
-
+    void recoverReferenceMetaFromFiles().then((next) => { if (!cancelled) setReferences(next); }).catch(() => { if (!cancelled) setReferences(loadReferenceMeta()); });
     return () => { cancelled = true; };
   }, []);
   useEffect(() => {
     let cancelled = false;
-
     async function recoverReferenceFiles() {
       const recovered = await Promise.all(defaultReferences().map(async (slot) => {
         const file = await readReferenceFile(slot.id).catch(() => null);
         return file ? { id: slot.id, file: file.name, size: file.size } : null;
       }));
-
       if (cancelled) return;
-
       const byId = new Map(recovered.filter(Boolean).map((item) => [item!.id, item!]));
-
       setReferences((items) => {
         let changed = false;
-
         const next = defaultReferences().map((slot) => {
           const current = items.find((item) => item.id === slot.id) || slot;
           const stored = byId.get(slot.id);
-
-          if (!current.file && stored?.file) {
-            changed = true;
-            return { ...current, file: stored.file, size: stored.size };
-          }
-
+          if (!current.file && stored?.file) { changed = true; return { ...current, file: stored.file, size: stored.size }; }
           return current;
         });
-
         if (changed) saveReferenceMeta(next);
         return changed ? next : items;
       });
     }
-
     void recoverReferenceFiles();
-
     return () => { cancelled = true; };
   }, []);
   useEffect(() => setTemplates(loadTemplateExhibits(round)), [round]);
@@ -165,9 +140,7 @@ export default function LetterGeneratorWorkspace() {
         docs.push({ id: `${route.type}-${route.bureau}-LETTER`, path: `Editable Documents/${prefix} ${typeLabel[route.type]}.docx`, type: route.type, role: 'LETTER', sequence: 1, bureau: route.bureau, count: route.items.length, detail: `${route.reason} · Preview the completed ordered packet from this editor`, blob: letter, packetSteps: sequence(route.type) });
         if (route.type === 'DISPUTE') {
           const items: Array<{ kind: 'AFFIDAVIT' | 'FTC'; role: 'AFFIDAVIT' | 'FTC'; number: number }> = [{ kind: 'AFFIDAVIT', role: 'AFFIDAVIT', number: 4 }];
-          if (isFtcEnabled()) {
-            items.push({ kind: 'FTC' as const, role: 'FTC' as const, number: 6 });
-          }
+          if (isFtcEnabled()) items.push({ kind: 'FTC', role: 'FTC', number: 6 });
           for (const item of items) {
             if (!templates[item.kind]) continue;
             const mapped = await createMappedDoc(item.kind, route.bureau, date);
@@ -190,14 +163,10 @@ export default function LetterGeneratorWorkspace() {
       const fcra = await readTemplateExhibit(round, 'FCRA');
       const attachment = await readTemplateExhibit(round, 'ATTACHMENT');
       const affidavit = docs.find((doc) => doc.bureau === bureau && doc.role === 'AFFIDAVIT');
-      
-      // Build missing items list dynamically based on FTC feature flag
       const missingItems: string[] = [];
       if (!fcra) missingItems.push('FCRA PDF');
       if (!affidavit) missingItems.push('Affidavit DOCX');
       if (!attachment) missingItems.push('Attachment PDF');
-      
-      // Only require FTC if the feature is enabled
       if (isFtcEnabled()) {
         const ftc = docs.find((doc) => doc.bureau === bureau && doc.role === 'FTC');
         if (!ftc) missingItems.push('FTC DOCX');
@@ -223,8 +192,11 @@ export default function LetterGeneratorWorkspace() {
       catch (error) { notices.push(error instanceof Error ? error.message : `${route.bureau}: PDF assembly failed.`); }
     }
     let finalOutput: { name: string; blob: Blob } | null = null;
-    if (packets.length) { const zip = new JSZip(); packets.forEach((packet) => zip.file(packet.path, packet.blob)); zip.file('Final Packet Manifest.txt', packets.flatMap((packet) => [packet.path, ...packet.sequence.map((entry) => `  ${entry}`), '']).join('\n')); finalOutput = { name: `${clean(parsed.name)}.zip`, blob: await zip.generateAsync({ type: 'blob' }) }; }
-    setFinalPackets(packets); setFinalZip(finalOutput); setWarnings((previous) => uniqueNotices(previous, notices)); setFinalizing(false); setStatus(packets.length ? `${packets.length} final PDF packet(s) ready for page-order review.` : 'Final PDF assembly requires attention.');
+    if (packets.length) {
+      const merged = await mergePdfBlobs(packets.map((packet) => ({ label: packet.path, blob: packet.blob })));
+      finalOutput = { name: `${clean(parsed.name)}_${fileBase(round)}_FINAL_MERGED_PACKET.pdf`, blob: merged.blob };
+    }
+    setFinalPackets(packets); setFinalZip(finalOutput); setWarnings((previous) => uniqueNotices(previous, notices)); setFinalizing(false); setStatus(finalOutput ? `${packets.length} packet(s) merged into one final PDF file.` : 'Final PDF assembly requires attention.');
   }
 
   function allowed(item: Panel) { return item === 'Generate' ? canGenerate : item === 'Outputs' ? Boolean(workingZip) : true; }
