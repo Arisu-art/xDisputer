@@ -21,6 +21,7 @@ import {
 } from '../../lib/saas/account-directory';
 import { listEntitlementLimits, type EntitlementLimitMap } from '../../lib/saas/entitlement-limits';
 import {
+  listManagerUserSettings,
   payrollAmount,
   type ManagerUserSetting,
   type ManagerUserSettingMap
@@ -115,7 +116,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
   const panelAccounts = accountsForPanel(activePanel, pendingResult, activeResult, blockedResult, allResult);
   const entitlementIds = accountIds(panelAccounts);
   const needsUserSettings = activePanel === 'access' || activePanel === 'output_activity' || activePanel === 'requests';
-  const [entitlementResult, settingsResult] = await Promise.all([listEntitlementLimits(supabase, [user.id, ...entitlementIds]), needsUserSettings ? Promise.resolve(emptySettings()) : Promise.resolve(emptySettings())]);
+  const [entitlementResult, settingsResult] = await Promise.all([listEntitlementLimits(supabase, [user.id, ...entitlementIds]), needsUserSettings ? listManagerUserSettings(supabase, user.id, entitlementIds) : Promise.resolve(emptySettings())]);
   const summary = summaryResult.summary;
   const queryError = summaryResult.errorMessage || pendingResult.errorMessage || activeResult.errorMessage || blockedResult.errorMessage || allResult.errorMessage || entitlementResult.errorMessage || settingsResult.errorMessage;
   const activeDefinition = managerOperationsNavItems(activePanel).find((item) => 'active' in item && item.active === true);
