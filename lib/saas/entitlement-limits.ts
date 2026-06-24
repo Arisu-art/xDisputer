@@ -37,15 +37,16 @@ function nonnegativeOrNull(value: unknown) {
 }
 
 function normalizeRow(row: RawEntitlementRow): EntitlementLimitRow {
+  const effectiveLimit = positiveOrNull(row.effective_output_limit);
   return {
     profile_id: String(row.profile_id || ''),
     max_clients: positiveOrNull(row.max_clients),
     current_clients: Number(row.current_clients || 0),
     default_client_output_limit: positiveOrNull(row.default_client_output_limit),
     client_output_limit: positiveOrNull(row.client_output_limit),
-    effective_output_limit: positiveOrNull(row.effective_output_limit),
+    effective_output_limit: effectiveLimit,
     output_used_today: Number(row.output_used_today ?? row.output_used_this_month ?? 0),
-    output_remaining_today: nonnegativeOrNull(row.output_remaining_today ?? row.output_remaining_this_month),
+    output_remaining_today: effectiveLimit === null ? null : nonnegativeOrNull(row.output_remaining_today ?? row.output_remaining_this_month),
     updated_at: row.updated_at || null
   };
 }
