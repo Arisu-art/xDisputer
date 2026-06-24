@@ -1,6 +1,7 @@
 import ConsoleNavLink from '../../components/ConsoleNavLink';
 import ManagerConsoleShell from '../../components/ManagerConsoleShell';
 import ManagerPayrollSettingsEditor from '../../components/manager/ManagerPayrollSettingsEditor';
+import ManagerReportControls from '../../components/manager/ManagerReportControls';
 import ManagerConsoleRealtimeRefreshMount from '../../components/manager/ManagerConsoleRealtimeRefreshMount';
 import ManagerKpiGrid from '../../src/features/manager-console/components/ManagerKpiGrid';
 import {
@@ -29,7 +30,7 @@ import {
 } from '../../lib/saas/manager-user-settings';
 import { requireRole } from '../../lib/saas/session';
 import { managerOperationsNavItems, normalizeManagerOperationsPanel } from '../../lib/manager-console/manager-operations-panels';
-import { listManagerReportData, moneyText, parseManagerReportInput, type ManagerReportData, type ManagerReportType } from '../../lib/manager-console/manager-reporting';
+import { formatReportDateRange, listManagerReportData, moneyText, parseManagerReportInput, type ManagerReportData, type ManagerReportType } from '../../lib/manager-console/manager-reporting';
 
 type PageProps = {
   searchParams?: Promise<{ panel?: string | string[]; control?: string | string[]; message?: string | string[]; reportType?: string | string[]; from?: string | string[]; to?: string | string[] }>;
@@ -67,7 +68,7 @@ function managerPanelHeader(activePanel: ManagerOperationsPanel, fallbackLabel?:
   if (activePanel === 'access') return { title: 'Access Control', description: 'Manage Disputer account status, approval, and compact metadata from one focused stable view.' };
   if (activePanel === 'output_activity') return { title: 'Output Activity', description: 'Confirm generated output before it affects payday pay.' };
   if (activePanel === 'requests') return { title: 'Request', description: 'Review pending confirmations and invite requests.' };
-  if (activePanel === 'reports') return { title: 'Report', description: 'Generate date-based output, salary, and user reports with clean Excel export.' };
+  if (activePanel === 'reports') return { title: 'Report', description: 'Generate salary plus output reports from Monday-based PH work weeks.' };
   return { title: fallbackLabel || 'Monitoring', description: 'Monitor outputs and Disputer status from one clean panel.' };
 }
 
@@ -95,15 +96,9 @@ function MonitoringPanel({ summary, pending, active, entitlements }: { summary: 
 function AccessPanel({ accounts, entitlements, settings }: { accounts: AccountDirectoryRow[]; entitlements: EntitlementLimitMap; settings: ManagerUserSettingMap }) { return <section className="manager-console-stack account-record-compact-stack">{accounts.length ? accounts.map((account) => <ManagerAccountCard key={account.id} account={account} entitlements={entitlements} settings={settings} />) : <EmptyState>No Disputers are assigned to this manager workspace yet.</EmptyState>}</section>; }
 
 function reportTypeLabel(type: ManagerReportType) {
-  if (type === 'salary') return 'Salary';
+  if (type === 'salary_outputs') return 'Salary + Outputs';
   if (type === 'users') return 'Users';
-  if (type === 'outputs') return 'Outputs';
   return 'Summary';
-}
-
-function dateTimeText(value: string) {
-  if (!value) return '—';
-  try { return new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value)); } catch { return '—'; }
 }
 
 function reportExportHref(report: ManagerReportData) {
@@ -111,18 +106,21 @@ function reportExportHref(report: ManagerReportData) {
   return `/api/manager/report-export?${params.toString()}`;
 }
 
+function outputPay(totalPay: number, baseSalary: number) {
+  return Math.max(0, totalPay - baseSalary);
+}
+
 function ReportTable({ report }: { report: ManagerReportData }) {
-  if (report.input.type === 'outputs') return <div className="manager-report-table-scroll"><table className="manager-report-table"><thead><tr><th>Date</th><th>Disputer</th><th>Letter client</th><th>Round</th><th>Status</th><th>Output</th><th>Rate</th><th>Pay</th></tr></thead><tbody>{report.outputs.map((row) => <tr key={row.id}><td>{dateTimeText(row.createdAt)}</td><td>{row.disputerName}</td><td>{row.clientName}</td><td>{row.roundLabel}</td><td>{row.status}</td><td>{row.outputCount}</td><td>{moneyText(row.rateAmount)}</td><td>{moneyText(row.estimatedPay)}</td></tr>)}</tbody></table></div>;
-  if (report.input.type === 'salary') return <div className="manager-report-table-scroll"><table className="manager-report-table"><thead><tr><th>Disputer</th><th>Type</th><th>Base salary</th><th>Rate</th><th>Approved outputs</th><th>Pending outputs</th><th>Estimated pay</th></tr></thead><tbody>{report.users.map((row) => <tr key={row.id}><td><strong>{row.name}</strong><small>{row.email}</small></td><td>{row.employmentType}</td><td>{moneyText(row.baseSalary)}</td><td>{moneyText(row.perOutputRate)}</td><td>{row.approvedOutputs}</td><td>{row.pendingOutputs}</td><td>{moneyText(row.estimatedPay)}</td></tr>)}</tbody></table></div>;
+  if (report.input.type === 'salary_outputs') return <div className="manager-report-table-scroll"><table className="manager-report-table"><thead><tr><th>Disputer</th><th>Type</th><th>Daily cap</th><th>Base salary</th><th>Rate</th><th>Approved outputs</th><th>Pending</th><th>Returned</th><th>Output pay</th><th>Total pay</th></tr></thead><tbody>{report.users.map((row) => <tr key={row.id}><td><strong>{row.name}</strong><small>{row.email}</small></td><td>{row.employmentType}</td><td>{row.outputLimit ?? 'Needs Master cap'}</td><td>{moneyText(row.baseSalary)}</td><td>{moneyText(row.perOutputRate)}</td><td>{row.approvedOutputs}</td><td>{row.pendingOutputs}</td><td>{row.returnedOutputs}</td><td>{moneyText(outputPay(row.estimatedPay, row.baseSalary))}</td><td>{moneyText(row.estimatedPay)}</td></tr>)}</tbody></table></div>;
   if (report.input.type === 'users') return <div className="manager-report-table-scroll"><table className="manager-report-table"><thead><tr><th>Disputer</th><th>Status</th><th>Type</th><th>Daily cap</th><th>Outputs</th><th>Approved</th><th>Pending</th><th>Returned</th></tr></thead><tbody>{report.users.map((row) => <tr key={row.id}><td><strong>{row.name}</strong><small>{row.email}</small></td><td>{row.status}</td><td>{row.employmentType}</td><td>{row.outputLimit ?? 'Needs Master cap'}</td><td>{row.outputs}</td><td>{row.approvedOutputs}</td><td>{row.pendingOutputs}</td><td>{row.returnedOutputs}</td></tr>)}</tbody></table></div>;
-  return <div className="manager-report-table-scroll"><table className="manager-report-table"><thead><tr><th>Disputer</th><th>Status</th><th>Outputs</th><th>Approved</th><th>Pending</th><th>Returned</th><th>Estimated pay</th></tr></thead><tbody>{report.users.map((row) => <tr key={row.id}><td><strong>{row.name}</strong><small>{row.email}</small></td><td>{row.status}</td><td>{row.outputs}</td><td>{row.approvedOutputs}</td><td>{row.pendingOutputs}</td><td>{row.returnedOutputs}</td><td>{moneyText(row.estimatedPay)}</td></tr>)}</tbody></table></div>;
+  return <div className="manager-report-table-scroll"><table className="manager-report-table"><thead><tr><th>Disputer</th><th>Status</th><th>Outputs</th><th>Approved</th><th>Pending</th><th>Returned</th><th>Output pay</th><th>Total pay</th></tr></thead><tbody>{report.users.map((row) => <tr key={row.id}><td><strong>{row.name}</strong><small>{row.email}</small></td><td>{row.status}</td><td>{row.outputs}</td><td>{row.approvedOutputs}</td><td>{row.pendingOutputs}</td><td>{row.returnedOutputs}</td><td>{moneyText(outputPay(row.estimatedPay, row.baseSalary))}</td><td>{moneyText(row.estimatedPay)}</td></tr>)}</tbody></table></div>;
 }
 
 function ReportPanel({ report }: { report: ManagerReportData }) {
   const type = report.input.type;
   return <section className="admin-monitor-card native-operation-card manager-console-report manager-report-workspace">
-    <header className="manager-console-card-header manager-report-header"><div><p>Report builder</p><h2>{reportTypeLabel(type)} report</h2><span>{report.input.range.fromDate} to {report.input.range.toDate}</span></div><ConsoleNavLink className="admin-action-button primary" href={reportExportHref(report)}>Export Excel</ConsoleNavLink></header>
-    <form action="/admin" method="get" className="manager-report-controls"><input type="hidden" name="panel" value="reports" /><label><span>Start date</span><input type="date" name="from" defaultValue={report.input.range.fromDate} /></label><label><span>End date</span><input type="date" name="to" defaultValue={report.input.range.toDate} /></label><label><span>Report type</span><select name="reportType" defaultValue={type}><option value="summary">Summary</option><option value="salary">Salary</option><option value="users">Users</option><option value="outputs">Outputs</option></select></label><button className="admin-action-button primary" type="submit">Generate report</button></form>
+    <header className="manager-console-card-header manager-report-header"><div><p>Report builder</p><h2>{reportTypeLabel(type)} report</h2><span>{formatReportDateRange(report.input.range)}</span></div></header>
+    <ManagerReportControls reportType={type} fromDate={report.input.range.fromDate} toDate={report.input.range.toDate} exportHref={reportExportHref(report)} />
     {report.errorMessage && <div className="admin-monitor-empty">Report warning: {report.errorMessage}</div>}
     <div className="manager-report-kpis"><span><small>Disputers</small><strong>{report.totals.userCount}</strong></span><span><small>Outputs</small><strong>{report.totals.totalOutputItems}</strong></span><span><small>Approved</small><strong>{report.totals.approvedRows}</strong></span><span><small>Pending</small><strong>{report.totals.pendingRows}</strong></span><span><small>Returned</small><strong>{report.totals.returnedRows}</strong></span><span><small>Estimated pay</small><strong>{moneyText(report.totals.estimatedPayTotal)}</strong></span></div>
     <ReportTable report={report} />
