@@ -13,37 +13,40 @@ if (existsSync('scripts/apply-manager-workspace-nav-wiring.mjs')) {
 }
 
 const page = read('app/manager-workspace/page.tsx');
-const shell = read('components/ManagerConsoleShell.tsx');
-const clientFlow = read('components/ManagerTemplateWorkspaceClient.tsx');
+const shell = read('components/templates/workspace/TemplateWorkspaceShell.tsx');
+const library = read('components/templates/workspace/TemplateRoundOnlyLibrary.tsx');
+const libraryCss = read('app/manager-template-library-upload.css');
 const switchComponent = read('components/ManagerWorkspaceSwitch.tsx');
 const routes = read('lib/saas/routes.ts');
 const admin = read('app/admin/page.tsx');
 const access = read('app/admin/access/page.tsx');
 const audit = read('components/AccessAuditView.tsx');
 const reports = read('components/GenerationReportView.tsx');
+const layout = read('app/layout.tsx');
+const api = read('app/api/template-assets/route.ts');
 const pkg = read('package.json');
 
-has(page, 'ManagerConsoleShell', 'manager workspace uses shared manager shell');
-has(page, 'ManagerTemplateWorkspaceClient', 'manager workspace uses client-like template workflow component');
-notHas(page, 'TemplateUploadCard', 'manager workspace has no raw upload cards');
-notHas(page, 'encType="multipart/form-data"', 'manager workspace has no raw multipart forms');
-has(shell, 'ManagerWorkspaceSwitch', 'shared shell owns switch mode');
-has(shell, 'variant="nav"', 'shared shell places switch inside visible sidebar nav');
-has(shell, 'admin-monitor-account', 'shared shell owns account block');
-has(clientFlow, 'TemplateProgressiveWorkspace', 'manager upload UX reuses client workspace progressive template workflow');
-has(clientFlow, '/api/template-assets?round=', 'manager upload workflow loads manager-scoped template API');
-has(clientFlow, 'MANAGER_TEMPLATE_ASSET', 'manager upload workflow uses manager template source');
+has(page, 'TemplateWorkspaceShell', 'manager workspace uses template workspace shell');
+has(page, 'TemplateLibraryHub', 'manager workspace renders Template Library hub');
+has(shell, 'ManagerConsoleShell', 'template shell uses shared manager shell');
+has(shell, 'mode="workspace"', 'template shell runs in manager workspace mode');
 has(switchComponent, 'manager-workspace-nav-switch', 'switch component exposes visible nav CTA variant');
-has(switchComponent, 'manager-workspace-switch-button', 'switch button component exists');
-has(switchComponent, 'managerSwitchPulse', 'switch pulse animation exists');
-has(switchComponent, 'managerSwitchShine', 'switch shine animation exists');
 has(routes, '/manager-workspace', 'manager workspace route is protected');
 has(admin, 'ManagerConsoleShell', '/admin uses shared manager shell');
 has(admin, 'mode="operations"', '/admin shell is operations mode');
 has(access, '<ManagerWorkspaceSwitch />', '/admin/access sidebar directly renders switch');
 has(audit, "{scope === 'manager' && <ManagerWorkspaceSwitch />}", '/admin/audit sidebar renders switch');
 has(reports, "{scope === 'manager' && <ManagerWorkspaceSwitch />}", '/admin/reports sidebar renders switch');
-has(pkg, 'apply-manager-workspace-nav-wiring.mjs', 'predev applies manager workspace nav wiring');
+has(layout, "import './manager-template-library-upload.css';", 'layout loads manager template upload CSS');
+has(library, 'templateSlots', 'Template Library exposes upload slots');
+has(library, 'uploadTemplate', 'Template Library upload handler exists');
+has(library, "fetch('/api/template-assets'", 'Template Library posts uploads to API');
+has(library, 'data-template-library-minimal="upload-enabled"', 'Template Library is upload-enabled');
+notHas(library, 'data-template-library-minimal="round-only"', 'Template Library must not be round-only');
+has(libraryCss, '.template-upload-slot-grid', 'Template Library upload layout exists');
+has(api, 'request.formData()', 'template-assets API reads multipart uploads');
+has(api, 'uploadManagerTemplateObject', 'template-assets API writes manager template files');
+has(pkg, 'template-workspace:guard', 'package keeps template workspace guard wired');
 
 checks.forEach((check) => console.log(`${check.ok ? '✅' : '❌'} ${check.label}`));
 const failed = checks.filter((check) => !check.ok);
